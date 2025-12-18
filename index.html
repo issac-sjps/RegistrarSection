@@ -1,1 +1,187 @@
-123
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新莊國小註冊組工作入口網</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-blue: #3498db;
+            --accent-green: #27ae60;
+            --accent-purple: #8e44ad;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: var(--primary-color);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 2rem;
+        }
+
+        p.subtitle {
+            color: #7f8c8d;
+            margin-top: 10px;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 25px;
+            transition: transform 0.2s ease;
+            border-top: 5px solid gray;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+        }
+
+        /* 個別卡片顏色設定 */
+        .card.subsidy { border-top-color: var(--accent-blue); }
+        .card.learning { border-top-color: var(--accent-green); }
+        .card.github { border-top-color: var(--accent-purple); }
+
+        .card h2 {
+            margin-top: 0;
+            color: var(--primary-color);
+            font-size: 1.4rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .link-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        a.btn {
+            text-decoration: none;
+            color: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            transition: background-color 0.2s, opacity 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        a.btn:hover {
+            opacity: 0.9;
+        }
+
+        /* 按鈕顏色 */
+        .subsidy .btn { background-color: var(--accent-blue); }
+        .learning .btn { background-color: var(--accent-green); }
+        .github .btn { background-color: var(--accent-purple); }
+        
+        /* 次要按鈕樣式 (針對新增的連結) */
+        .btn.secondary {
+            background-color: white;
+            border: 2px solid; 
+        }
+
+        .subsidy .btn.secondary {
+            color: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+        .subsidy .btn.secondary:hover {
+            background-color: #eaf6fd;
+        }
+
+        .learning .btn.secondary {
+            color: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+        .learning .btn.secondary:hover {
+            background-color: #eafaf1;
+        }
+
+        footer {
+            margin-top: auto;
+            padding-top: 40px;
+            color: #95a5a6;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>新莊國小註冊組</h1>
+        <p class="subtitle">工作連結入口網</p>
+    </header>
+
+    <div class="container">
+
+        <div class="card subsidy">
+            <h2>💰 補助申請</h2>
+            <div class="link-group">
+                <a href="https://issac-sjps.github.io/RegistrarSection/" class="btn" target="_blank">
+                    進入補助申請首頁
+                </a>
+                <a href="https://issac-sjps.github.io/RegistrarSection/身分減免名單檢核" class="btn secondary" target="_blank">
+                    身分減免名單檢核
+                </a>
+            </div>
+        </div>
+
+        <div class="card learning">
+            <h2>📚 學習扶助</h2>
+            <div class="link-group">
+                <a href="https://issac-sjps.github.io/LearningAssistance/" class="btn" target="_blank">
+                    進入學習扶助首頁
+                </a>
+                <a href="https://issac-sjps.github.io/LearningAssistance/%E8%80%83%E8%A9%A6%E9%80%9A%E7%9F%A5%E5%96%AE%E8%88%87%E4%B8%8A%E8%AA%B2%E6%84%8F%E9%A1%98%E8%AA%BF%E6%9F%A5%E8%A1%A8" class="btn secondary" target="_blank">
+                    考試通知與意願調查表
+                </a>
+            </div>
+        </div>
+
+        <div class="card github">
+            <h2>🐱 GitHub 資源</h2>
+            <div class="link-group">
+                <a href="https://github.com/issac-sjps/" class="btn" target="_blank">
+                    前往 GitHub Profile
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+    <footer>
+        &copy; 新莊國小註冊組 (SJPS Registrar Section)
+    </footer>
+
+</body>
+</html>
