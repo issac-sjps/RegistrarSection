@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>114學年度 身分減免決策支援系統 v7.7</title>
+    <title>114學年度 身分減免決策支援系統 v7.8</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -51,7 +51,7 @@
                 <div class="flex justify-between items-center h-16">
                     <div class="flex items-center gap-3">
                         <div class="bg-blue-600 text-white p-2 rounded-lg font-bold text-xl">減免</div>
-                        <h1 class="text-xl font-bold text-slate-800">決策支援系統 <span class="text-xs bg-rose-100 text-rose-800 px-2 py-1 rounded-full">v7.7 優先權修正版</span></h1>
+                        <h1 class="text-xl font-bold text-slate-800">決策支援系統 <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full">v7.8 排序修正版</span></h1>
                     </div>
                     <div class="flex items-center gap-3">
                         <button @click="fixData" class="btn btn-outline text-xs bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100">🛠️ 校正資料</button>
@@ -167,8 +167,8 @@
                 <div class="card p-0 overflow-hidden mt-4">
                     <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center"><h3 class="font-bold text-slate-700">📋 名單明細</h3><button class="btn btn-outline text-xs h-8" @click="printKhBookList">🖨️ 列印名單</button></div>
                     <div class="max-h-[400px] overflow-y-auto">
-                        <table class="data-table"><thead><tr><th>班級</th><th>姓名</th><th>核定類別</th><th>原始所有身分 (除錯用)</th><th class="text-right">金額</th></tr></thead>
-                        <tbody><tr v-for="s in khBookStats.students" :key="s.id"><td class="font-mono">{{ s.class }}-{{ s.seat }}</td><td class="font-bold">{{ s.name }}</td><td class="text-xs text-orange-600 font-bold">{{ s.khBookType }}</td><td class="text-xs text-slate-400">{{ s.allInfo }}</td><td class="text-right font-bold text-slate-700">{{ formatMoney(s.amount) }}</td></tr></tbody></table>
+                        <table class="data-table"><thead><tr><th>班級</th><th>姓名</th><th>身分</th><th>核定類別</th><th class="text-right">金額</th></tr></thead>
+                        <tbody><tr v-for="s in khBookStats.students" :key="s.id"><td class="font-mono">{{ s.class }}-{{ s.seat }}</td><td class="font-bold">{{ s.name }}</td><td>{{ s.status }}</td><td class="text-xs text-orange-600 font-bold">{{ s.khBookType }}</td><td class="text-right font-bold text-slate-700">{{ formatMoney(s.amount) }}</td></tr></tbody></table>
                     </div>
                 </div>
             </div>
@@ -279,10 +279,10 @@
                 ];
 
                 onMounted(() => {
-                    const saved = localStorage.getItem('subsidy_v77_data') || localStorage.getItem('subsidy_v76_data');
+                    const saved = localStorage.getItem('subsidy_v78_data') || localStorage.getItem('subsidy_v77_data');
                     if (saved) { const data = JSON.parse(saved); students.value = data.students || []; bookFees.value = data.fees || bookFees.value; }
                 });
-                const saveData = () => localStorage.setItem('subsidy_v77_data', JSON.stringify({ students: students.value, fees: bookFees.value }));
+                const saveData = () => localStorage.setItem('subsidy_v78_data', JSON.stringify({ students: students.value, fees: bookFees.value }));
 
                 const mapStatusToStandard = (input) => {
                     if (!input) return "";
@@ -362,7 +362,7 @@
                     }).sort((a,b) => (a.class - b.class) || (a.seat - b.seat));
                 });
                 
-                // v7.7 FIXED PRIORITY for Kaohsiung Book Fees
+                // v7.8 FIXED PRIORITY for Kaohsiung Book Fees
                 const khBookStats = computed(() => {
                     const matrix = { '身心障礙學生、身心障礙人士子女':{amount:0,total:0}, '原住民籍學生':{amount:0,total:0}, '低收入戶學生':{amount:0,total:0}, '中低收入單親家庭學生':{amount:0,total:0}, '功勳及公教遺族':{amount:0,total:0} };
                     for(let k in matrix) { for(let i=1;i<=6;i++) matrix[k][i] = 0; }
@@ -382,7 +382,7 @@
                         const isSingle = allInfo.includes("單親");
                         const isMerit = allInfo.includes("功勳");
 
-                        // PRIORITY FIX: Low Income comes BEFORE Indigenous
+                        // PRIORITY FIX v7.8: Low Income comes BEFORE Indigenous
                         if (isDisability) type = '身心障礙學生、身心障礙人士子女';
                         else if (isLow) type = '低收入戶學生'; // [Moved UP] Priority 2
                         else if (isIndig) type = '原住民籍學生'; // [Moved DOWN] Priority 3
@@ -391,7 +391,7 @@
                         
                         if(type && fee > 0) { 
                             stats.grandCount++; stats.grandTotal += fee; 
-                            stats.students.push({ ...s, khBookType: type, amount: fee, grade, allInfo }); // Added allInfo for debugging
+                            stats.students.push({ ...s, khBookType: type, amount: fee, grade, allInfo }); 
                             if(matrix[type]) { matrix[type][grade] = (matrix[type][grade] || 0) + 1; matrix[type].total++; matrix[type].amount += fee; stats.gradeTotals[grade]++; }
                         }
                     });
