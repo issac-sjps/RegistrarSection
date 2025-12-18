@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>114學年度 身分減免決策支援系統 v9.0</title>
+    <title>114學年度 身分減免決策支援系統 v9.1 (完整版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -61,7 +61,7 @@
                 <div class="flex justify-between items-center h-16">
                     <div class="flex items-center gap-3">
                         <div class="bg-blue-600 text-white p-2 rounded-lg font-bold text-xl">減免</div>
-                        <h1 class="text-xl font-bold text-slate-800">決策支援系統 <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full">v9.0 自訂表單版</span></h1>
+                        <h1 class="text-xl font-bold text-slate-800">決策支援系統 <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full">v9.1 完整修正版</span></h1>
                     </div>
                     <div class="flex items-center gap-3">
                         <button @click="fixData" class="btn btn-outline text-xs bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100">🛠️ 校正資料</button>
@@ -131,7 +131,7 @@
                             <div><label class="text-xs font-bold text-slate-500">第一欄</label><input v-model="formConfig.col1" class="w-full border p-2 rounded text-center"></div>
                             <div><label class="text-xs font-bold text-slate-500">第二欄</label><input v-model="formConfig.col2" class="w-full border p-2 rounded text-center"></div>
                             <div><label class="text-xs font-bold text-slate-500">第三欄</label><input v-model="formConfig.col3" class="w-full border p-2 rounded text-center"></div>
-                            <div><label class="text-xs font-bold text-slate-500">第四欄 (備註欄)</label><textarea v-model="formConfig.col4Raw" rows="3" class="w-full border p-2 rounded text-sm"></textarea></div>
+                            <div><label class="text-xs font-bold text-slate-500">第四欄 (備註欄)</label><textarea v-model="formConfig.col4Raw" rows="4" class="w-full border p-2 rounded text-sm"></textarea><p class="text-xs text-slate-400 mt-1">*此欄位支援換行，輸入的文字會直接顯示在列印表頭。</p></div>
                         </div>
                     </div>
                 </div>
@@ -156,13 +156,66 @@
                 </div>
             </div>
 
-             <div v-if="['indigenous','moe','khbook','notebook','list','analysis','budget'].includes(currentTab)" class="max-w-7xl mx-auto w-full p-6 overflow-y-auto">
-                <div v-if="currentTab==='indigenous'" class="space-y-6"><h2 class="text-2xl font-bold text-teal-900">🌲 原住民學生統計 ({{indigenousStats.total}}人)</h2><div class="card"><table class="data-table"><thead><tr><th>班級</th><th>姓名</th><th>族別</th></tr></thead><tbody><tr v-for="s in filterByGrade(indigenousStats.list)" :key="s.id"><td>{{s.class}}-{{s.seat}}</td><td>{{s.name}}</td><td>{{s.tribe}}</td></tr></tbody></table></div></div>
-                <div v-if="currentTab==='moe'" class="space-y-6"><h2 class="text-2xl font-bold text-indigo-900">🎓 教育部補助 ({{formatMoney(moeStats.grandTotal)}})</h2><div class="card"><table class="data-table"><thead><tr><th>班級</th><th>姓名</th><th>項目</th><th>金額</th></tr></thead><tbody><tr v-for="s in filterByGrade(moeStats.students)" :key="s.id"><td>{{s.class}}-{{s.seat}}</td><td>{{s.name}}</td><td>{{s.moeItems}}</td><td>{{formatMoney(s.moeAmt)}}</td></tr></tbody></table></div></div>
-                <div v-if="currentTab==='list'" class="space-y-4"><input v-model="searchQuery" placeholder="搜尋姓名..." class="border p-2 rounded w-full"><table class="data-table"><thead><tr><th>班級</th><th>姓名</th><th>身分</th><th>操作</th></tr></thead><tbody><tr v-for="s in filteredList" :key="s.id"><td>{{s.class}}-{{s.seat}}</td><td>{{s.name}}</td><td>{{s.status}}</td><td><button @click="deleteStudent(s.id)">🗑️</button></td></tr></tbody></table></div>
-                <div v-if="currentTab==='analysis'"><button @click="printAnalysis" class="btn btn-primary mb-4">列印統計</button><table class="data-table"><thead><tr><th>類別</th><th v-for="c in uniqueClasses">{{c}}</th><th>總計</th></tr></thead><tbody><tr v-for="row in pivotData" :key="row.category"><td>{{row.category}}</td><td v-for="c in uniqueClasses">{{row.counts[c]||'-'}}</td><td>{{row.total}}</td></tr></tbody></table></div>
-                <div v-if="currentTab==='budget'"><div class="grid grid-cols-6 gap-2 mb-4"><div v-for="g in 6" :key="g" class="border p-2 bg-white">{{g}}年 <input v-model="bookFees[g]" class="w-16 text-right font-bold"></div></div></div>
+             <div v-if="currentTab === 'indigenous'" class="max-w-7xl mx-auto w-full p-6 overflow-y-auto space-y-6">
+                <div class="flex justify-between items-center"><div><h2 class="text-2xl font-bold text-teal-900">🌲 原住民學生統計</h2></div><div class="bg-teal-600 text-white px-4 py-2 rounded-lg shadow-md"><div class="text-2xl font-bold">{{ indigenousStats.total }} 人</div></div></div>
+                <div class="card"><h3 class="font-bold text-slate-700 mb-4 border-b pb-2">📊 族群分佈排行</h3><table class="w-full text-sm"><tr v-for="(count, tribe) in indigenousStats.tribes" :key="tribe" class="border-b last:border-0 border-slate-100"><td class="py-2 font-bold text-slate-700">{{ tribe }}</td><td class="py-2 text-right"><div class="flex items-center justify-end gap-2"><div class="h-2 bg-teal-200 rounded-full" :style="{width: (count/indigenousStats.total*100) + 'px'}"></div><span class="font-mono font-bold">{{ count }} 人</span></div></td></tr></table></div>
+                <div class="card p-0 overflow-hidden">
+                    <div class="p-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3">
+                        <div class="flex flex-wrap gap-2">
+                            <button @click="filterGrade=0" :class="['btn-filter', filterGrade===0 ? 'btn-filter-active' : 'btn-filter-inactive']">全部 ({{ indigenousStats.total }})</button>
+                            <button v-for="g in 6" :key="g" @click="filterGrade=g" :class="['btn-filter', filterGrade===g ? 'btn-filter-active' : (indigenousStats.grades[g]>0 ? 'btn-filter-inactive' : 'btn-filter-empty')]">{{g}}年級 ({{indigenousStats.grades[g]}})</button>
+                        </div>
+                    </div>
+                    <div class="max-h-[500px] overflow-y-auto"><table class="data-table"><thead><tr><th>班級</th><th>姓名</th><th>族別</th><th>原始資料</th></tr></thead><tbody><tr v-for="s in filterByGrade(indigenousStats.list)" :key="s.id"><td class="font-mono">{{ s.class }}-{{ s.seat }}</td><td class="font-bold">{{ s.name }}</td><td><span class="bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-xs font-bold">{{ s.tribe }}</span></td><td class="text-xs text-slate-400 max-w-[200px] truncate">{{ s.mergedDetails }}</td></tr></tbody></table></div>
+                </div>
             </div>
+
+            <div v-if="currentTab === 'moe'" class="max-w-7xl mx-auto w-full p-6 overflow-y-auto space-y-6">
+                <div class="flex justify-between items-center"><h2 class="text-2xl font-bold text-indigo-900">🎓 教育部無力繳交補助</h2><div class="bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-md"><div class="text-2xl font-bold">{{ formatMoney(moeStats.grandTotal) }}</div></div></div>
+                <div class="card p-0 overflow-hidden"><table class="data-table matrix-table"><thead><tr><th class="w-32 text-left bg-slate-100">補助類別</th><th v-for="g in 6" :key="g">{{g}}年級</th><th class="text-center bg-indigo-100 text-indigo-900">合計</th><th class="text-right bg-indigo-100 text-indigo-900">金額</th></tr></thead><tbody><tr v-for="(row, key) in moeStats.matrix" :key="key"><td class="matrix-row-header">{{ key }}</td><td v-for="g in 6" :key="g"><span v-if="row[g] > 0" class="font-bold text-slate-700">{{ row[g] }}</span><span v-else class="text-slate-300">-</span></td><td class="matrix-total">{{ row.total }}</td><td class="matrix-money">{{ formatMoney(row.amount) }}</td></tr></tbody></table></div>
+                <div class="card p-0 overflow-hidden mt-4">
+                    <div class="p-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3">
+                        <div class="flex flex-wrap gap-2">
+                            <button @click="filterGrade=0" :class="['btn-filter', filterGrade===0 ? 'btn-filter-active' : 'btn-filter-inactive']">全部 ({{ moeStats.grandCount }})</button>
+                            <button v-for="g in 6" :key="g" @click="filterGrade=g" :class="['btn-filter', filterGrade===g ? 'btn-filter-active' : (moeStats.gradeTotals[g]>0 ? 'btn-filter-inactive' : 'btn-filter-empty')]">{{g}}年級 ({{moeStats.gradeTotals[g]}})</button>
+                        </div>
+                    </div>
+                    <div class="max-h-[400px] overflow-y-auto"><table class="data-table"><thead><tr><th>班級</th><th>姓名</th><th>身分</th><th>項目</th><th class="text-right">金額</th></tr></thead><tbody><tr v-for="s in filterByGrade(moeStats.students)" :key="s.id"><td class="font-mono">{{ s.class }}-{{ s.seat }}</td><td class="font-bold">{{ s.name }}</td><td><span class="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs font-bold">{{ s.status }}</span></td><td class="text-xs text-slate-500">{{ s.moeItems }}</td><td class="text-right font-bold text-slate-700">{{ formatMoney(s.moeAmt) }}</td></tr></tbody></table></div>
+                </div>
+            </div>
+
+             <div v-if="currentTab === 'khbook'" class="max-w-7xl mx-auto w-full p-6 overflow-y-auto space-y-6">
+                <div class="flex justify-between items-center"><div><h2 class="text-2xl font-bold text-orange-900">📖 高雄市書籍費補助</h2><p class="text-sm text-slate-500 mt-1">※ 排除低收、中低收 (教育部補助)。</p></div><div class="bg-orange-600 text-white px-4 py-2 rounded-lg shadow-md"><div class="text-2xl font-bold">{{ formatMoney(khBookStats.grandTotal) }}</div></div></div>
+                <div class="card p-0 overflow-hidden"><table class="data-table matrix-table"><thead><tr><th class="w-56 text-left bg-slate-100">補助類別</th><th v-for="g in 6" :key="g">{{g}}年級</th><th class="text-center bg-orange-100 text-orange-900">合計</th><th class="text-right bg-orange-100 text-orange-900">金額</th></tr></thead><tbody><tr v-for="(row, key) in khBookStats.matrix" :key="key"><td class="matrix-row-header">{{ key }}</td><td v-for="g in 6" :key="g"><span v-if="row[g] > 0" class="font-bold text-slate-700">{{ row[g] }}</span><span v-else class="text-slate-300">-</span></td><td class="matrix-total">{{ row.total }}</td><td class="matrix-money">{{ formatMoney(row.amount) }}</td></tr></tbody></table></div>
+                <div class="card p-0 overflow-hidden mt-4">
+                    <div class="p-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3">
+                        <div class="flex flex-wrap gap-2">
+                            <button @click="filterGrade=0" :class="['btn-filter', filterGrade===0 ? 'btn-filter-active' : 'btn-filter-inactive']">全部 ({{ khBookStats.grandCount }})</button>
+                            <button v-for="g in 6" :key="g" @click="filterGrade=g" :class="['btn-filter', filterGrade===g ? 'btn-filter-active' : (khBookStats.gradeTotals[g]>0 ? 'btn-filter-inactive' : 'btn-filter-empty')]">{{g}}年級 ({{khBookStats.gradeTotals[g]}})</button>
+                        </div>
+                    </div>
+                    <div class="max-h-[400px] overflow-y-auto"><table class="data-table"><thead><tr><th>班級</th><th>姓名</th><th>核定類別</th><th>原始所有身分</th><th class="text-right">金額</th></tr></thead><tbody><tr v-for="s in filterByGrade(khBookStats.students)" :key="s.id"><td class="font-mono">{{ s.class }}-{{ s.seat }}</td><td class="font-bold">{{ s.name }}</td><td class="text-xs text-orange-600 font-bold">{{ s.khBookType }}</td><td class="text-xs text-slate-400">{{ s.allInfo }}</td><td class="text-right font-bold text-slate-700">{{ formatMoney(s.amount) }}</td></tr></tbody></table></div>
+                </div>
+            </div>
+
+            <div v-if="currentTab === 'notebook'" class="max-w-7xl mx-auto w-full p-6 overflow-y-auto space-y-6">
+                <div class="flex justify-between items-center"><h2 class="text-2xl font-bold text-purple-900">📚 高雄市簿本費 (200元)</h2><div class="bg-purple-600 text-white px-4 py-2 rounded-lg shadow-md"><div class="text-2xl font-bold">{{ formatMoney(notebookStats.grandTotal) }}</div></div></div>
+                <div class="card p-0 overflow-hidden"><table class="data-table matrix-table"><thead><tr><th class="w-32 text-left bg-slate-100">補助類別</th><th v-for="g in 6" :key="g">{{g}}年級</th><th class="text-center bg-purple-100 text-purple-900">合計</th><th class="text-right bg-purple-100 text-purple-900">金額</th></tr></thead><tbody><tr v-for="(row, key) in notebookStats.matrix" :key="key"><td class="matrix-row-header">{{ key }}</td><td v-for="g in 6" :key="g"><span v-if="row[g] > 0" class="font-bold text-slate-700">{{ row[g] }}</span><span v-else class="text-slate-300">-</span></td><td class="matrix-total">{{ row.total }}</td><td class="matrix-money">{{ formatMoney(row.amount) }}</td></tr></tbody></table></div>
+                <div class="card p-0 overflow-hidden mt-4">
+                    <div class="p-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3">
+                        <div class="flex flex-wrap gap-2">
+                            <button @click="filterGrade=0" :class="['btn-filter', filterGrade===0 ? 'btn-filter-active' : 'btn-filter-inactive']">全部 ({{ notebookStats.grandCount }})</button>
+                            <button v-for="g in 6" :key="g" @click="filterGrade=g" :class="['btn-filter', filterGrade===g ? 'btn-filter-active' : (notebookStats.gradeTotals[g]>0 ? 'btn-filter-inactive' : 'btn-filter-empty')]">{{g}}年級 ({{notebookStats.gradeTotals[g]}})</button>
+                        </div>
+                    </div>
+                    <div class="max-h-[400px] overflow-y-auto"><table class="data-table"><thead><tr><th>班級</th><th>姓名</th><th>身分</th><th>補助原因</th><th class="text-right">金額</th></tr></thead><tbody><tr v-for="s in filterByGrade(notebookStats.students)" :key="s.id"><td class="font-mono">{{ s.class }}-{{ s.seat }}</td><td class="font-bold">{{ s.name }}</td><td>{{ s.status }}</td><td class="text-xs text-purple-600 font-bold">{{ s.khType }}</td><td class="text-right font-bold text-slate-700">$200</td></tr></tbody></table></div>
+                </div>
+            </div>
+
+            <div v-if="currentTab === 'list'" class="max-w-7xl mx-auto w-full p-6"><input v-model="searchQuery" placeholder="搜尋姓名..." class="border p-2 rounded w-full mb-4"><table class="data-table"><thead><tr><th>班級</th><th>姓名</th><th>身分</th><th>性別</th><th>備註</th><th class="w-20">操作</th></tr></thead><tbody><tr v-for="s in filteredList" :key="s.id"><td>{{s.class}}-{{s.seat}}</td><td>{{s.name}}</td><td>{{s.status}}</td><td>{{s.gender}}</td><td>{{s.mergedDetails}}</td><td><button @click="deleteStudent(s.id)" class="text-red-500">🗑️</button></td></tr></tbody></table></div>
+            <div v-if="currentTab === 'analysis'" class="max-w-7xl mx-auto w-full p-6"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold text-slate-800">📊 交叉分析報表</h2><button @click="printAnalysis" class="btn btn-primary">🖨️ 列印統計表</button></div><div class="card overflow-x-auto p-0"><table class="data-table border border-slate-200"><thead><tr class="bg-slate-200"><th class="w-48 bg-slate-200 border-r border-slate-300">身分 / 班級</th><th v-for="cls in uniqueClasses" :key="cls" class="text-center w-12 text-xs text-slate-500">{{ cls }}</th><th class="text-center w-20 bg-amber-50 text-amber-800 border-l border-slate-300">總計</th></tr></thead><tbody><tr v-for="row in pivotData" :key="row.category"><td class="font-bold text-slate-700 border-r border-slate-200 bg-slate-50 text-xs">{{ row.category }}</td><td v-for="cls in uniqueClasses" :key="cls" class="text-center"><span v-if="row.counts[cls]" class="font-bold text-slate-800">{{ row.counts[cls] }}</span><span v-else class="text-slate-200 text-xs">-</span></td><td class="text-center font-bold bg-amber-50 text-amber-800 border-l border-slate-200">{{ row.total }}</td></tr></tbody></table></div></div>
+            <div v-if="currentTab === 'budget'" class="max-w-7xl mx-auto w-full p-6"><div class="card p-0"><div class="p-4 bg-blue-50 border-b border-blue-100"><div class="grid grid-cols-6 gap-2"><div v-for="g in 6" :key="g" class="flex bg-white px-2 py-1 rounded border"><span class="text-xs font-bold text-slate-400">{{g}}年</span><input type="number" v-model.number="bookFees[g]" class="w-full text-right font-bold text-blue-600 outline-none"></div></div></div></div></div>
+
         </main>
 
         <div :class="['print-area hidden', printMode]">
@@ -279,10 +332,9 @@
                 watch(bookFees, () => localStorage.setItem('subsidy_v83_data', JSON.stringify({ students: students.value, fees: bookFees.value })), { deep: true });
                 watch(formConfig, () => localStorage.setItem('subsidy_config_v9', JSON.stringify(formConfig.value)), { deep: true });
                 
-                // --- 核心邏輯 (與 V8.3 相同，為節省長度，此處僅保留關鍵函數，功能全在) ---
+                // --- 核心邏輯 (完整版) ---
                 const triggerImport = () => document.getElementById('fileInput').click();
-                const handleFile = (e) => { /* Excel匯入邏輯同v8.3，省略以節省篇幅，請想像它在這裡 */ 
-                    // 實際部署時請將 V8.3 的 handleFile 複製過來
+                const handleFile = (e) => { 
                     const file = e.target.files[0]; if (!file) return;
                     const reader = new FileReader();
                     reader.onload = (evt) => {
@@ -291,12 +343,33 @@
                          wb.SheetNames.forEach(name => {
                              const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { defval: "" });
                              all = all.concat(rows.map((r, i) => {
-                                let statusRaw = r['最優補助身分'] || r['減免身分'] || r['補助身分'] || r['身分'] || '';
+                                let statusRaw = r['最優補助身分'] || r['減免身分'] || r['補助身分'] || r['身分'] || r['減免類別'] || '';
+                                let isMid = false, isSingle = false;
+                                if (String(statusRaw).includes('中低')) isMid = true; if (String(statusRaw).includes('單親')) isSingle = true;
+                                const targetCols = ["1.低收(社)", "2.中低收(社)", "3.單親(社)", "4.身障(學)(社)", "5.身障(家)(社)", "6.身障(學)", "7.身障(家)", "8.重身障(學)", "9.原民生", "10.原民清寒(原)", "10.原民清寒(原民會)", "11.功勳", "12.導師認定", "系統整合備註", "詳細備註", "備註"];
+                                let extraInfo = "";
+                                for (const key in r) {
+                                    const val = String(r[key]).trim();
+                                    if (val && (targetCols.includes(key) || key.includes('.'))) {
+                                         if (val !== '0' && val.toLowerCase() !== 'false') {
+                                             extraInfo += ` [${key}: ${val}]`;
+                                             if (key.includes('中低') && (val === '1' || val.includes('Yes'))) isMid = true;
+                                             if (key.includes('單親') && (val === '1' || val.includes('Yes'))) isSingle = true;
+                                         }
+                                    }
+                                }
+                                if (isMid && isSingle && !statusRaw.includes('中低') && !statusRaw.includes('單親')) statusRaw += " [偵測:中低+單親]";
+                                let gender = '';
+                                if(r['性別']) gender = r['性別'].trim();
+                                else if(r['身分證號']) {
+                                    const id = r['身分證號'].trim();
+                                    if(id.length === 10) { const c = id.charAt(1); if(c==='1') gender='男'; else if(c==='2') gender='女'; }
+                                }
                                 return {
                                     id: `${name}-${i}-${Date.now()}`,
                                     class: r['班級'] ? String(r['班級']).trim() : '', seat: r['座號'] || 0,
-                                    name: r['姓名'] || '', status: statusRaw, 
-                                    mergedDetails: r['備註'] || '', note: ''
+                                    name: r['姓名'] || '', status: mapStatusToStandard(statusRaw), rawStatus: statusRaw,
+                                    mergedDetails: extraInfo, note: r['手動備註'] || '', idNumber: r['身分證號'] || '', gender: gender || '未詳'
                                 };
                              }).filter(s=>s.name));
                          });
@@ -304,27 +377,144 @@
                     };
                     reader.readAsArrayBuffer(file);
                 };
-                const fixData = () => { alert("資料校正 (請使用 V8.3 邏輯)"); };
+                
+                const fixData = () => { students.value = students.value.map(s => ({ ...s, status: mapStatusToStandard(s.status) })); alert("資料校正完成！"); };
+                
+                const mapStatusToStandard = (input) => {
+                    if (!input) return "";
+                    let str = String(input).trim();
+                    if (str.includes("重") && str.includes("身障")) return "8. 重身障(學)";
+                    if (str.includes("身障")) {
+                        const isSocial = str.includes("社") || str.includes("局");
+                        const isStudent = str.includes("學") || str.includes("生");
+                        const isParent = str.includes("家") || str.includes("父") || str.includes("母");
+                        if (isStudent) return isSocial ? "4. 身障(學)(社)" : "6. 身障(學)";
+                        if (isParent) return isSocial ? "5. 身障(家)(社)" : "7. 身障(家)";
+                    }
+                    if (str.includes("低收") && !str.includes("中低")) return "1. 低收(社)";
+                    if (str.includes("中低")) return "2. 中低收(社)";
+                    if (str.includes("單親")) return "3. 單親(社)";
+                    if (str.includes("原民") && !str.includes("清寒")) return "9. 原民生";
+                    if (str.includes("原民") && str.includes("清寒")) return "10. 原民清寒(原民會)";
+                    if (str.includes("功勳")) return "11. 功勳";
+                    if (str.includes("導師") || str.includes("教師")) return "12. 導師認定";
+                    const prefix = str.match(/^(\d+)\./);
+                    const standardCategories = ["1. 低收(社)", "2. 中低收(社)", "3. 單親(社)", "4. 身障(學)(社)", "5. 身障(家)(社)", "6. 身障(學)", "7. 身障(家)", "8. 重身障(學)", "9. 原民生", "10. 原民清寒(原民會)", "11. 功勳", "12. 導師認定"];
+                    if (prefix) { const found = standardCategories.find(c => c.startsWith(prefix[0])); if (found) return found; }
+                    return str;
+                };
 
                 const getGrade = (cls) => String(cls).length >= 3 ? parseInt(String(cls)[0]) : 0;
+                const standardCategories = ["1. 低收(社)", "2. 中低收(社)", "3. 單親(社)", "4. 身障(學)(社)", "5. 身障(家)(社)", "6. 身障(學)", "7. 身障(家)", "8. 重身障(學)", "9. 原民生", "10. 原民清寒(原民會)", "11. 功勳", "12. 導師認定"];
                 const uniqueClasses = computed(() => [...new Set(students.value.map(s => s.class))].sort((a,b)=>a-b));
                 const sortedClasses = computed(() => uniqueClasses.value);
                 const getStudentsByClass = (cls) => students.value.filter(s => s.class == cls).sort((a,b)=>a.seat-b.seat);
+                
                 const filterByGrade = (list) => { if (filterGrade.value === 0) return list; return list.filter(s => getGrade(s.class) === filterGrade.value); };
                 
                 const totalStudents = computed(() => students.value.length);
-                const genderTotal = computed(() => ({ m:0, f:0 })); 
-                const dualStatusStats = computed(() => ({ total:0, list:[] })); 
+                const genderTotal = computed(() => { let m = 0, f = 0; students.value.forEach(s => { if(s.gender==='男') m++; else if(s.gender==='女') f++; }); return { m, f }; });
+                const dualStatusStats = computed(() => {
+                    const list = []; const gradeCounts = {1:0, 2:0, 3:0, 4:0, 5:0, 6:0};
+                    students.value.forEach(s => {
+                        const details = (s.mergedDetails || "").toLowerCase();
+                        const matches = details.match(/\[/g);
+                        if (matches && matches.length >= 2) { list.push(s); const g = getGrade(s.class); if(gradeCounts[g] !== undefined) gradeCounts[g]++; }
+                    });
+                    return { list, grades: gradeCounts, total: list.length };
+                });
+
                 const filteredList = computed(() => students.value.filter(s => s.name.includes(searchQuery.value)));
                 const formatMoney = (v) => v ? '$' + v.toLocaleString() : '$0';
-                
-                // 統計 (Placeholder，請將 V8.3 完整 computed 貼過來以獲得完整功能)
-                const moeStats = computed(() => ({ grandTotal:0, students:[] }));
-                const khBookStats = computed(() => ({ grandTotal:0, students:[] }));
-                const notebookStats = computed(() => ({ grandTotal:0, students:[] }));
-                const indigenousStats = computed(() => ({ total:0, list:[] }));
-                const pivotData = computed(() => []);
-                const overallStats = computed(() => ({ totalMoney: 0 }));
+
+                const indigenousStats = computed(() => {
+                    const list = students.value.filter(s => s.status.includes('原民'));
+                    const tribeCounts = {}; const gradeCounts = {1:0, 2:0, 3:0, 4:0, 5:0, 6:0};
+                    const detailedList = list.map(s => {
+                        let raw = (s.mergedDetails || "") + (s.note || "");
+                        let tribeRaw = raw.replace(/[(（]已建檔[)）]/g, '').replace(/已建檔/g, '').replace(/[0-9.]/g, '').replace(/原民生/g, '').replace(/原民清寒/g, '').replace(/原民/g, '').replace(/[(（]原[)）]/g, '').replace(/[()（）]/g, ' ').trim();
+                        let tribe = "未註記"; const tribeMatch = tribeRaw.match(/(\S+族)/); if(tribeMatch) { tribe = tribeMatch[1]; } else if(tribeRaw.length > 1 && tribeRaw.length < 5) { tribe = tribeRaw; }
+                        if (!tribe || tribe === "未註記") tribe = "未註記";
+                        if (!tribeCounts[tribe]) tribeCounts[tribe] = 0; tribeCounts[tribe]++;
+                        const g = getGrade(s.class); if(gradeCounts[g] !== undefined) gradeCounts[g]++;
+                        return { ...s, tribe };
+                    }).sort((a,b) => (a.class - b.class));
+                    const sortedTribes = Object.fromEntries(Object.entries(tribeCounts).sort(([,a],[,b]) => b-a));
+                    return { total: list.length, tribes: sortedTribes, grades: gradeCounts, list: detailedList };
+                });
+
+                const khBookStats = computed(() => {
+                    const matrix = { '身心障礙學生、身心障礙人士子女':{amount:0,total:0}, '原住民籍學生':{amount:0,total:0}, '低收入戶學生':{amount:0,total:0}, '中低收入單親家庭學生':{amount:0,total:0}, '功勳及公教遺族':{amount:0,total:0} };
+                    for(let k in matrix) { for(let i=1;i<=6;i++) matrix[k][i] = 0; }
+                    let stats = { grandTotal: 0, grandCount: 0, students: [], matrix, gradeTotals:{1:0,2:0,3:0,4:0,5:0,6:0} };
+                    students.value.forEach(s => {
+                        const grade = getGrade(s.class); const fee = bookFees.value[grade] || 0;
+                        const allInfo = (s.status||"") + (s.rawStatus||"") + (s.mergedDetails||"") + (s.note||"");
+                        let type = '';
+                        const isDisability = allInfo.includes("身障") || allInfo.includes("鑑輔");
+                        const isIndig = allInfo.includes("原民");
+                        const isLow = allInfo.includes("低收") && !allInfo.includes("中低");
+                        const isMid = allInfo.includes("中低");
+                        const isSingle = allInfo.includes("單親");
+                        const isMerit = allInfo.includes("功勳");
+                        if (isDisability) type = '身心障礙學生、身心障礙人士子女';
+                        else if (isLow) type = '低收入戶學生';
+                        else if (isMid) { if (isSingle) type = '中低收入單親家庭學生'; else type = ''; }
+                        else if (isIndig) type = '原住民籍學生';
+                        else if (isMerit) type = '功勳及公教遺族';
+                        if(type && fee > 0) { 
+                            stats.grandCount++; stats.grandTotal += fee; 
+                            stats.students.push({ ...s, khBookType: type, amount: fee, grade, allInfo }); 
+                            if(matrix[type]) { matrix[type][grade] = (matrix[type][grade] || 0) + 1; matrix[type].total++; matrix[type].amount += fee; stats.gradeTotals[grade]++; }
+                        }
+                    });
+                    return stats;
+                });
+
+                const moeStats = computed(() => {
+                    const matrix = { '低收入戶':{amount:0,total:0}, '中低收入戶':{amount:0,total:0}, '教師認定':{amount:0,total:0} };
+                    for(let k in matrix) { for(let i=1;i<=6;i++) matrix[k][i] = 0; }
+                    let stats = { grandTotal:0, grandCount:0, students:[], matrix, gradeTotals:{1:0,2:0,3:0,4:0,5:0,6:0} };
+                    students.value.forEach(s => {
+                        let type='', amt=0, items=[], key=''; const grade = getGrade(s.class);
+                        if (s.status.includes('低收') && !s.status.includes('中低')) { type='low'; key='低收入戶'; amt=600; items=['課本$600']; }
+                        else if (s.status.includes('中低')) { type='mid'; key='中低收入戶'; amt=833; items=['課本$600','保險$233']; }
+                        else if (s.status.includes('導師')) { type='teacher'; key='教師認定'; amt=833; items=['課本$600','保險$233']; }
+                        if(type && key) { 
+                            stats.grandTotal+=amt; stats.grandCount++; stats.students.push({ ...s, moeType:type, moeAmt:amt, moeItems:items.join('+') });
+                            matrix[key][grade] = (matrix[key][grade] || 0) + 1; matrix[key].total++; matrix[key].amount += amt; stats.gradeTotals[grade]++;
+                        }
+                    });
+                    return stats;
+                });
+
+                const notebookStats = computed(() => {
+                    const matrix = { '中低收入戶':{amount:0,total:0}, '導師認定':{amount:0,total:0} };
+                    for(let k in matrix) { for(let i=1;i<=6;i++) matrix[k][i] = 0; }
+                    let stats = { grandTotal:0, grandCount:0, students:[], matrix, gradeTotals:{1:0,2:0,3:0,4:0,5:0,6:0} };
+                    students.value.forEach(s => {
+                        let matched = ''; const grade = getGrade(s.class);
+                        if (s.status.includes('中低')) matched = '中低收入戶'; else if (s.status.includes('導師')) matched = '導師認定';
+                        if(matched) { 
+                            stats.grandTotal+=200; stats.grandCount++; stats.students.push({...s, khType:matched});
+                            matrix[matched][grade] = (matrix[matched][grade] || 0) + 1; matrix[matched].total++; matrix[matched].amount += 200; stats.gradeTotals[grade]++;
+                        }
+                    });
+                    return stats;
+                });
+
+                const pivotData = computed(() => {
+                    const map = {}; standardCategories.forEach(c => map[c] = { category: c, counts: {}, total: 0 });
+                    const others = {};
+                    students.value.forEach(s => {
+                        if (!s.status) return;
+                        if (standardCategories.includes(s.status)) { map[s.status].counts[s.class] = (map[s.status].counts[s.class]||0)+1; map[s.status].total++; } 
+                        else { if (!others[s.status]) others[s.status] = { category: s.status, counts: {}, total: 0 }; others[s.status].counts[s.class] = (others[s.status].counts[s.class]||0)+1; others[s.status].total++; }
+                    });
+                    return [...Object.values(map), ...Object.values(others).sort((a,b)=>b.total-a.total)];
+                });
+
+                const overallStats = computed(() => ({ totalMoney: moeStats.value.grandTotal + khBookStats.value.grandTotal + notebookStats.value.grandTotal }));
                 const deleteStudent = (id) => students.value = students.value.filter(s=>s.id!==id);
 
                 const nextTickWindowPrint = () => nextTick(() => window.print());
@@ -337,7 +527,7 @@
                     uniqueClasses, sortedClasses, getStudentsByClass, 
                     totalStudents, genderTotal, overallStats, dualStatusStats, 
                     moeStats, khBookStats, notebookStats, pivotData, indigenousStats,
-                    formatMoney, filterByGrade, triggerImport, handleFile, fixData, filteredList, deleteStudent, searchQuery, nextTickWindowPrint
+                    formatMoney, filterByGrade, triggerImport, handleFile, fixData, filteredList, deleteStudent, searchQuery, nextTickWindowPrint, bookFees
                 };
             }
         }).mount('#app');
