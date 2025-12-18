@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>114學年度 身分減免決策支援系統 v9.1 (完整版)</title>
+    <title>114學年度 身分減免決策支援系統 v9.2 (修正版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -61,7 +61,7 @@
                 <div class="flex justify-between items-center h-16">
                     <div class="flex items-center gap-3">
                         <div class="bg-blue-600 text-white p-2 rounded-lg font-bold text-xl">減免</div>
-                        <h1 class="text-xl font-bold text-slate-800">決策支援系統 <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full">v9.1 完整修正版</span></h1>
+                        <h1 class="text-xl font-bold text-slate-800">決策支援系統 <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full">v9.2 修正版</span></h1>
                     </div>
                     <div class="flex items-center gap-3">
                         <button @click="fixData" class="btn btn-outline text-xs bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100">🛠️ 校正資料</button>
@@ -101,8 +101,8 @@
                     <div class="card space-y-4">
                         <h3 class="font-bold text-lg border-b pb-2">1. 變數設定 (自動帶入內文)</h3>
                         <div><label class="block text-xs font-bold text-slate-500 mb-1">學年度</label><input v-model="formConfig.year" class="w-full border p-2 rounded"></div>
-                        <div><label class="block text-xs font-bold text-slate-500 mb-1">截止日期 ({{ '{{deadline}}' }})</label><input v-model="formConfig.deadline" class="w-full border p-2 rounded"></div>
-                        <div><label class="block text-xs font-bold text-slate-500 mb-1">註冊組分機 ({{ '{{ext}}' }})</label><input v-model="formConfig.ext" class="w-full border p-2 rounded"></div>
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">截止日期 ( &#123;&#123;deadline&#125;&#125; )</label><input v-model="formConfig.deadline" class="w-full border p-2 rounded"></div>
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">註冊組分機 ( &#123;&#123;ext&#125;&#125; )</label><input v-model="formConfig.ext" class="w-full border p-2 rounded"></div>
                     </div>
 
                     <div class="card space-y-4">
@@ -114,7 +114,7 @@
                     <div class="card md:col-span-2 space-y-2">
                         <div class="flex justify-between items-end">
                             <h3 class="font-bold text-lg">3. 填報說明內容</h3>
-                            <span class="text-xs text-slate-500">可用 {{ '{{deadline}}' }} 和 {{ '{{ext}}' }} 代表上方設定的日期與分機</span>
+                            <span class="text-xs text-slate-500">可用 &#123;&#123;deadline&#125;&#125; 和 &#123;&#123;ext&#125;&#125; 代表上方設定的日期與分機</span>
                         </div>
                         <textarea v-model="formConfig.instructionsRaw" rows="6" class="w-full border border-slate-300 rounded p-3 text-sm focus:ring-2 focus:ring-blue-500 font-mono leading-relaxed" placeholder="請輸入說明，每一行會自動變成一個項目符號..."></textarea>
                         <div class="bg-slate-50 p-3 rounded text-xs text-slate-600">
