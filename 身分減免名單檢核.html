@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>114學年度 身分減免決策支援系統 v9.2 (修正版)</title>
+    <title>114學年度 身分減免決策支援系統 v9.6</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -40,7 +40,7 @@
             .page-break { page-break-after: always; }
             /* 一般表格 */
             .print-table { width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 10pt; font-family: "Noto Serif TC", serif; margin-bottom: 10px; }
-            .print-table th, .print-table td { border: 1px solid black; padding: 4px; text-align: center; vertical-align: middle; }
+            .print-table th, .print-table td { border: 1px solid black; padding: 6px; text-align: center; vertical-align: middle; }
             
             /* 參考對照表 (字體較小) */
             .ref-table { width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 8pt; font-family: "Noto Serif TC", serif; margin-bottom: 10px; }
@@ -61,7 +61,7 @@
                 <div class="flex justify-between items-center h-16">
                     <div class="flex items-center gap-3">
                         <div class="bg-blue-600 text-white p-2 rounded-lg font-bold text-xl">減免</div>
-                        <h1 class="text-xl font-bold text-slate-800">決策支援系統 <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full">v9.2 修正版</span></h1>
+                        <h1 class="text-xl font-bold text-slate-800">決策支援系統 <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full">v9.6 新學期版</span></h1>
                     </div>
                     <div class="flex items-center gap-3">
                         <button @click="fixData" class="btn btn-outline text-xs bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100">🛠️ 校正資料</button>
@@ -126,12 +126,13 @@
                     </div>
 
                     <div class="card md:col-span-2 space-y-2">
-                        <h3 class="font-bold text-lg">4. 學生名單表格標題設定</h3>
-                        <div class="grid grid-cols-4 gap-4">
-                            <div><label class="text-xs font-bold text-slate-500">第一欄</label><input v-model="formConfig.col1" class="w-full border p-2 rounded text-center"></div>
-                            <div><label class="text-xs font-bold text-slate-500">第二欄</label><input v-model="formConfig.col2" class="w-full border p-2 rounded text-center"></div>
-                            <div><label class="text-xs font-bold text-slate-500">第三欄</label><input v-model="formConfig.col3" class="w-full border p-2 rounded text-center"></div>
-                            <div><label class="text-xs font-bold text-slate-500">第四欄 (備註欄)</label><textarea v-model="formConfig.col4Raw" rows="4" class="w-full border p-2 rounded text-sm"></textarea><p class="text-xs text-slate-400 mt-1">*此欄位支援換行，輸入的文字會直接顯示在列印表頭。</p></div>
+                        <h3 class="font-bold text-lg">4. 學生名單表格標題設定 (共5欄)</h3>
+                        <div class="grid grid-cols-5 gap-4">
+                            <div><label class="text-xs font-bold text-slate-500">欄1 (座號)</label><input v-model="formConfig.col1" class="w-full border p-2 rounded text-center text-xs"></div>
+                            <div><label class="text-xs font-bold text-slate-500">欄2 (姓名)</label><input v-model="formConfig.col2" class="w-full border p-2 rounded text-center text-xs"></div>
+                            <div><label class="text-xs font-bold text-slate-500">欄3 (身分)</label><input v-model="formConfig.col3" class="w-full border p-2 rounded text-center text-xs"></div>
+                            <div class="col-span-1"><label class="text-xs font-bold text-slate-500">欄4 (備註)</label><textarea v-model="formConfig.col4Raw" rows="3" class="w-full border p-2 rounded text-xs bg-slate-50"></textarea></div>
+                            <div class="col-span-1"><label class="text-xs font-bold text-slate-500">欄5 (兄弟姊妹)</label><textarea v-model="formConfig.col5Raw" rows="3" class="w-full border p-2 rounded text-xs bg-slate-50"></textarea></div>
                         </div>
                     </div>
                 </div>
@@ -236,17 +237,19 @@
                     <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 2px; margin-top: 10px;"><div style="font-weight:bold; font-size:12pt;">表2--{{ cls }} 班級確認名單</div><div style="font-size:9pt;">列印日期：{{ new Date().toLocaleDateString() }}</div></div>
                     <table class="print-table">
                         <thead><tr>
-                            <th width="10%">{{ formConfig.col1 }}</th>
-                            <th width="15%">{{ formConfig.col2 }}</th>
-                            <th width="25%">{{ formConfig.col3 }}</th>
-                            <th width="50%" style="text-align:left; vertical-align:top; line-height:1.3; font-weight:bold; white-space: pre-line;">{{ formConfig.col4Raw }}</th>
+                            <th width="8%">{{ formConfig.col1 }}</th>
+                            <th width="12%">{{ formConfig.col2 }}</th>
+                            <th width="20%">{{ formConfig.col3 }}</th>
+                            <th width="30%" style="text-align:left; vertical-align:top; line-height:1.3; font-weight:bold; white-space: pre-line;">{{ formConfig.col4Raw }}</th>
+                            <th width="30%" style="text-align:left; vertical-align:top; line-height:1.3; font-weight:bold; white-space: pre-line;">{{ formConfig.col5Raw }}</th>
                         </tr></thead>
                         <tbody>
                             <tr v-for="s in getStudentsByClass(cls)" :key="s.id">
                                 <td>{{ s.seat }}</td><td class="font-bold">{{ s.name }}</td><td>{{ s.status }}</td>
-                                <td style="text-align:left; font-size:9pt; height: 30px; vertical-align: top;"><span v-if="s.note || s.mergedDetails" class="text-xs text-gray-500 block mb-1">{{ s.note }} {{ s.mergedDetails.replace(/\[|\]/g,'') }}</span></td>
+                                <td style="text-align:left; font-size:9pt; vertical-align: top;"><span v-if="s.note || s.mergedDetails" class="text-xs text-gray-500 block mb-1">{{ s.note }} {{ s.mergedDetails.replace(/\[|\]/g,'') }}</span></td>
+                                <td style="text-align:left; font-size:9pt; vertical-align: top;"><span v-if="s.siblings" class="text-xs text-gray-500 block">{{ s.siblings }}</span></td>
                             </tr>
-                            <tr v-for="n in Math.max(0, 5 - getStudentsByClass(cls).length)" :key="'empty'+n"><td style="height:35px"></td><td></td><td></td><td></td></tr>
+                            <tr v-for="n in Math.max(0, 5 - getStudentsByClass(cls).length)" :key="'empty'+n"><td style="height:35px"></td><td></td><td></td><td></td><td></td></tr>
                         </tbody>
                     </table>
                     <div v-if="formConfig.showFooter" class="print-footer text-right px-10" style="margin-top: 20px;"><span style="font-size: 12pt; font-weight: bold;">導師簽名：________________________</span></div>
@@ -278,10 +281,10 @@
                 const printMode = ref('');
                 const searchQuery = ref('');
 
-                // --- V9.0 設定邏輯 ---
+                // --- V9.5 設定邏輯 ---
                 const defaultConfig = {
                     year: '114', 
-                    deadline: '9/5(五)中午前', 
+                    deadline: '3/2(一)中午前', 
                     ext: '112',
                     instructionsRaw: `請於 {{deadline}} 交回此表至註冊組 (分機{{ext}}) ； 不論有無學生申請，都需要導師簽名，再交回註冊組。
 若家長表示學生具有減免身份，卻不在下列表2中，請家長提供減免文件正本，交予註冊組掃描留存；並請導師於備註欄註明該生是否申請午餐減免、同校兄弟姊妹班級與姓名。
@@ -289,8 +292,9 @@
 若表單內需要刪除或新增導師認定的減免學生名單，請導師直接增列、刪除，並於備註欄註明是否申請午餐減免、同校兄弟姊妹的班級與姓名，以利出納組彙整相關費用。`,
                     col1: '座號', col2: '姓名', col3: '目前系統身分',
                     col4Raw: `備註
-1. 請列出同校弟妹的班級姓名
-2. 導師認定__註明是否同時申請午餐減免`,
+(系統帶入)`,
+                    col5Raw: `兄弟姊妹
+(列出同校弟妹的班級姓名)`,
                     showRefTable: true,
                     showFooter: true
                 };
@@ -298,17 +302,15 @@
                 const formConfig = ref({ ...defaultConfig });
                 const resetConfig = () => { formConfig.value = { ...defaultConfig }; };
 
-                // 計算屬性：自動替換變數並切割行
                 const parsedInstructions = computed(() => {
                     let text = formConfig.value.instructionsRaw || "";
                     text = text.replace(/{{deadline}}/g, formConfig.value.deadline).replace(/{{ext}}/g, formConfig.value.ext);
                     return text.split('\n').filter(line => line.trim() !== '');
                 });
 
-                // 對照表資料 (固定)
                 const refTableData = [
-                    { id: '1.低收、2.中低收(社會局通過)', item: '全免', note: '114/08/04前由社會局比對系統自動匯入。請導師填寫同校弟妹班級姓名' },
-                    { id: '3.單親子女補助(社會局通過)', item: '午餐費', note: '' },
+                    { id: '1.低收、2.中低收(社會局通過)', item: '全免', note: '由社會局比對系統檢核，免附證明。請導師填寫同校弟妹班級姓名。' },
+                    { id: '3.單親子女補助(社會局通過)', item: '午餐費', note: '由社會局比對系統檢核，免附證明。請導師填寫同校弟妹班級姓名。' },
                     { id: '4.身障生活補助-學生(社會局通過)', item: '午餐費、書籍費', note: '社會局比對系統自動匯入' },
                     { id: '5.身障生活補助-家長(社會局通過)', item: '午餐費、書籍費', note: '家長提供身分證字號由註冊組比對' },
                     { id: '6.一般身障-學生', item: '書籍費', note: '特教組提供名單；導師校務系統註記' },
@@ -323,16 +325,14 @@
                 onMounted(() => {
                     const savedData = localStorage.getItem('subsidy_v83_data');
                     if (savedData) { const data = JSON.parse(savedData); students.value = data.students || []; bookFees.value = data.fees || bookFees.value; }
-                    const savedConfig = localStorage.getItem('subsidy_config_v9');
+                    const savedConfig = localStorage.getItem('subsidy_config_v9_5');
                     if (savedConfig) { formConfig.value = { ...defaultConfig, ...JSON.parse(savedConfig) }; }
                 });
 
-                // 自動儲存
                 watch(students, () => localStorage.setItem('subsidy_v83_data', JSON.stringify({ students: students.value, fees: bookFees.value })), { deep: true });
                 watch(bookFees, () => localStorage.setItem('subsidy_v83_data', JSON.stringify({ students: students.value, fees: bookFees.value })), { deep: true });
-                watch(formConfig, () => localStorage.setItem('subsidy_config_v9', JSON.stringify(formConfig.value)), { deep: true });
+                watch(formConfig, () => localStorage.setItem('subsidy_config_v9_5', JSON.stringify(formConfig.value)), { deep: true });
                 
-                // --- 核心邏輯 (完整版) ---
                 const triggerImport = () => document.getElementById('fileInput').click();
                 const handleFile = (e) => { 
                     const file = e.target.files[0]; if (!file) return;
@@ -365,11 +365,13 @@
                                     const id = r['身分證號'].trim();
                                     if(id.length === 10) { const c = id.charAt(1); if(c==='1') gender='男'; else if(c==='2') gender='女'; }
                                 }
+                                let siblings = r['兄弟姊妹'] || r['同校弟妹'] || ''; 
                                 return {
                                     id: `${name}-${i}-${Date.now()}`,
                                     class: r['班級'] ? String(r['班級']).trim() : '', seat: r['座號'] || 0,
                                     name: r['姓名'] || '', status: mapStatusToStandard(statusRaw), rawStatus: statusRaw,
-                                    mergedDetails: extraInfo, note: r['手動備註'] || '', idNumber: r['身分證號'] || '', gender: gender || '未詳'
+                                    mergedDetails: extraInfo, note: r['手動備註'] || '', idNumber: r['身分證號'] || '', gender: gender || '未詳',
+                                    siblings: siblings 
                                 };
                              }).filter(s=>s.name));
                          });
@@ -520,6 +522,11 @@
                 const nextTickWindowPrint = () => nextTick(() => window.print());
                 const printAllForms = () => { printMode.value = 'forms'; nextTickWindowPrint(); };
                 const printAnalysis = () => { printMode.value = 'analysis'; nextTickWindowPrint(); };
+                const printMoeList = () => { printMode.value = 'moeList'; nextTickWindowPrint(); };
+                const printKhBookList = () => { printMode.value = 'khBookList'; nextTickWindowPrint(); };
+                const printNotebookList = () => { printMode.value = 'notebookList'; nextTickWindowPrint(); };
+                const printIndigenousList = () => { printMode.value = 'indigenousList'; nextTickWindowPrint(); };
+                const getProofStatusText = (s) => ["1. 低收(社)", "2. 中低收(社)", "3. 單親(社)", "4. 身障(學)(社)", "5. 身障(家)(社)", "10. 原民清寒(原民會)"].includes(s.status) ? "" : (((s.rawStatus||"")+(s.mergedDetails||"")+(s.note||"")).includes("已建檔") ? "(已繳)" : (["6. 身障(學)", "7. 身障(家)", "8. 重身障(學)", "9. 原民生", "11. 功勳"].includes(s.status) ? "(請繳交證明)" : ""));
 
                 return { 
                     currentTab, tabs, students, formConfig, refTableData, 
@@ -527,7 +534,8 @@
                     uniqueClasses, sortedClasses, getStudentsByClass, 
                     totalStudents, genderTotal, overallStats, dualStatusStats, 
                     moeStats, khBookStats, notebookStats, pivotData, indigenousStats,
-                    formatMoney, filterByGrade, triggerImport, handleFile, fixData, filteredList, deleteStudent, searchQuery, nextTickWindowPrint, bookFees
+                    formatMoney, filterByGrade, triggerImport, handleFile, fixData, filteredList, deleteStudent, searchQuery, nextTickWindowPrint, bookFees, getProofStatusText,
+                    printMoeList, printKhBookList, printNotebookList, printIndigenousList, filterGrade
                 };
             }
         }).mount('#app');
