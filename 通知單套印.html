@@ -2,155 +2,173 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>教務處簽名通知單產生器</title>
+    <title>教務處通知單產生器 V3 - 自訂排版版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
-        
-        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f3f4f6; }
-        
-        /* 模擬圖片中的空心字/藝術字效果 */
-        .wordart-title {
-            font-size: 2.2rem;
-            font-weight: 900;
-            color: black;
-            -webkit-text-stroke: 1px black;
-            text-shadow: 2px 2px 0px #ccc;
-            letter-spacing: 2px;
+        body { font-family: 'Noto Sans TC', sans-serif; }
+
+        /* A4 定義 */
+        .page {
+            width: 210mm;
+            min-height: 296mm;
+            padding: 0;
+            margin: 0 auto;
+            background: white;
+            display: grid;
+            align-content: start;
+            page-break-after: always;
         }
 
-        .notice-box {
-            width: 100%;
-            height: 14cm; /* 調整高度以符合一頁印幾份 */
-            border: 1px solid black;
-            padding: 20px;
-            position: relative;
-            background: white;
+        .notice-item {
+            border: 0.5px solid #000;
+            box-sizing: border-box;
+            padding: 10px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
+
+        .sig-table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        .sig-table td { border: 1px solid black; padding: 2px; height: 30px; font-size: 12px; }
+
+        .art-title { font-weight: 900; -webkit-text-stroke: 1px black; color: white; text-shadow: 1.5px 1.5px 0 #000; text-align: center; line-height: 1.2; }
 
         @media print {
             .no-print { display: none !important; }
-            body { background: white; padding: 0; }
-            .print-container { 
-                display: grid !important; 
-                grid-template-columns: 1fr 1fr; /* 一頁兩欄 */
-                gap: 0;
-            }
-            .notice-box { 
-                border: 0.5px solid #000; 
-                height: 14.8cm; /* A4 一半的高度 */
-                page-break-inside: avoid;
-            }
+            body { background: white; margin: 0; padding: 0; }
+            .page { border: none; box-shadow: none; margin: 0; width: 210mm; }
         }
     </style>
 </head>
-<body class="p-4">
+<body class="bg-gray-200">
 
-<div class="max-w-5xl mx-auto no-print bg-white p-6 rounded-xl shadow-lg mb-8">
-    <h1 class="text-2xl font-bold mb-4 text-blue-800">🖨️ 教務處通知單自動化系統</h1>
+<div class="no-print p-6 max-w-5xl mx-auto bg-white shadow-xl rounded-lg my-5">
+    <h1 class="text-2xl font-bold text-blue-800 mb-4 border-b pb-2">🖨️ 教務處通知單智慧系統 V3</h1>
     
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div class="space-y-4">
-            <div>
-                <label class="block font-bold mb-1">1. 上傳 Excel 檔案</label>
-                <input type="file" id="excelFile" accept=".xlsx, .xls" class="block w-full text-sm border border-gray-300 rounded-lg cursor-pointer bg-gray-50 p-2">
-                <p class="text-xs text-gray-500 mt-1">欄位請包含：年級、班級、座號、姓名</p>
-            </div>
-            <div>
-                <label class="block font-bold mb-1">2. 自訂通知單內容</label>
-                <input id="customTitle" type="text" value="教務處簽名通知單" class="w-full border p-2 rounded mb-2 font-bold">
-                <textarea id="customDesc" class="w-full border p-2 rounded h-24 text-sm">教務處有相關申請資料需要學生本人簽名，請學生拿本通知單到教務處簽名。</textarea>
+            <div class="bg-blue-50 p-3 rounded">
+                <label class="block font-bold mb-1">1. 基本設定</label>
+                <select id="templateType" class="w-full p-2 border rounded mb-2" onchange="processData()">
+                    <option value="award">版型 B：領獎獎學金</option>
+                    <option value="signature">版型 A：簡單簽名單</option>
+                </select>
+                <input type="file" id="excelFile" accept=".xlsx, .xls" class="w-full text-sm">
             </div>
         </div>
-        
-        <div class="bg-blue-50 p-4 rounded-lg">
-            <h3 class="font-bold mb-2 text-blue-700">智慧辨識說明</h3>
-            <ul class="text-sm space-y-2 text-gray-700">
-                <li>✅ <strong>班級自動修正：</strong> 如果年級是 5，班級寫 501，系統會自動轉換為 「5年 1班」。</li>
-                <li>✅ <strong>自動排版：</strong> 預設為 A4 一頁兩份（左右併排）。</li>
-                <li>✅ <strong>列印優化：</strong> 按下下方按鈕後，會自動隱藏設定區。</li>
-            </ul>
-            <button onclick="window.print()" class="mt-4 w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700">產生並列印通知單</button>
+
+        <div class="bg-purple-50 p-3 rounded text-sm">
+            <label class="block font-bold mb-1 text-purple-800">2. 排版自訂 (橫 x 直)</label>
+            <div class="flex gap-2 items-center mb-2">
+                <span>每列</span>
+                <input type="number" id="gridCols" value="2" min="1" max="4" class="w-16 p-1 border rounded text-center" onchange="processData()">
+                <span>份 ✕ 每頁</span>
+                <input type="number" id="gridRows" value="4" min="1" max="10" class="w-16 p-1 border rounded text-center" onchange="processData()">
+                <span>層</span>
+            </div>
+            <p class="text-xs text-purple-600">※ 常用建議：2x4, 2x6, 3x6</p>
+            <div class="mt-2">
+                <label>全域字體大小:</label>
+                <input type="range" id="fontSizeBase" min="10" max="24" value="14" class="w-full" oninput="processData()">
+            </div>
+        </div>
+
+        <div class="bg-orange-50 p-3 rounded">
+            <label class="block font-bold mb-1">3. 內容與列印</label>
+            <textarea id="customContent" class="w-full border p-2 h-20 text-xs mb-2" oninput="processData()">時間：於下週一第二節下課
+地點：教務處註冊組
+注意事項：請務必攜帶聯絡簿貼妥。</textarea>
+            <button onclick="window.print()" class="w-full bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700">開始列印</button>
         </div>
     </div>
 </div>
 
-<div id="printArea" class="print-container grid grid-cols-1 md:grid-cols-2 w-full max-w-[210mm] mx-auto">
-    <div class="p-10 text-center text-gray-400 no-print">請先上傳 Excel 檔案...</div>
+<div id="printArea">
+    <div class="text-center py-20 text-gray-400 no-print">請上傳 Excel 以開始製作...</div>
 </div>
 
 <script>
-    const fileInput = document.getElementById('excelFile');
-    const printArea = document.getElementById('printArea');
+    let excelData = [];
 
-    fileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
+    // 智慧辨識班級
+    function parseClass(grade, cls) {
+        let g = grade?.toString() || "";
+        let c = cls?.toString() || "";
+        if (c.length >= 3 && c.startsWith(g)) {
+            return parseInt(c.substring(g.length));
+        }
+        return c;
+    }
+
+    document.getElementById('excelFile').addEventListener('change', function(e) {
         const reader = new FileReader();
-
-        reader.onload = (evt) => {
-            const data = evt.target.result;
-            const workbook = XLSX.read(data, { type: 'binary' });
-            const sheetName = workbook.SheetNames[0];
-            const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-            
-            renderNotices(rows);
+        reader.onload = function(event) {
+            const data = new Uint8Array(event.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            excelData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+            processData();
         };
-        reader.readAsBinaryString(file);
+        reader.readAsArrayBuffer(e.target.files[0]);
     });
 
-    function smartParseClass(grade, cls) {
-        let gStr = grade.toString();
-        let cStr = cls.toString();
-        // 如果班級是 501 且 年級是 5，則去掉開頭的 5
-        if (cStr.length >= 3 && cStr.startsWith(gStr)) {
-            return parseInt(cStr.substring(gStr.length));
-        }
-        return cls;
-    }
-
-    function renderNotices(data) {
-        const title = document.getElementById('customTitle').value;
-        const desc = document.getElementById('customDesc').value;
-        const today = new Date().toLocaleDateString();
-
-        printArea.innerHTML = data.map(student => {
-            // 自動對應 Excel 欄位名稱 (支援多種常見命名)
-            const grade = student['年級'] || '';
-            const rawClass = student['班級'] || '';
-            const seat = student['座號'] || '';
-            const name = student['姓名'] || '';
+    function processData() {
+        if (excelData.length === 0) return;
+        
+        const type = document.getElementById('templateType').value;
+        const cols = parseInt(document.getElementById('gridCols').value);
+        const rows = parseInt(document.getElementById('gridRows').value);
+        const fSize = document.getElementById('fontSizeBase').value;
+        const customText = document.getElementById('customContent').value.replace(/\n/g, '<br>');
+        const itemsPerPage = cols * rows;
+        
+        let html = '';
+        
+        // 分頁處理
+        for (let i = 0; i < excelData.length; i += itemsPerPage) {
+            html += `<div class="page" style="grid-template-columns: repeat(${cols}, 1fr); grid-template-rows: repeat(${rows}, 1fr); font-size: ${fSize}px;">`;
             
-            const finalClass = smartParseClass(grade, rawClass);
+            const pageItems = excelData.slice(i, i + itemsPerPage);
+            pageItems.forEach(student => {
+                const g = student['年級'] || '';
+                const rawC = student['班級'] || '';
+                const s = student['座號'] || '';
+                const name = student['姓名'] || '';
+                const c = parseClass(g, rawC);
+                const classCode = `${g}${c.toString().padStart(2,'0')}-${s}`;
 
-            return `
-                <div class="notice-box">
-                    <div class="text-center mb-6">
-                        <h1 class="wordart-title">${title}</h1>
-                    </div>
-                    
-                    <div class="text-xl space-y-3 mb-6">
-                        <p>班級：${grade} 年 ${finalClass} 班</p>
-                        <p>座號：${seat}</p>
-                        <p>姓名：${name}</p>
-                    </div>
-
-                    <div class="text-lg leading-relaxed mb-6">
-                        <p class="font-bold">簽名時間：<span class="font-normal text-base">收到通知單後的下課或放學時間。</span></p>
-                        <p class="font-bold">說明：<span class="font-normal text-base">${desc}</span></p>
-                    </div>
-
-                    <div class="absolute bottom-10 left-0 right-0 text-center">
-                        <p class="text-xl">發放日期：<span class="border-b border-black inline-block w-48 text-center">${today}</span></p>
-                    </div>
-                </div>
-            `;
-        }).join('');
+                if (type === 'award') {
+                    html += `
+                    <div class="notice-item">
+                        <div class="font-bold border-b border-black pb-1">領獎人：${classCode} ${name} <span class="text-[0.6em] font-normal float-right">【貼於聯絡簿】</span></div>
+                        <div class="flex-grow py-1 leading-tight text-[0.9em]">
+                            ${customText}
+                        </div>
+                        <table class="sig-table">
+                            <tr><td width="60%">家長簽章</td><td></td></tr>
+                            <tr><td>學生領取簽名</td><td></td></tr>
+                        </table>
+                    </div>`;
+                } else {
+                    html += `
+                    <div class="notice-item text-center">
+                        <div class="art-title" style="font-size: 1.5em;">通知單</div>
+                        <div class="text-left mt-2 space-y-1">
+                            <p>班級：${g}年${c}班</p>
+                            <p>座號：${s} 姓名：${name}</p>
+                        </div>
+                        <div class="text-[0.8em] mt-2 border-t pt-1">
+                            請攜帶本單至教務處辦理。
+                        </div>
+                    </div>`;
+                }
+            });
+            html += `</div>`;
+        }
+        document.getElementById('printArea').innerHTML = html;
     }
-
-    // 監聽文字變更同步更新 (若已有資料)
-    document.getElementById('customTitle').oninput = () => { if(fileInput.files.length) fileInput.dispatchEvent(new Event('change')); };
-    document.getElementById('customDesc').oninput = () => { if(fileInput.files.length) fileInput.dispatchEvent(new Event('change')); };
 </script>
 
 </body>
