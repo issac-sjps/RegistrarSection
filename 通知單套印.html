@@ -2,17 +2,14 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>智慧通知單產生器 V6.1</title>
+    <title>智慧通知單產生器 V6.2 - 資料核對版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Sans TC', sans-serif; }
 
-        @page {
-            size: A4;
-            margin: 0.5cm;
-        }
+        @page { size: A4; margin: 0.5cm; }
 
         .page {
             width: 200mm;
@@ -46,6 +43,10 @@
         .sig-table td { border: 1px solid black; padding: 4px; height: 32px; font-size: 0.85rem; line-height: 1.2; }
         .bg-label { background-color: #fcfcfc; text-align: center; font-weight: bold; width: 60%; }
 
+        /* 彈窗樣式 */
+        #dataModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; }
+        .modal-content { background: white; width: 90%; max-width: 800px; max-height: 80vh; overflow-y: auto; padding: 20px; border-radius: 12px; }
+
         @media print {
             .no-print { display: none !important; }
             body { background: white; margin: 0; padding: 0; }
@@ -66,6 +67,7 @@
                     <option value="award">版型 B：教務處領獎學金</option>
                     <option value="signature">版型 A：教務處通知</option>
                 </select>
+                <button onclick="toggleModal(true)" id="viewDataBtn" class="hidden w-full bg-gray-600 text-white py-1 rounded text-sm hover:bg-gray-700">🔍 查看上傳總表</button>
             </div>
 
             <div class="flex-1 min-w-[200px] space-y-3">
@@ -74,7 +76,6 @@
                     <input type="number" id="gridCols" value="2" class="w-14 p-2 border rounded text-center save-data">
                     <span>x</span>
                     <input type="number" id="gridRows" value="4" class="w-14 p-2 border rounded text-center save-data">
-                    <span class="text-xs text-gray-400">0.5cm 邊距</span>
                 </div>
                 <div class="text-xs">
                     字體大小: <input type="range" id="fontSizeBase" min="10" max="26" value="14" class="w-full mt-2 save-data">
@@ -82,29 +83,54 @@
             </div>
 
             <div class="flex-[2] min-w-[300px] space-y-2">
-                <h3 class="font-bold text-orange-800 border-l-4 border-orange-800 pl-2">3. 內容編輯區</h3>
+                <h3 class="font-bold text-orange-800 border-l-4 border-orange-800 pl-2">3. 內容編輯</h3>
                 <input id="customTitle" type="text" class="w-full border p-2 rounded font-bold save-data">
-                <textarea id="customContent" class="w-full border p-2 h-28 text-sm save-data"></textarea>
+                <textarea id="customContent" class="w-full border p-2 h-24 text-sm save-data"></textarea>
             </div>
 
             <div class="flex flex-col gap-2 pt-8">
-                <button onclick="processData()" class="bg-emerald-600 text-white py-2 px-6 rounded-md font-bold hover:bg-emerald-700 transition-all">🔄 產生預覽</button>
-                <button onclick="window.print()" class="bg-blue-600 text-white py-2 px-6 rounded-md font-bold hover:bg-blue-700 shadow-md">🖨️ 開始列印</button>
-                <span id="saveStatus" class="text-center text-[10px] text-gray-400">已啟用自動存檔</span>
+                <button onclick="processData()" class="bg-emerald-600 text-white py-2 px-6 rounded-md font-bold hover:bg-emerald-700">🔄 產生預覽</button>
+                <button onclick="window.print()" class="bg-blue-600 text-white py-2 px-6 rounded-md font-bold hover:bg-blue-700">🖨️ 開始列印</button>
+                <span id="saveStatus" class="text-center text-[10px] text-gray-400">自動儲存已啟動</span>
             </div>
         </div>
     </div>
 </div>
 
+<div id="dataModal" onclick="toggleModal(false)">
+    <div class="modal-content shadow-2xl" onclick="event.stopPropagation()">
+        <div class="flex justify-between items-center mb-4 border-b pb-2">
+            <h2 class="text-xl font-bold text-blue-800">📊 已上傳資料總表 (核對用)</h2>
+            <button onclick="toggleModal(false)" class="text-gray-500 hover:text-red-500 text-2xl">×</button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left border-collapse">
+                <thead class="bg-gray-100 sticky top-0">
+                    <tr>
+                        <th class="border p-2">流水號</th>
+                        <th class="border p-2">年級</th>
+                        <th class="border p-2">原班級</th>
+                        <th class="border p-2">轉換後班級</th>
+                        <th class="border p-2">座號</th>
+                        <th class="border p-2">姓名</th>
+                    </tr>
+                </thead>
+                <tbody id="modalTableBody">
+                    </tbody>
+            </table>
+        </div>
+        <p class="mt-4 text-xs text-gray-500">* 註：轉換後班級會自動處理 501 -> 1 的邏輯。</p>
+    </div>
+</div>
+
 <div id="printArea" class="py-4">
-    <div class="text-center py-40 text-gray-400 no-print italic">上傳 Excel 後點擊產生預覽...</div>
+    <div class="text-center py-40 text-gray-400 no-print italic">請上傳 Excel 並點擊產生預覽...</div>
 </div>
 
 <script>
     let excelData = [];
-    const STORAGE_KEY = 'notice_maker_v6_settings';
+    const STORAGE_KEY = 'notice_maker_v6_2_settings';
 
-    // 定義兩套預設文字
     const defaultTexts = {
         award: {
             title: "教務處領獎學金",
@@ -140,11 +166,10 @@
             document.getElementById('customTitle').value = s.customTitle;
             document.getElementById('customContent').value = s.customContent;
         } else {
-            switchTemplate(); // 無存檔時帶入初始預設
+            switchTemplate();
         }
     }
 
-    // 切換版型時自動帶入預設文字
     function switchTemplate() {
         const type = document.getElementById('templateType').value;
         document.getElementById('customTitle').value = defaultTexts[type].title;
@@ -152,9 +177,31 @@
         saveToLocal();
     }
 
-    document.querySelectorAll('.save-data').forEach(el => {
-        el.addEventListener('input', saveToLocal);
-    });
+    function toggleModal(show) {
+        document.getElementById('dataModal').style.display = show ? 'flex' : 'none';
+        if (show) fillModalTable();
+    }
+
+    function fillModalTable() {
+        const tbody = document.getElementById('modalTableBody');
+        tbody.innerHTML = excelData.map((row, i) => {
+            const g = row['年級'] || '-';
+            const rawC = row['班級'] || '-';
+            const parsedC = parseClass(g, rawC);
+            return `
+                <tr class="${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
+                    <td class="border p-2">${i+1}</td>
+                    <td class="border p-2 font-bold">${g}</td>
+                    <td class="border p-2 text-gray-400">${rawC}</td>
+                    <td class="border p-2 text-blue-600 font-bold">${parsedC}</td>
+                    <td class="border p-2">${row['座號'] || '-'}</td>
+                    <td class="border p-2">${row['姓名'] || '-'}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    document.querySelectorAll('.save-data').forEach(el => el.addEventListener('input', saveToLocal));
 
     document.getElementById('excelFile').addEventListener('change', function(e) {
         const reader = new FileReader();
@@ -162,7 +209,8 @@
             const data = new Uint8Array(event.target.result);
             const workbook = XLSX.read(data, {type: 'array'});
             excelData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-            alert("✅ Excel 讀取成功：共 " + excelData.length + " 位學生");
+            document.getElementById('viewDataBtn').classList.remove('hidden');
+            alert("✅ 讀取完成！共有 " + excelData.length + " 筆資料，點擊「查看上傳總表」進行核對。");
         };
         reader.readAsArrayBuffer(e.target.files[0]);
     });
@@ -188,7 +236,6 @@
         let html = '';
         for (let i = 0; i < excelData.length; i += itemsPerPage) {
             html += `<div class="page" style="grid-template-columns: repeat(${cols}, 1fr); grid-template-rows: repeat(${rows}, 1fr); font-size: ${fSize}px;">`;
-            
             const pageItems = excelData.slice(i, i + itemsPerPage);
             pageItems.forEach(student => {
                 const g = student['年級'] || '';
@@ -206,9 +253,7 @@
                             領獎人：${classCode} ${name}
                             <span class="float-right font-normal text-gray-500 text-[0.7em]">【請協助貼於聯絡簿上】</span>
                         </div>
-                        <div class="flex-grow py-1 leading-tight text-[0.85em]">
-                            ${content}
-                        </div>
+                        <div class="flex-grow py-1 leading-tight text-[0.85em]">${content}</div>
                         <table class="sig-table">
                             <tr><td class="bg-label">事前家長簽章</td><td></td></tr>
                             <tr><td class="bg-label">學生確認錢無誤後簽章</td><td></td></tr>
@@ -222,13 +267,10 @@
                         <div class="border-y border-black py-2 my-2 font-bold text-center text-[1.2em]">
                             ${g} 年 ${c} 班  ${s} 號  ${name}
                         </div>
-                        <div class="flex-grow pt-2 leading-relaxed text-[1em]">
-                            ${content}
-                        </div>
+                        <div class="flex-grow pt-2 leading-relaxed text-[1em]">${content}</div>
                     </div>`;
                 }
             });
-
             for(let j=0; j < (itemsPerPage - pageItems.length); j++) {
                 html += `<div class="notice-item border-dashed border-gray-100"></div>`;
             }
