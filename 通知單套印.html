@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>智慧通知單產生器 V8 - 終極對齊版</title>
+    <title>智慧通知單產生器 V8.1 - 內容修正版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -13,7 +13,7 @@
         .page {
             width: 210mm;
             min-height: 297mm;
-            padding: 5mm; /* 回歸你要求的 0.5cm 邊界 */
+            padding: 5mm; /* 邊界 0.5cm */
             margin: 10px auto;
             background: white;
             position: relative;
@@ -38,7 +38,6 @@
         .sig-table td { border: 1px solid black; padding: 4px; height: 32px; font-size: 0.8rem; }
         .bg-label { background-color: #f9fafb; text-align: center; font-weight: bold; width: 55%; }
 
-        /* 彈窗樣式 */
         #dataModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; }
         .modal-content { background: white; width: 90%; max-width: 900px; max-height: 85vh; overflow-y: auto; padding: 25px; border-radius: 12px; }
 
@@ -77,13 +76,13 @@
         <div class="flex-grow space-y-2">
             <h3 class="font-bold text-orange-800 border-l-4 border-orange-500 pl-2">3. 內容編輯</h3>
             <input id="customTitle" type="text" class="w-full border p-1 rounded font-bold text-sm save-data">
-            <textarea id="customContent" class="w-full border p-1 h-16 text-xs save-data"></textarea>
+            <textarea id="customContent" class="w-full border p-1 h-32 text-xs save-data"></textarea>
         </div>
 
         <div class="flex flex-col gap-2 pt-6">
             <button onclick="processData()" class="bg-emerald-600 text-white py-2 px-6 rounded font-bold hover:bg-emerald-700 shadow-md">🔄 預覽刷新</button>
             <button onclick="window.print()" class="bg-blue-600 text-white py-2 px-6 rounded font-bold hover:bg-blue-700 shadow-md">🖨️ 開始列印</button>
-            <span id="saveStatus" class="text-[10px] text-gray-400 text-center">已自動儲存</span>
+            <span id="saveStatus" class="text-[10px] text-gray-400 text-center">自動儲存中</span>
         </div>
     </div>
 </div>
@@ -107,12 +106,12 @@
 
 <script>
     let excelData = [];
-    const STORAGE_KEY = 'notice_maker_v8_final';
+    const STORAGE_KEY = 'notice_maker_v8_1_final';
 
     const defaultTexts = {
         award: {
             title: "教務處領獎學金",
-            content: "時間：於明天9/17(三)第二節大下課。\n地點：教務處註冊組\n獎項：\n攜帶物品：聯絡簿、本通知單(應已貼於聯絡簿上)\n注意事項：\n1. 需有家長簽名才可以領獎學金。\n2. 請學生當場確認金額無誤後彌封訂於聯絡簿上帶回。\n3. 請家長當天確認學生是否有正確拿回獎學金給家長。學生簽領日期：__________"
+            content: "時間：於明天9/17(三)第二節大下課。\n地點：教務處註冊組\n獎項：\n攜帶物品：聯絡簿、本通知單(應已貼於聯絡簿上)\n注意事項：\n1. 需有家長簽名才可以領獎學金。\n2. 請學生當場確認金額無誤後彌封訂於聯絡簿上帶回。\n3. 請家長當天確認學生是否有正確拿回獎學金給家長。\n\n學生簽領日期：__________"
         },
         signature: {
             title: "教務處通知單",
@@ -120,7 +119,6 @@
         }
     };
 
-    // --- 本地儲存邏輯 ---
     function saveToLocal() {
         const settings = {
             templateType: document.getElementById('templateType').value,
@@ -132,7 +130,7 @@
             customContent: document.getElementById('customContent').value
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-        document.getElementById('saveStatus').innerText = '儲存於 ' + new Date().toLocaleTimeString();
+        document.getElementById('saveStatus').innerText = '已儲存 ' + new Date().toLocaleTimeString();
     }
 
     function loadFromLocal() {
@@ -148,7 +146,6 @@
         }
     }
 
-    // --- 彈窗核對邏輯 ---
     function toggleModal(show) {
         document.getElementById('dataModal').style.display = show ? 'flex' : 'none';
         if (show) fillModalTable();
@@ -170,12 +167,11 @@
         }).join('');
     }
 
-    // --- 模板切換 ---
     function switchTemplate() {
         const type = document.getElementById('templateType').value;
         document.getElementById('customTitle').value = defaultTexts[type].title;
         document.getElementById('customContent').value = defaultTexts[type].content;
-        document.getElementById('boxHeight').value = (type === 'award') ? 68 : 45;
+        document.getElementById('boxHeight').value = (type === 'award') ? 72 : 45; // 獎學金模板稍微拉高一點預留空間
         processData();
         saveToLocal();
     }
@@ -187,7 +183,7 @@
             const workbook = XLSX.read(data, {type: 'array'});
             excelData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
             document.getElementById('viewDataBtn').classList.remove('hidden');
-            alert("✅ 讀取完成！共 " + excelData.length + " 位學生");
+            alert("✅ 檔案讀取成功！共 " + excelData.length + " 位學生");
             processData();
         };
         reader.readAsArrayBuffer(e.target.files[0]);
@@ -212,7 +208,8 @@
         const boxGap = document.getElementById('boxGap').value;
         const fSize = document.getElementById('fontSizeBase').value;
         
-        const itemsPerPage = Math.floor(280 / (parseFloat(boxH) + parseFloat(boxGap))) * 2;
+        // 自動計算每頁容納數量
+        const itemsPerPage = Math.floor(285 / (parseFloat(boxH) + parseFloat(boxGap))) * 2;
         
         let html = '';
         for (let i = 0; i < excelData.length; i += itemsPerPage) {
@@ -227,7 +224,7 @@
                 const c = parseClass(g, rawC);
                 const classCode = `${g}${c.toString().padStart(2,'0')}-${s}`;
 
-                const itemStyle = `height: ${boxH}mm; width: ${boxW}%; margin-bottom: ${boxGap}mm; margin-right: ${index % 2 === 0 ? '1%' : '0'};`;
+                const itemStyle = `height: ${boxH}mm; width: ${boxW}%; margin-bottom: ${boxGap}mm; margin-right: ${index % 2 === 0 ? '1.5%' : '0'};`;
 
                 if (type === 'award') {
                     html += `<div class="notice-item" style="${itemStyle}">
@@ -235,7 +232,7 @@
                         <div class="font-bold border-b border-black pb-1 mb-1 text-[0.85em]">
                             領獎人：${classCode} ${name} <span class="float-right font-normal text-gray-500 text-[0.6em]">【貼於聯絡簿】</span>
                         </div>
-                        <div class="flex-grow py-1 leading-tight text-[0.8em]">${content}</div>
+                        <div class="flex-grow py-1 leading-tight text-[0.78em]">${content}</div>
                         <table class="sig-table">
                             <tr><td class="bg-label">事前家長簽章</td><td></td></tr>
                             <tr><td class="bg-label">學生確認錢無誤後簽章</td><td></td></tr>
