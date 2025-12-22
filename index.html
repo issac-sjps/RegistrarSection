@@ -10,6 +10,7 @@
             --accent-blue: #3498db;
             --accent-green: #27ae60;
             --accent-purple: #8e44ad;
+            --accent-orange: #e67e22; /* 新增橘色系 */
             --bg-color: #f4f7f6;
             --card-bg: #ffffff;
         }
@@ -67,6 +68,7 @@
         .card.subsidy { border-top-color: var(--accent-blue); }
         .card.learning { border-top-color: var(--accent-green); }
         .card.github { border-top-color: var(--accent-purple); }
+        .card.printing { border-top-color: var(--accent-orange); } /* 新增 */
 
         .card h2 {
             margin-top: 0;
@@ -104,6 +106,7 @@
         .subsidy .btn { background-color: var(--accent-blue); }
         .learning .btn { background-color: var(--accent-green); }
         .github .btn { background-color: var(--accent-purple); }
+        .printing .btn { background-color: var(--accent-orange); } /* 新增 */
         
         /* 次要按鈕樣式 */
         .btn.secondary {
@@ -136,6 +139,15 @@
         }
         .github .btn.secondary:hover {
             background-color: #f5eef8;
+        }
+
+        /* 通知單套印 - 次要按鈕顏色 (預留未來使用) */
+        .printing .btn.secondary {
+            color: var(--accent-orange);
+            border-color: var(--accent-orange);
+        }
+        .printing .btn.secondary:hover {
+            background-color: #fdf2e9;
         }
 
         footer {
@@ -190,6 +202,15 @@
                 </a>
                 <a href="https://issac-sjps.github.io/Home/" class="btn secondary" target="_blank">
                     GitHub Pages 首頁 (Home)
+                </a>
+            </div>
+        </div>
+
+        <div class="card printing">
+            <h2>🖨️ 通知單套印</h2>
+            <div class="link-group">
+                <a href="https://issac-sjps.github.io/RegistrarSection/%E9%80%9A%E7%9F%A5%E5%96%AE%E5%A5%97%E5%8D%B0" class="btn" target="_blank">
+                    進入通知單套印網頁
                 </a>
             </div>
         </div>
