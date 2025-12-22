@@ -2,142 +2,164 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>智慧通知單產生器 V5</title>
+    <title>智慧通知單產生器 V6 - 自動存檔版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Sans TC', sans-serif; }
 
-        /* A4 列印設定 */
+        /* A4 與列印邊距設定 */
+        @page {
+            size: A4;
+            margin: 0.5cm; /* 設定上下左右邊距為 0.5cm */
+        }
+
         .page {
-            width: 210mm;
-            min-height: 296mm;
-            margin: 10mm auto;
+            width: 200mm; /* A4(210mm) - 左右邊距(10mm) */
+            min-height: 286mm; /* A4(297mm) - 上下邊距(10mm) */
+            margin: 5mm auto;
             background: white;
             display: grid;
             page-break-after: always;
-            border: 1px solid #eee;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border: 1px solid #ddd;
         }
 
         .notice-item {
             border: 0.5px solid #000;
             box-sizing: border-box;
-            padding: 15px;
+            padding: 12px;
             display: flex;
             flex-direction: column;
-            justify-content: flex-start; /* 改為靠上對齊 */
-            gap: 10px;
+            overflow: hidden;
         }
 
-        /* 標題改為一般大粗體 */
         .main-title {
-            font-size: 2rem; /* 大字 */
-            font-weight: 900; /* 極粗 */
+            font-size: 1.8rem;
+            font-weight: 900;
             text-align: center;
-            line-height: 1.2;
             color: black;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            line-height: 1.2;
         }
 
-        /* 簽章表格 */
+        /* 簽章表格：完整三格 */
         .sig-table { width: 100%; border-collapse: collapse; margin-top: auto; }
-        .sig-table td { border: 1px solid black; padding: 6px; height: 40px; font-size: 1rem; }
+        .sig-table td { border: 1px solid black; padding: 4px; height: 32px; font-size: 0.85rem; line-height: 1.2; }
+        .bg-label { background-color: #fcfcfc; text-align: center; font-weight: bold; width: 60%; }
 
         @media print {
             .no-print { display: none !important; }
-            body { background: white; margin: 0; }
-            .page { border: none; box-shadow: none; margin: 0; width: 210mm; }
+            body { background: white; margin: 0; padding: 0; }
+            .page { border: none; box-shadow: none; margin: 0; width: 200mm; }
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-slate-100 min-h-screen">
 
-<div class="no-print p-6 bg-white border-b shadow-md sticky top-0 z-50">
+<div class="no-print p-6 bg-white border-b shadow-lg sticky top-0 z-50">
     <div class="max-w-7xl mx-auto">
-        <div class="flex flex-wrap gap-8 items-start">
+        <div class="flex flex-wrap gap-6 items-start">
             
-            <div class="flex-1 min-w-[250px] space-y-4">
-                <h3 class="font-bold text-blue-700 border-l-4 border-blue-700 pl-2">1. 資料與版型</h3>
-                <input type="file" id="excelFile" accept=".xlsx, .xls" class="w-full text-sm border p-2 rounded">
-                <select id="templateType" class="w-full p-2 border rounded font-bold bg-blue-50" onchange="processData()">
-                    <option value="award">版型 B：領獎獎學金 (含簽章表)</option>
-                    <option value="signature">版型 A：簡單通知單 (純文字)</option>
+            <div class="flex-1 min-w-[220px] space-y-3">
+                <h3 class="font-bold text-blue-800 border-l-4 border-blue-800 pl-2">1. 檔案與版型</h3>
+                <input type="file" id="excelFile" accept=".xlsx, .xls" class="w-full text-xs border p-2 rounded">
+                <select id="templateType" class="w-full p-2 border rounded font-bold bg-blue-50 save-data">
+                    <option value="award">版型 B：領獎獎學金 (三格簽章)</option>
+                    <option value="signature">版型 A：簡單通知單</option>
                 </select>
             </div>
 
-            <div class="flex-1 min-w-[200px] space-y-4">
-                <h3 class="font-bold text-purple-700 border-l-4 border-purple-700 pl-2">2. 排版設定</h3>
-                <div class="flex items-center gap-3">
-                    <div class="text-center">
-                        <span class="block text-xs text-gray-500">每列</span>
-                        <input type="number" id="gridCols" value="2" min="1" class="w-16 p-2 border rounded text-center font-bold">
-                    </div>
-                    <span class="pt-4">✕</span>
-                    <div class="text-center">
-                        <span class="block text-xs text-gray-500">每頁</span>
-                        <input type="number" id="gridRows" value="4" min="1" class="w-16 p-2 border rounded text-center font-bold">
-                    </div>
+            <div class="flex-1 min-w-[200px] space-y-3">
+                <h3 class="font-bold text-purple-800 border-l-4 border-purple-800 pl-2">2. 排版 (欄 x 列)</h3>
+                <div class="flex items-center gap-2">
+                    <input type="number" id="gridCols" value="2" class="w-14 p-2 border rounded text-center save-data">
+                    <span>x</span>
+                    <input type="number" id="gridRows" value="4" class="w-14 p-2 border rounded text-center save-data">
+                    <span class="text-xs text-gray-400">0.5cm 邊距</span>
                 </div>
                 <div class="text-xs">
-                    整體字體大小: <input type="range" id="fontSizeBase" min="12" max="28" value="16" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mt-2" oninput="processData()">
+                    字體大小: <input type="range" id="fontSizeBase" min="12" max="26" value="15" class="w-full mt-2 save-data">
                 </div>
             </div>
 
-            <div class="flex-[2] min-w-[300px] space-y-3">
-                <h3 class="font-bold text-orange-700 border-l-4 border-orange-700 pl-2">3. 自訂文字</h3>
-                <input id="customTitle" type="text" placeholder="輸入大標題" value="教務處領獎通知" class="w-full border-2 border-orange-200 p-2 rounded-md font-bold text-lg">
-                <textarea id="customContent" class="w-full border-2 border-orange-200 p-2 h-24 text-base rounded-md" placeholder="輸入說明內文...">時間：12/25(五) 第二節大下課
-地點：教務處註冊組
-說明：請攜帶本通知單與聯絡簿前來領取。</textarea>
+            <div class="flex-[2] min-w-[300px] space-y-2">
+                <h3 class="font-bold text-orange-800 border-l-4 border-orange-800 pl-2">3. 內容儲存區</h3>
+                <input id="customTitle" type="text" placeholder="輸入標題" class="w-full border p-2 rounded font-bold save-data">
+                <textarea id="customContent" class="w-full border p-2 h-20 text-sm save-data" placeholder="輸入內文..."></textarea>
             </div>
 
-            <div class="flex flex-col gap-3 pt-8">
-                <button onclick="processData()" class="bg-green-600 text-white py-3 px-8 rounded-full font-bold shadow-lg hover:bg-green-700 transition-all active:scale-95">🔄 產生預覽</button>
-                <button onclick="window.print()" class="bg-blue-600 text-white py-3 px-8 rounded-full font-bold shadow-lg hover:bg-blue-700 transition-all active:scale-95">🖨️ 列印/轉PDF</button>
+            <div class="flex flex-col gap-2 pt-8">
+                <button onclick="processData()" class="bg-emerald-600 text-white py-2 px-6 rounded-md font-bold hover:bg-emerald-700 transition-all">🔄 產生預覽</button>
+                <button onclick="window.print()" class="bg-blue-600 text-white py-2 px-6 rounded-md font-bold hover:bg-blue-700 shadow-md">🖨️ 開始列印</button>
+                <span id="saveStatus" class="text-center text-[10px] text-gray-400">資料已自動儲存</span>
             </div>
         </div>
     </div>
 </div>
 
 <div id="printArea" class="py-4">
-    <div class="text-center py-40 text-gray-400 no-print italic text-xl">
-        👋 您好！請先上傳 Excel 檔案後點擊「產生預覽」。
-    </div>
+    <div class="text-center py-40 text-gray-400 no-print italic">上傳 Excel 後點擊產生預覽...</div>
 </div>
 
 <script>
     let excelData = [];
+    const STORAGE_KEY = 'notice_maker_settings';
 
-    // 智慧班級辨識 (501 -> 1)
-    function parseClass(grade, cls) {
-        let g = grade?.toString() || "";
-        let c = cls?.toString() || "";
-        if (c.length >= 3 && c.startsWith(g)) {
-            return parseInt(c.substring(g.length));
-        }
-        return c;
+    // --- 本地儲存邏輯 ---
+    function saveToLocal() {
+        const settings = {
+            templateType: document.getElementById('templateType').value,
+            gridCols: document.getElementById('gridCols').value,
+            gridRows: document.getElementById('gridRows').value,
+            fontSizeBase: document.getElementById('fontSizeBase').value,
+            customTitle: document.getElementById('customTitle').value,
+            customContent: document.getElementById('customContent').value
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+        document.getElementById('saveStatus').innerText = '上次儲存：' + new Date().toLocaleTimeString();
     }
 
-    // 讀取 Excel
+    function loadFromLocal() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            const s = JSON.parse(saved);
+            document.getElementById('templateType').value = s.templateType || 'award';
+            document.getElementById('gridCols').value = s.gridCols || 2;
+            document.getElementById('gridRows').value = s.gridRows || 4;
+            document.getElementById('fontSizeBase').value = s.fontSizeBase || 15;
+            document.getElementById('customTitle').value = s.customTitle || '教務處領獎通知';
+            document.getElementById('customContent').value = s.customContent || '時間：\n地點：教務處註冊組\n請攜帶聯絡簿辦理。';
+        }
+    }
+
+    // 監聽所有輸入欄位變動即存檔
+    document.querySelectorAll('.save-data').forEach(el => {
+        el.addEventListener('input', saveToLocal);
+    });
+
+    // --- Excel 處理 ---
     document.getElementById('excelFile').addEventListener('change', function(e) {
         const reader = new FileReader();
         reader.onload = function(event) {
             const data = new Uint8Array(event.target.result);
             const workbook = XLSX.read(data, {type: 'array'});
             excelData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-            alert("✅ 讀取完成！共有 " + excelData.length + " 位同學。");
+            alert("已讀取 " + excelData.length + " 筆學生資料");
         };
         reader.readAsArrayBuffer(e.target.files[0]);
     });
 
-    // 核心渲染
+    function parseClass(grade, cls) {
+        let g = grade?.toString() || "";
+        let c = cls?.toString() || "";
+        if (c.length >= 3 && c.startsWith(g)) return parseInt(c.substring(g.length));
+        return c;
+    }
+
+    // --- 渲染預覽 ---
     function processData() {
-        if (excelData.length === 0) {
-            alert("請先選擇 Excel 檔案！");
-            return;
-        }
+        if (excelData.length === 0) return alert("請先上傳 Excel 檔案");
         
         const type = document.getElementById('templateType').value;
         const title = document.getElementById('customTitle').value;
@@ -147,9 +169,7 @@
         const fSize = document.getElementById('fontSizeBase').value;
         const itemsPerPage = cols * rows;
         
-        const printArea = document.getElementById('printArea');
         let html = '';
-        
         for (let i = 0; i < excelData.length; i += itemsPerPage) {
             html += `<div class="page" style="grid-template-columns: repeat(${cols}, 1fr); grid-template-rows: repeat(${rows}, 1fr); font-size: ${fSize}px;">`;
             
@@ -165,27 +185,28 @@
                 if (type === 'award') {
                     html += `
                     <div class="notice-item">
-                        <div class="main-title" style="font-size: 1.5em;">${title}</div>
-                        <div class="font-bold border-b border-gray-400 pb-1 mb-1">
+                        <div class="main-title" style="font-size: 1.4em;">${title}</div>
+                        <div class="font-bold border-b border-gray-400 pb-1 mb-1 text-[0.9em]">
                             領獎人：${classCode} ${name}
-                            <span class="text-[0.6em] font-normal float-right text-gray-500">【簽領單】</span>
+                            <span class="float-right font-normal text-gray-500 text-[0.7em]">【領獎通知】</span>
                         </div>
-                        <div class="flex-grow py-1 leading-normal">
+                        <div class="flex-grow py-1 leading-tight text-[0.85em]">
                             ${content}
                         </div>
                         <table class="sig-table">
-                            <tr><td width="55%" class="bg-gray-50 text-center">事前家長簽章</td><td></td></tr>
-                            <tr><td class="bg-gray-50 text-center">學生確認領取簽章</td><td></td></tr>
+                            <tr><td class="bg-label">事前家長簽章</td><td></td></tr>
+                            <tr><td class="bg-label">學生確認錢無誤後簽章</td><td></td></tr>
+                            <tr><td class="bg-label">教務處發放完畢簽章</td><td></td></tr>
                         </table>
                     </div>`;
                 } else {
                     html += `
                     <div class="notice-item">
                         <div class="main-title">${title}</div>
-                        <div class="border-y-2 border-black py-3 my-2 font-bold text-center">
-                            ${g} 年 ${c} 班 座號：${s} 姓名：${name}
+                        <div class="border-y border-black py-2 my-1 font-bold text-center text-[1.1em]">
+                            ${g}年${c}班 ${s}號 ${name}
                         </div>
-                        <div class="flex-grow pt-2 leading-relaxed">
+                        <div class="flex-grow pt-2 leading-relaxed text-[0.9em]">
                             ${content}
                         </div>
                     </div>`;
@@ -193,16 +214,17 @@
             });
 
             // 補空白格
-            const emptySlots = itemsPerPage - pageItems.length;
-            for(let j=0; j<emptySlots; j++) {
+            for(let j=0; j < (itemsPerPage - pageItems.length); j++) {
                 html += `<div class="notice-item border-dashed border-gray-100"></div>`;
             }
-
             html += `</div>`;
         }
-        printArea.innerHTML = html;
-        window.scrollTo({ top: 400, behavior: 'smooth' });
+        document.getElementById('printArea').innerHTML = html;
+        saveToLocal();
     }
+
+    // 初始化讀取
+    loadFromLocal();
 </script>
 
 </body>
