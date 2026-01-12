@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>班級分發結果列印系統</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: "Microsoft JhengHei", sans-serif; padding: 20px; background-color: #f4f7f6; }
+        .no-print { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; background: white; }
+        th, td { border: 1px solid #000; padding: 8px; text-align: center; font-size: 14px; }
+        th { background-color: #f2f2f2; }
+        
+        /* 列印核心設定 */
+        @media print {
+            .no-print { display: none; } /* 隱藏上傳按鈕 */
+            .page-break { page-break-after: always; } /* 每個班級後自動分頁 */
+            body { background: white; padding: 0; }
+            table { page-break-inside: auto; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+        }
+        
+        .class-title { text-align: center; margin-top: 20px; font-size: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="no-print">
+        <h2>班級分發清單產生器</h2>
+        <p>請上傳包含以下欄位的 Excel：班級、座號、姓名、性別、分發學校名稱、改分發備註、原分發學校</p>
+        <input type="file" id="upload" accept=".xlsx, .xls" />
+        <button onclick="window.print()" style="padding: 5px 15px; cursor: pointer;">確認無誤，直接列印</button>
+    </div>
+
+    <div id="output"></div>
+
+    <script>
+        document.getElementById('upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(event) {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                // 轉為 JSON 格式
+                let jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                // 排序：先排班級，再排座號
+                jsonData.sort((a, b) => {
+                    if (a.班級 !== b.班級) return a.班級 - b.班級;
+                    return a.座號 - b.座號;
+                });
+
+                // 按班級群組化
+                const groupedData = jsonData.reduce((acc, row) => {
+                    (acc[row.班級] = acc[row.班級] || []).push(row);
+                    return acc;
+                }, {});
+
+                renderTables(groupedData);
+            };
+
+            reader.readAsArrayBuffer(file);
+        });
+
+        function renderTables(groups) {
+            const output = document.getElementById('output');
+            output.innerHTML = '';
+
+            Object.keys(groups).forEach((className) => {
+                let html = `<div class="page-break">`;
+                html += `<div class="class-title">${className} 班 分發結果清單</div>`;
+                html += `<table>
+                    <thead>
+                        <tr>
+                            <th>座號</th>
+                            <th>姓名</th>
+                            <th>性別</th>
+                            <th>分發學校名稱</th>
+                            <th>改分發備註</th>
+                            <th>原分發學校</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+                
+                groups[className].forEach(student => {
+                    html += `
+                        <tr>
+                            <td>${student.座號 || ''}</td>
+                            <td>${student.姓名 || ''}</td>
+                            <td>${student.性別 || ''}</td>
+                            <td>${student.分發學校名稱 || ''}</td>
+                            <td>${student.改分發備註 || ''}</td>
+                            <td>${student.原分發學校 || ''}</td>
+                        </tr>`;
+                });
+
+                html += `</tbody></table></div>`;
+                output.innerHTML += html;
+            });
+        }
+    </script>
+</body>
+</html>
