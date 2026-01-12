@@ -2,35 +2,46 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>班級分發結果列印系統</title>
+    <title>班級分發結果合併列印</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: "Microsoft JhengHei", sans-serif; padding: 20px; background-color: #f4f7f6; }
         .no-print { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        h2 { color: #333; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; background: white; }
-        th, td { border: 1px solid #000; padding: 8px; text-align: center; font-size: 14px; }
+        
+        /* 區塊容器：防止班級標題跟表格被切開 */
+        .class-section { 
+            page-break-inside: avoid; 
+            margin-bottom: 40px; 
+            background: white;
+        }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #000; padding: 6px; text-align: center; font-size: 13px; }
         th { background-color: #f2f2f2; }
         
-        /* 列印核心設定 */
-        @media print {
-            .no-print { display: none; } /* 隱藏上傳按鈕 */
-            .page-break { page-break-after: always; } /* 每個班級後自動分頁 */
-            body { background: white; padding: 0; }
-            table { page-break-inside: auto; }
-            tr { page-break-inside: avoid; page-break-after: auto; }
+        .class-title { 
+            text-align: left; 
+            font-size: 18px; 
+            font-weight: bold; 
+            border-left: 5px solid #333;
+            padding-left: 10px;
+            margin-top: 20px;
         }
-        
-        .class-title { text-align: center; margin-top: 20px; font-size: 20px; font-weight: bold; }
+
+        @media print {
+            .no-print { display: none; }
+            body { background: white; padding: 0; }
+            .class-section { page-break-inside: avoid; } /* 確保一個班級盡量不被切斷 */
+        }
     </style>
 </head>
 <body>
 
     <div class="no-print">
-        <h2>班級分發清單產生器</h2>
-        <p>請上傳包含以下欄位的 Excel：班級、座號、姓名、性別、分發學校名稱、改分發備註、原分發學校</p>
+        <h2>班級分發清單 (連續列印版)</h2>
+        <p>上傳 Excel 後，各班會緊接著排列，不會強制換頁。</p>
         <input type="file" id="upload" accept=".xlsx, .xls" />
-        <button onclick="window.print()" style="padding: 5px 15px; cursor: pointer;">確認無誤，直接列印</button>
+        <button onclick="window.print()" style="padding: 5px 15px; cursor: pointer; margin-left: 10px;">點此列印 / 存為 PDF</button>
     </div>
 
     <div id="output"></div>
@@ -43,19 +54,17 @@
             reader.onload = function(event) {
                 const data = new Uint8Array(event.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                
-                // 轉為 JSON 格式
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                 let jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-                // 排序：先排班級，再排座號
+                // 排序：先排班級(數字)，再排座號
                 jsonData.sort((a, b) => {
-                    if (a.班級 !== b.班級) return a.班級 - b.班級;
-                    return a.座號 - b.座號;
+                    const classA = parseInt(a.班級) || 0;
+                    const classB = parseInt(b.班級) || 0;
+                    if (classA !== classB) return classA - classB;
+                    return (parseInt(a.座號) || 0) - (parseInt(b.座號) || 0);
                 });
 
-                // 按班級群組化
                 const groupedData = jsonData.reduce((acc, row) => {
                     (acc[row.班級] = acc[row.班級] || []).push(row);
                     return acc;
@@ -63,7 +72,6 @@
 
                 renderTables(groupedData);
             };
-
             reader.readAsArrayBuffer(file);
         });
 
@@ -72,17 +80,17 @@
             output.innerHTML = '';
 
             Object.keys(groups).forEach((className) => {
-                let html = `<div class="page-break">`;
-                html += `<div class="class-title">${className} 班 分發結果清單</div>`;
+                let html = `<div class="class-section">`;
+                html += `<div class="class-title">${className} 班</div>`;
                 html += `<table>
                     <thead>
                         <tr>
-                            <th>座號</th>
-                            <th>姓名</th>
-                            <th>性別</th>
-                            <th>分發學校名稱</th>
-                            <th>改分發備註</th>
-                            <th>原分發學校</th>
+                            <th width="8%">座號</th>
+                            <th width="12%">姓名</th>
+                            <th width="8%">性別</th>
+                            <th width="25%">分發學校名稱</th>
+                            <th width="22%">原分發學校</th>
+                            <th width="25%">改分發備註</th>
                         </tr>
                     </thead>
                     <tbody>`;
@@ -94,8 +102,8 @@
                             <td>${student.姓名 || ''}</td>
                             <td>${student.性別 || ''}</td>
                             <td>${student.分發學校名稱 || ''}</td>
-                            <td>${student.改分發備註 || ''}</td>
                             <td>${student.原分發學校 || ''}</td>
+                            <td>${student.改分發備註 || ''}</td>
                         </tr>`;
                 });
 
