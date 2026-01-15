@@ -3,248 +3,303 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>小學評語產生器 - 專業萬用版</title>
+    <title>小學評語產生器 - 語氣差異版</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
     <style>
-        :root {
-            --primary: #4a90e2;
-            --accent: #ff7675;
-            --bg: #f4f7f6;
+        :root { --primary: #4a90e2; --bg: #f8f9fa; --card-bg: #ffffff; }
+        body { font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1200px; margin: auto; background: var(--card-bg); padding: 30px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+        
+        /* 頂部控制列 */
+        .top-bar { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 20px; margin-bottom: 25px; padding: 20px; background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; }
+        .control-group { display: flex; flex-direction: column; gap: 8px; }
+        input, select { padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+
+        /* 主佈局 */
+        .main-layout { display: grid; grid-template-columns: 240px 1fr; gap: 30px; }
+        .sidebar { border-right: 1px solid #eee; padding-right: 20px; max-height: 800px; overflow-y: auto; }
+        .stu-item { padding: 12px; margin-bottom: 5px; border-radius: 6px; cursor: pointer; border: 1px solid transparent; }
+        .stu-item:hover { background: #f0f7ff; color: var(--primary); }
+        .stu-item.active { background: var(--primary); color: white; }
+
+        /* 標籤群組 */
+        .tag-section { margin-bottom: 30px; }
+        .tag-header { font-size: 1.1rem; font-weight: bold; color: var(--primary); margin-bottom: 15px; border-left: 5px solid var(--primary); padding-left: 10px; }
+        .tag-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+        .tag-btn { 
+            display: flex; align-items: flex-start; gap: 10px; padding: 12px; 
+            border: 1px solid #e0e0e0; border-radius: 8px; cursor: pointer; 
+            transition: all 0.2s; background: white; font-size: 0.9rem;
         }
-        body { font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; background: var(--bg); margin: 0; padding: 15px; }
-        .container { max-width: 1100px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        
-        /* 頂部設定區 */
-        .setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e0e0e0; }
-        .input-box { display: flex; flex-direction: column; gap: 8px; }
-        input[type="text"], input[type="file"] { padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
-        
-        /* 主區域佈局 */
-        .main-content { display: grid; grid-template-columns: 220px 1fr; gap: 20px; }
-        
-        /* 學生列表 */
-        .student-sidebar { border: 1px solid #eee; border-radius: 8px; height: 600px; overflow-y: auto; background: #fff; }
-        .stu-item { padding: 12px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: 0.2s; font-size: 0.95rem; }
-        .stu-item:hover { background: #e3f2fd; }
-        .stu-item.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .tag-btn:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .tag-btn.checked { background: #eef6ff; border-color: var(--primary); color: var(--primary); }
+        .tag-btn input { margin-top: 3px; }
 
-        /* 多選格子區 */
-        .tag-section { margin-bottom: 25px; }
-        .tag-title { font-size: 1.1rem; color: var(--primary); font-weight: bold; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-        .tag-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
-        .tag-card { 
-            display: flex; align-items: flex-start; gap: 8px; padding: 10px; 
-            background: #fff; border: 1px solid #ddd; border-radius: 6px; 
-            cursor: pointer; transition: 0.2s; font-size: 0.9rem;
-        }
-        .tag-card:hover { border-color: var(--primary); background: #f0f7ff; }
-        .tag-card input { margin-top: 3px; }
-        .tag-card.checked { background: #e3f2fd; border-color: var(--primary); }
+        /* 語氣與字數切換 */
+        .mode-bar { display: flex; gap: 30px; background: #fffbe6; padding: 15px 25px; border-radius: 10px; margin-bottom: 20px; align-items: center; border: 1px solid #ffe58f; }
+        .mode-group { display: flex; align-items: center; gap: 10px; }
 
-        /* 字數選擇器 */
-        .word-count-selector { background: #fff3e0; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 20px; align-items: center; }
-
-        /* 結果區 */
-        .result-box { position: sticky; bottom: 20px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 -5px 20px rgba(0,0,0,0.05); border: 2px solid var(--primary); }
-        textarea { width: 100%; height: 120px; padding: 12px; border: none; font-size: 1.1rem; resize: none; outline: none; line-height: 1.6; color: #333; }
-        .footer-btns { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
-        .btn { padding: 12px 25px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        .btn-copy { background: var(--primary); color: white; }
-        .btn-clear { background: #eee; color: #666; }
-        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        /* 結果顯示 */
+        .result-container { position: sticky; bottom: 20px; margin-top: 40px; background: #fff; border: 3px solid var(--primary); border-radius: 15px; padding: 25px; box-shadow: 0 -10px 30px rgba(0,0,0,0.1); }
+        textarea { width: 100%; height: 140px; border: none; font-size: 1.15rem; line-height: 1.7; resize: none; outline: none; margin-bottom: 15px; }
+        .btn-group { display: flex; justify-content: flex-end; gap: 15px; align-items: center; }
+        .btn { padding: 12px 30px; border-radius: 8px; font-weight: bold; cursor: pointer; border: none; transition: 0.3s; }
+        .btn-copy { background: var(--primary); color: white; font-size: 1rem; }
+        .btn-reset { background: #f0f0f0; color: #666; }
+        .btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2 style="text-align: center; margin-top: 0;">🍎 小學評語產生器</h2>
+    <h1>📝 萬用評語產生器 (多語氣版)</h1>
 
-    <div class="setup-grid">
-        <div class="input-box">
-            <label><strong>👤 模式 A：手動輸入學生姓名</strong></label>
-            <input type="text" id="manualName" placeholder="請在此輸入姓名（會優先使用此欄位）" oninput="updateName()">
+    <div class="top-bar">
+        <div class="control-group">
+            <label>👤 學生姓名 (直接輸入或點選清單)</label>
+            <input type="text" id="targetName" placeholder="請輸入姓名..." oninput="refresh()">
         </div>
-        <div class="input-box">
-            <label><strong>📁 模式 B：匯入 Excel 名單</strong></label>
-            <input type="file" id="excelFile" accept=".xlsx, .xls">
+        <div class="control-group">
+            <label>📁 匯入 Excel 名單</label>
+            <input type="file" id="upload" accept=".xlsx, .xls">
         </div>
-    </div>
-
-    <div class="main-content">
-        <div class="student-sidebar">
-            <div style="padding:15px; font-weight:bold; background:#eee;">學生清單 (<span id="count">0</span>)</div>
-            <div id="stuList">
-                <div style="padding:20px; color:#999; font-size: 0.9rem;">尚未匯入名單</div>
-            </div>
-        </div>
-
-        <div>
-            <div class="word-count-selector">
-                <strong>📝 評語目標長度：</strong>
-                <label><input type="radio" name="wLen" value="100" checked onchange="refresh()"> 100 字左右 (簡潔)</label>
-                <label><input type="radio" name="wLen" value="150" onchange="refresh()"> 150-200 字 (豐富)</label>
-                <label><input type="radio" name="wLen" value="250" onchange="refresh()"> 250 字以上 (詳盡)</label>
-            </div>
-
-            <div id="tagGroups">
-                </div>
+        <div class="control-group">
+            <label>📊 快速選擇</label>
+            <select onchange="quickSelect(this.value)">
+                <option value="">-- 自動勾選預設組合 --</option>
+                <option value="perfect">優等生 (全方位優異)</option>
+                <option value="active">過動型 (有活力但需自律)</option>
+                <option value="quiet">內向型 (文靜踏實)</option>
+            </select>
         </div>
     </div>
 
-    <div class="result-box">
-        <textarea id="outputText" placeholder="選取學生並勾選特質後，評語會自動產生於此..."></textarea>
-        <div class="footer-btns">
-            <span id="charCount" style="color:#888;">目前字數：0</span>
-            <div>
-                <button class="btn btn-clear" onclick="resetAll()">清空重置</button>
-                <button class="btn btn-copy" onclick="copyContent()">一鍵複製評語</button>
+    <div class="mode-bar">
+        <div class="mode-group">
+            <strong>🗣️ 說話語氣：</strong>
+            <label><input type="radio" name="tone" value="warm" checked onchange="refresh()"> 溫暖鼓勵</label>
+            <label><input type="radio" name="tone" value="formal" onchange="refresh()"> 正式莊重</label>
+            <label><input type="radio" name="tone" value="witty" onchange="refresh()"> 幽默風趣</label>
+        </div>
+        <div class="mode-group">
+            <strong>📏 目標字數：</strong>
+            <label><input type="radio" name="wLen" value="100" checked onchange="refresh()"> 100字</label>
+            <label><input type="radio" name="wLen" value="200" onchange="refresh()"> 200字</label>
+        </div>
+    </div>
+
+    <div class="main-layout">
+        <div class="sidebar">
+            <div style="font-weight: bold; margin-bottom: 10px;">學生名單 (<span id="stuCount">0</span>)</div>
+            <div id="stuList"><small style="color:#999">尚未匯入資料</small></div>
+        </div>
+
+        <div id="optionsArea">
             </div>
+    </div>
+
+    <div class="result-container">
+        <textarea id="resultOutput" placeholder="勾選上方特質後，評語將在此即時生成..."></textarea>
+        <div class="btn-group">
+            <span id="charCount" style="color: #999; margin-right: auto;">字數：0</span>
+            <button class="btn btn-reset" onclick="resetForm()">全部清空</button>
+            <button class="btn btn-copy" onclick="copyText()">複製評語內容</button>
         </div>
     </div>
 </div>
 
 <script>
-    let students = [];
-    let selectedName = "";
-
-    const database = {
-        "📖 學習表現": [
-            "上課聽講專注，能積極思考並舉手發言",
-            "作業書寫極為工整，學習態度堪為模範",
-            "邏輯分析能力優異，尤其在數學領域表現突出",
-            "理解力強，能迅速掌握老師教授的新知識",
-            "面對學業挑戰不輕言放棄，展現良好韌性",
-            "具備主動學習的精神，常能自發鑽研課外知識",
-            "課堂討論時能提出獨到見解，令人印象深刻"
-        ],
-        "🌱 品行生活": [
-            "個性沈穩負責，老師交辦的事務皆能圓滿達成",
-            "品德優良，待人接物誠懇有禮，深得師長喜愛",
-            "生活習慣良好，擔任班級幹部盡職認真",
-            "做事細心且有條理，能把自己的環境整理得井然有序",
-            "處事公正無私，是老師在班級經營上的好幫手",
-            "性格活潑開朗，總是帶著燦爛笑容，是班上的開心果",
-            "非常有自律心，即便老師不在場也能自發維持秩序"
-        ],
-        "🤝 人際互動": [
-            "熱心助人，當同學遇到困難時總能主動伸出援手",
-            "具備卓越的領導才能，能帶領團隊共同完成任務",
-            "心胸開闊，懂得包容他人，同儕關係極為融洽",
-            "樂於分享學習心得，在團體合作中扮演關鍵角色",
-            "溝通能力佳，能理性處理與同學間的摩擦",
-            "待人真誠，深受同學信任，擁有極佳的人緣",
-            "懂得體諒他人，說話得體，展現良好的社交禮儀"
-        ],
-        "✨ 鼓勵與建議": [
-            "期許下學期能保持這份熱忱，繼續在學業上突破自我",
-            "若能在處理細節時更加細心，表現定能更趨完美",
-            "加油！老師對你充滿信心，相信你的潛力無可限量",
-            "希望你能多參與群體活動，展現你內在的才華",
-            "期盼你能將這份專注力延伸至各個學科，全方位進步",
-            "期待看到你更自信、更勇敢地表達自己的想法",
-            "願你保持這顆好奇心，勇敢地探索未知的領域"
-        ]
-    };
-
-    // 初始化標籤
-    function init() {
-        const container = document.getElementById('tagGroups');
-        for (const [title, items] of Object.entries(database)) {
-            const section = document.createElement('div');
-            section.className = 'tag-section';
-            section.innerHTML = `<div class="tag-title">${title}</div><div class="tag-grid"></div>`;
-            const grid = section.querySelector('.tag-grid');
-            
-            items.forEach(item => {
-                const card = document.createElement('label');
-                card.className = 'tag-card';
-                card.innerHTML = `<input type="checkbox" value="${item}" onchange="refresh()"> <span>${item}</span>`;
-                grid.appendChild(card);
-            });
-            container.appendChild(section);
+// 核心語氣資料庫
+const dataLib = {
+    "學習態度": [
+        {
+            id: "a1", label: "上課積極發言",
+            warm: "在課堂上總是看到你充滿熱情地舉手分享，那份求知欲讓老師印象深刻。",
+            formal: "課堂參與度極高，能主動針對教學內容提出見解，展現優異的思辨能力。",
+            witty: "你是班上的『發言擔當』，課堂上有了你的聲音，氣氛總是格外熱絡！"
+        },
+        {
+            id: "a2", label: "作業書寫工整",
+            warm: "翻開你的作業本是一種視覺享受，每一筆一畫都看得到你的用心。",
+            formal: "學業任務完成度高，作業字跡端正且條理分明，展現嚴謹的求知態度。",
+            witty: "你的字跡就像印刷出來的一樣漂亮，看來你的耐心指數已經點滿了。"
+        },
+        {
+            id: "a3", label: "邏輯理解力強",
+            warm: "你擁有一顆靈活的大腦，遇到難題時總能閃現智慧的光芒。",
+            formal: "邏輯分析能力出色，面對複雜邏輯問題時能迅速釐清重點，表現優異。",
+            witty: "你的大腦運作速度簡直是 5G 等級，反應快到有時候連老師都快跟不上了。"
+        },
+        {
+            id: "a4", label: "需加強專注力",
+            warm: "如果你能把窗外的小鳥先放一邊，專注於課堂，表現一定會更驚人喔！",
+            formal: "學習穩定性仍有提升空間，若能增強課堂專注度，學業表現定能更趨完善。",
+            witty: "你似乎有一顆愛旅行的心，上課時思緒偶爾會飄到遠方，記得要準時回航喔。"
         }
-    }
+    ],
+    "品行生活": [
+        {
+            id: "c1", label: "誠實負責",
+            warm: "老師最欣賞你誠實無欺的品質，這比得到滿分更讓老師為你感到驕傲。",
+            formal: "為人正直誠實，對於交辦任務能展現極高的責任感與執行力。",
+            witty: "你就像是班上的『誠信大使』，做事踏實到讓人完全不需要擔心。"
+        },
+        {
+            id: "c2", label: "熱心助人",
+            warm: "你溫暖的雙手幫助了不少同學，班級因為有你而變得更加溫馨。",
+            formal: "具備良好的同理心，樂於協助同儕解決困難，為班級環境帶來正面影響。",
+            witty: "你簡直是我們班的『行動急救包』，哪裡有困難，哪裡就有你的身影。"
+        },
+        {
+            id: "c3", label: "活潑好動",
+            warm: "你全身充滿了能量，那份活力總是能感染身邊的每一個人。",
+            formal: "個性開朗外向，體力充沛，若能將這份動能轉化為自律力，表現將更佳。",
+            witty: "你體內的電池大概是核能級別的，永遠有無窮的體力去探索校園的每個角落。"
+        }
+    ],
+    "期許建議": [
+        {
+            id: "f1", label: "更上一層樓",
+            warm: "繼續保持這份熱情，老師相信你未來的路一定會繁花盛開。",
+            formal: "期許下學期能延續目前的優勢，在多元領域中持續深耕，追求卓越。",
+            witty: "目前的你已經很棒了，但老師覺得你還在『熱身階段』，期待你下學期火力全開！"
+        },
+        {
+            id: "f2", label: "建立自信心",
+            warm: "其實你比自己想像中還要優秀，大膽地站在舞台中央發光吧！",
+            formal: "建議建立更強的自我認同感，克服面對挑戰時的畏難情緒，未來可期。",
+            witty: "別再把你的才華藏起來了，老師已經準備好要當你的頭號粉絲囉！"
+        }
+    ]
+};
 
-    // 處理 Excel
-    document.getElementById('excelFile').addEventListener('change', function(e) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const wb = XLSX.read(new Uint8Array(event.target.result), {type: 'array'});
-            const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-            students = data.map(r => r['姓名'] || Object.values(r)[0]).filter(n => n);
-            renderList();
-        };
-        reader.readAsArrayBuffer(e.target.files[0]);
+let allStudents = [];
+
+// 初始化 UI
+function initTags() {
+    const area = document.getElementById('optionsArea');
+    for (const [cat, items] of Object.entries(dataLib)) {
+        const div = document.createElement('div');
+        div.className = 'tag-section';
+        div.innerHTML = `<div class="tag-header">${cat}</div><div class="tag-grid"></div>`;
+        const grid = div.querySelector('.tag-grid');
+        
+        items.forEach(item => {
+            const label = document.createElement('label');
+            label.className = 'tag-btn';
+            label.innerHTML = `<input type="checkbox" value="${item.id}" data-cat="${cat}" onchange="refresh()"> <span>${item.label}</span>`;
+            grid.appendChild(label);
+        });
+        area.appendChild(div);
+    }
+}
+
+// 核心生成邏輯
+function refresh() {
+    const name = document.getElementById('targetName').value || "該生";
+    const tone = document.querySelector('input[name="tone"]:checked').value;
+    const wLen = document.querySelector('input[name="wLen"]:checked').value;
+    const selectedIds = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(i => i.value);
+    
+    // 更新選取樣式
+    document.querySelectorAll('.tag-btn').forEach(btn => {
+        btn.classList.toggle('checked', btn.querySelector('input').checked);
     });
 
-    function renderList() {
-        const list = document.getElementById('stuList');
-        document.getElementById('count').innerText = students.length;
-        list.innerHTML = "";
-        students.forEach(name => {
-            const div = document.createElement('div');
-            div.className = 'stu-item';
-            div.innerText = name;
-            div.onclick = () => {
-                document.querySelectorAll('.stu-item').forEach(i => i.classList.remove('active'));
-                div.classList.add('active');
-                document.getElementById('manualName').value = name;
-                selectedName = name;
-                refresh();
-            };
-            list.appendChild(div);
-        });
-    }
-
-    function updateName() {
-        selectedName = document.getElementById('manualName').value;
-        refresh();
-    }
-
-    function refresh() {
-        const name = selectedName || "該生";
-        const tags = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(i => i.value);
-        const len = document.querySelector('input[name="wLen"]:checked').value;
-        
-        let intro = `${name}同學：\n本學期你在校表現非常優異。`;
-        let closing = "加油！老師對你充滿期待。";
-
-        // 字數擴充邏輯
-        if (len == "150") {
-            intro = `${name}同學：\n時光荏苒，本學期已接近尾聲。觀察你這幾個月來的在校生活，老師感到非常欣慰。`;
-            closing = "希望在未來的日子裡，你能繼續秉持這份正向的態度，勇敢追尋自己的夢想，老師會一直為你加油的！";
-        } else if (len == "250") {
-            intro = `${name}同學：\n轉眼間本學期即將結束，回顧你在校的點點滴滴，老師看見了你各方面的成長與進步。你是一位優秀的孩子，在班級中展現了獨特的個人特色。`;
-            closing = "教育是一場長跑，期許你在接下來的學習旅程中，能保持這份難能可貴的好奇心與上進心，不斷挑戰自我的極限。老師相信你一定能譜寫出屬於自己精彩的篇章，加油！";
+    let parts = [];
+    selectedIds.forEach(id => {
+        for (let cat in dataLib) {
+            const item = dataLib[cat].find(i => i.id === id);
+            if (item) parts.push(item[tone]);
         }
+    });
 
-        const body = tags.length > 0 ? tags.join('；') + '。' : "（請勾選特質選項）";
-        const result = `${intro}\n${body}\n${closing}`;
-        
-        document.getElementById('outputText').value = result;
-        document.getElementById('charCount').innerText = `目前字數：${result.length}`;
-        
-        // 切換卡片樣式
-        document.querySelectorAll('.tag-card').forEach(card => {
-            card.classList.toggle('checked', card.querySelector('input').checked);
+    // 根據語氣設定開頭與結尾
+    let config = {
+        warm: { intro: `${name}，本學期看著你不斷成長，老師心裡有說不出的感動。`, end: "加油，老師會一直為你喝采！" },
+        formal: { intro: `${name}同學在本學期的校園生活中，各方面表現如下：`, end: "綜上所述，期許該生未來能持續進步，發揮所長。" },
+        witty: { intro: `哈囉${name}！時光飛逝，我們一起完成了一個精彩的學期。`, end: "繼續保持你的獨特電力，讓世界看見你！" }
+    };
+
+    let intro = config[tone].intro;
+    let closing = config[tone].end;
+
+    // 字數擴展
+    if (wLen == "200") {
+        if(tone === 'warm') intro = `親愛的${name}，不知不覺一個學期又過去了。在老師眼中，你是一個充滿無限可能性的孩子，每天都能在校園裡看見你努力的身影。`;
+        if(tone === 'formal') intro = `查${name}同學於本學期在校期間，守法習禮，課業與品德均衡發展。經本導師長期觀察，具體評語如下：`;
+    }
+
+    const body = parts.length > 0 ? parts.join(' ') : "（請勾選上方的表現標籤）";
+    const final = `${intro}\n\n${body}\n\n${closing}`;
+    
+    document.getElementById('resultOutput').value = final;
+    document.getElementById('charCount').innerText = `字數：${final.length}`;
+}
+
+// Excel 匯入
+document.getElementById('upload').addEventListener('change', function(e) {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const wb = XLSX.read(new Uint8Array(event.target.result), {type: 'array'});
+        const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+        allStudents = data.map(r => r['姓名'] || Object.values(r)[0]).filter(n => n);
+        renderStuList();
+    };
+    reader.readAsArrayBuffer(e.target.files[0]);
+});
+
+function renderStuList() {
+    const list = document.getElementById('stuList');
+    document.getElementById('stuCount').innerText = allStudents.length;
+    list.innerHTML = "";
+    allStudents.forEach(name => {
+        const d = document.createElement('div');
+        d.className = 'stu-item';
+        d.innerText = name;
+        d.onclick = () => {
+            document.querySelectorAll('.stu-item').forEach(i => i.classList.remove('active'));
+            d.classList.add('active');
+            document.getElementById('targetName').value = name;
+            refresh();
+        };
+        list.appendChild(d);
+    });
+}
+
+function quickSelect(type) {
+    const checks = document.querySelectorAll('input[type="checkbox"]');
+    checks.forEach(c => c.checked = false); // 先清空
+    
+    const maps = {
+        perfect: ['a1', 'a2', 'c1', 'f1'],
+        active: ['a1', 'a4', 'c3', 'f2'],
+        quiet: ['a2', 'c1', 'c2', 'f2']
+    };
+    
+    if(maps[type]) {
+        maps[type].forEach(id => {
+            const el = document.querySelector(`input[value="${id}"]`);
+            if(el) el.checked = true;
         });
     }
+    refresh();
+}
 
-    function resetAll() {
-        document.querySelectorAll('input[type="checkbox"]').forEach(i => i.checked = false);
-        document.getElementById('manualName').value = "";
-        selectedName = "";
-        refresh();
-    }
+function resetForm() {
+    document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false);
+    document.getElementById('targetName').value = "";
+    refresh();
+}
 
-    function copyContent() {
-        const area = document.getElementById('outputText');
-        area.select();
-        document.execCommand('copy');
-        alert('評語已複製到剪貼簿！');
-    }
+function copyText() {
+    const area = document.getElementById('resultOutput');
+    area.select();
+    document.execCommand('copy');
+    alert('評語已複製！');
+}
 
-    init();
+initTags();
 </script>
 
 </body>
