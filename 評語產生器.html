@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小學生評語產生器</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #f5f7fa;
+            --text-color: #333;
+        }
+        body {
+            font-family: "Microsoft JhengHei", sans-serif;
+            background-color: #eef2f3;
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 100%;
+        }
+        h2 { text-align: center; color: var(--primary-color); }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+        .btn-generate { background-color: var(--primary-color); color: white; }
+        .btn-generate:hover { background-color: #357abd; }
+        .btn-copy { background-color: #2ecc71; color: white; }
+        .btn-copy:hover { background-color: #27ae60; }
+        
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: var(--secondary-color);
+            border-left: 5px solid var(--primary-color);
+            min-height: 80px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+        .footer { text-align: center; font-size: 12px; color: #888; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>📝 小學生評語產生器</h2>
+    
+    <div class="input-group">
+        <label>學生姓名</label>
+        <input type="text" id="studentName" placeholder="例如：王小明">
+    </div>
+
+    <div class="input-group">
+        <label>表現主調</label>
+        <select id="tone">
+            <option value="excellent">優異穩定</option>
+            <option value="good">進步很大</option>
+            <option value="needsImprovement">仍需努力</option>
+            <option value="active">活潑好動</option>
+        </select>
+    </div>
+
+    <div class="btn-group">
+        <button class="btn-generate" onclick="generateComment()">產生評語</button>
+        <button class="btn-copy" onclick="copyText()">複製評語</button>
+    </div>
+
+    <div id="result">點擊「產生評語」按鈕來生成內容...</div>
+
+    <div class="footer">本工具僅供參考，請老師根據學生實際情況調整。</div>
+</div>
+
+<script>
+    const database = {
+        opening: ["{name}本學期表現良好，", "{name}是一位聰明的孩子，", "{name}在校表現穩定，", "{name}個性溫和，"],
+        excellent: {
+            traits: ["學習態度認真專注，", "課堂上總是積極發言，", "作業書寫工整美觀，"],
+            social: ["與同學相處融洽，是老師的好幫手。", "深得同學喜愛，展現出領導才能。", "處事沉穩，展現出超越年齡的成熟。"],
+            closing: ["希望繼續保持，再創佳績！", "老師對你未來的表現充滿期待。", "期許你在未來的學習道路上更上一層樓。"]
+        },
+        good: {
+            traits: ["本學期在學業上有明顯進步，", "開始找到學習的樂趣，", "能夠按時完成老師交辦的任務，"],
+            social: ["待人誠懇有禮，", "熱心參與班級活動，", "懂得體諒他人，進步有目共睹。"],
+            closing: ["只要持之以恆，一定會更出色！", "加油，保持這份進步的動力。", "願你繼續保持好奇心，勇敢嘗試。"]
+        },
+        needsImprovement: {
+            traits: ["學習上若能更專注，成績定能提升，", "偶爾會因為粗心而影響表現，", "作業繳交的準時度仍有進步空間，"],
+            social: ["建議多與同學正面溝通，", "在課堂規範上需更加自律，", "希望你能學會分配時間，平衡玩樂與學習。"],
+            closing: ["期待下學期看到煥然一新的你。", "老師相信你一定做得到，加油！", "調整心態，明天會更好。"]
+        },
+        active: {
+            traits: ["充滿活力，是班上的開心果，", "思維敏捷，對新鮮事物充滿好奇，", "體育表現亮眼，反應靈敏，"],
+            social: ["人緣極佳，樂於分享，", "做事乾脆利落，但也稍欠細心，", "熱情主動，總是積極參與各項競賽。"],
+            closing: ["若能動靜得宜，表現將更完美。", "將這份熱情轉化為學習的動力吧！", "期待你在擅長的領域發光發熱。"]
+        }
+    };
+
+    function generateComment() {
+        const name = document.getElementById('studentName').value || "該生";
+        const tone = document.getElementById('tone').value;
+        const db = database[tone];
+
+        const open = database.opening[Math.floor(Math.random() * database.opening.length)];
+        const trait = db.traits[Math.floor(Math.random() * db.traits.length)];
+        const social = db.social[Math.floor(Math.random() * db.social.length)];
+        const close = db.closing[Math.floor(Math.random() * db.closing.length)];
+
+        let comment = open + trait + social + close;
+        comment = comment.replace(/{name}/g, name);
+        
+        document.getElementById('result').innerText = comment;
+    }
+
+    function copyText() {
+        const text = document.getElementById('result').innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            alert('評語已複製到剪貼簿！');
+        });
+    }
+</script>
+
+</body>
+</html>
