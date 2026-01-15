@@ -3,304 +3,257 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>小學評語產生器 - 語氣差異版</title>
+    <title>小學評語產生器 - 六維度語氣版</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
     <style>
-        :root { --primary: #4a90e2; --bg: #f8f9fa; --card-bg: #ffffff; }
-        body { font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; }
-        .container { max-width: 1200px; margin: auto; background: var(--card-bg); padding: 30px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+        :root { --primary: #3498db; --bg: #f5f6fa; --card: #ffffff; }
+        body { font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #2f3640; }
+        .container { max-width: 1200px; margin: auto; background: var(--card); padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
         
         /* 頂部控制列 */
-        .top-bar { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 20px; margin-bottom: 25px; padding: 20px; background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; }
-        .control-group { display: flex; flex-direction: column; gap: 8px; }
-        input, select { padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+        .top-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .input-group { display: flex; flex-direction: column; gap: 5px; }
+        input, select { padding: 10px; border: 1px solid #dcdde1; border-radius: 6px; }
+
+        /* 設定列 */
+        .mode-settings { background: #f1f2f6; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 40px; }
 
         /* 主佈局 */
-        .main-layout { display: grid; grid-template-columns: 240px 1fr; gap: 30px; }
-        .sidebar { border-right: 1px solid #eee; padding-right: 20px; max-height: 800px; overflow-y: auto; }
-        .stu-item { padding: 12px; margin-bottom: 5px; border-radius: 6px; cursor: pointer; border: 1px solid transparent; }
-        .stu-item:hover { background: #f0f7ff; color: var(--primary); }
-        .stu-item.active { background: var(--primary); color: white; }
+        .main-grid { display: grid; grid-template-columns: 200px 1fr; gap: 30px; }
+        .stu-list { border: 1px solid #f1f2f6; border-radius: 8px; height: 700px; overflow-y: auto; background: #fff; }
+        .stu-btn { padding: 10px; border-bottom: 1px solid #f1f2f6; cursor: pointer; font-size: 0.9rem; }
+        .stu-btn:hover { background: #e1f5fe; }
+        .stu-btn.active { background: var(--primary); color: white; }
 
-        /* 標籤群組 */
-        .tag-section { margin-bottom: 30px; }
-        .tag-header { font-size: 1.1rem; font-weight: bold; color: var(--primary); margin-bottom: 15px; border-left: 5px solid var(--primary); padding-left: 10px; }
-        .tag-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
-        .tag-btn { 
-            display: flex; align-items: flex-start; gap: 10px; padding: 12px; 
-            border: 1px solid #e0e0e0; border-radius: 8px; cursor: pointer; 
-            transition: all 0.2s; background: white; font-size: 0.9rem;
+        /* 標籤區 */
+        .category-block { margin-bottom: 25px; }
+        .category-title { font-weight: bold; color: var(--primary); margin-bottom: 12px; border-bottom: 2px solid #f1f2f6; padding-bottom: 5px; }
+        .tag-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+        .tag-card { 
+            display: flex; align-items: flex-start; gap: 10px; padding: 10px; 
+            border: 1px solid #eee; border-radius: 6px; cursor: pointer; transition: 0.2s; font-size: 0.85rem; background: #fff;
         }
-        .tag-btn:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .tag-btn.checked { background: #eef6ff; border-color: var(--primary); color: var(--primary); }
-        .tag-btn input { margin-top: 3px; }
+        .tag-card:hover { border-color: var(--primary); }
+        .tag-card.active { background: #ebf7ff; border-color: var(--primary); }
 
-        /* 語氣與字數切換 */
-        .mode-bar { display: flex; gap: 30px; background: #fffbe6; padding: 15px 25px; border-radius: 10px; margin-bottom: 20px; align-items: center; border: 1px solid #ffe58f; }
-        .mode-group { display: flex; align-items: center; gap: 10px; }
-
-        /* 結果顯示 */
-        .result-container { position: sticky; bottom: 20px; margin-top: 40px; background: #fff; border: 3px solid var(--primary); border-radius: 15px; padding: 25px; box-shadow: 0 -10px 30px rgba(0,0,0,0.1); }
-        textarea { width: 100%; height: 140px; border: none; font-size: 1.15rem; line-height: 1.7; resize: none; outline: none; margin-bottom: 15px; }
-        .btn-group { display: flex; justify-content: flex-end; gap: 15px; align-items: center; }
-        .btn { padding: 12px 30px; border-radius: 8px; font-weight: bold; cursor: pointer; border: none; transition: 0.3s; }
-        .btn-copy { background: var(--primary); color: white; font-size: 1rem; }
-        .btn-reset { background: #f0f0f0; color: #666; }
-        .btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
+        /* 結果區 */
+        .result-panel { position: sticky; bottom: 10px; background: white; border: 2px solid var(--primary); padding: 20px; border-radius: 12px; margin-top: 30px; box-shadow: 0 -10px 20px rgba(0,0,0,0.05); }
+        textarea { width: 100%; height: 100px; border: none; font-size: 1.1rem; line-height: 1.5; resize: none; outline: none; margin-bottom: 10px; background: transparent; }
+        .btn-row { display: flex; justify-content: flex-end; gap: 10px; align-items: center; }
+        .btn { padding: 10px 25px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-copy { background: var(--primary); color: white; }
+        .btn-reset { background: #ecf0f1; color: #7f8c8d; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>📝 萬用評語產生器 (多語氣版)</h1>
+    <h2 style="margin:0 0 20px 0; text-align:center;">🍎 六維度專業評語產生器</h2>
 
-    <div class="top-bar">
-        <div class="control-group">
-            <label>👤 學生姓名 (直接輸入或點選清單)</label>
-            <input type="text" id="targetName" placeholder="請輸入姓名..." oninput="refresh()">
+    <div class="top-row">
+        <div class="input-group">
+            <label>👤 學生姓名</label>
+            <input type="text" id="stuName" placeholder="直接輸入或點清單" oninput="updateOutput()">
         </div>
-        <div class="control-group">
-            <label>📁 匯入 Excel 名單</label>
-            <input type="file" id="upload" accept=".xlsx, .xls">
+        <div class="input-group">
+            <label>📁 匯入 Excel</label>
+            <input type="file" id="importFile" accept=".xlsx, .xls">
         </div>
-        <div class="control-group">
-            <label>📊 快速選擇</label>
-            <select onchange="quickSelect(this.value)">
-                <option value="">-- 自動勾選預設組合 --</option>
-                <option value="perfect">優等生 (全方位優異)</option>
-                <option value="active">過動型 (有活力但需自律)</option>
-                <option value="quiet">內向型 (文靜踏實)</option>
+        <div class="input-group">
+            <label>⚡ 快速套用模板</label>
+            <select onchange="applyTemplate(this.value)">
+                <option value="">-- 請選擇 --</option>
+                <option value="A">全能模範生</option>
+                <option value="B">進步潛力股</option>
+                <option value="C">需要小提醒</option>
             </select>
         </div>
     </div>
 
-    <div class="mode-bar">
-        <div class="mode-group">
-            <strong>🗣️ 說話語氣：</strong>
-            <label><input type="radio" name="tone" value="warm" checked onchange="refresh()"> 溫暖鼓勵</label>
-            <label><input type="radio" name="tone" value="formal" onchange="refresh()"> 正式莊重</label>
-            <label><input type="radio" name="tone" value="witty" onchange="refresh()"> 幽默風趣</label>
+    <div class="mode-settings">
+        <div><strong>🗣️ 說話語氣：</strong>
+            <label><input type="radio" name="tone" value="warm" checked onchange="updateOutput()"> 溫暖鼓勵</label>
+            <label><input type="radio" name="tone" value="formal" onchange="updateOutput()"> 正式莊重</label>
+            <label><input type="radio" name="tone" value="witty" onchange="updateOutput()"> 幽默風趣</label>
         </div>
-        <div class="mode-group">
-            <strong>📏 目標字數：</strong>
-            <label><input type="radio" name="wLen" value="100" checked onchange="refresh()"> 100字</label>
-            <label><input type="radio" name="wLen" value="200" onchange="refresh()"> 200字</label>
+        <div><strong>📏 預計長度：</strong>
+            <label><input type="radio" name="len" value="short" checked onchange="updateOutput()"> 100字</label>
+            <label><input type="radio" name="len" value="long" onchange="updateOutput()"> 200字</label>
         </div>
     </div>
 
-    <div class="main-layout">
-        <div class="sidebar">
-            <div style="font-weight: bold; margin-bottom: 10px;">學生名單 (<span id="stuCount">0</span>)</div>
-            <div id="stuList"><small style="color:#999">尚未匯入資料</small></div>
+    <div class="main-grid">
+        <div class="stu-list">
+            <div style="padding:10px; background:#f1f2f6; font-weight:bold;">學生清單 (<span id="stuTotal">0</span>)</div>
+            <div id="stuContainer"><small style="padding:10px; display:block; color:#999;">尚未匯入...</small></div>
         </div>
 
-        <div id="optionsArea">
+        <div id="tagsRoot">
             </div>
     </div>
 
-    <div class="result-container">
-        <textarea id="resultOutput" placeholder="勾選上方特質後，評語將在此即時生成..."></textarea>
-        <div class="btn-group">
-            <span id="charCount" style="color: #999; margin-right: auto;">字數：0</span>
-            <button class="btn btn-reset" onclick="resetForm()">全部清空</button>
-            <button class="btn btn-copy" onclick="copyText()">複製評語內容</button>
+    <div class="result-panel">
+        <textarea id="finalOutput" placeholder="請選取特質，評語將即時在此生成，無空行段落..."></textarea>
+        <div class="btn-row">
+            <span id="txtLen" style="color:#999; margin-right:auto;">字數：0</span>
+            <button class="btn btn-reset" onclick="resetCheckboxes()">重設</button>
+            <button class="btn btn-copy" onclick="copy()">複製評語</button>
         </div>
     </div>
 </div>
 
 <script>
-// 核心語氣資料庫
-const dataLib = {
-    "學習態度": [
-        {
-            id: "a1", label: "上課積極發言",
-            warm: "在課堂上總是看到你充滿熱情地舉手分享，那份求知欲讓老師印象深刻。",
-            formal: "課堂參與度極高，能主動針對教學內容提出見解，展現優異的思辨能力。",
-            witty: "你是班上的『發言擔當』，課堂上有了你的聲音，氣氛總是格外熱絡！"
-        },
-        {
-            id: "a2", label: "作業書寫工整",
-            warm: "翻開你的作業本是一種視覺享受，每一筆一畫都看得到你的用心。",
-            formal: "學業任務完成度高，作業字跡端正且條理分明，展現嚴謹的求知態度。",
-            witty: "你的字跡就像印刷出來的一樣漂亮，看來你的耐心指數已經點滿了。"
-        },
-        {
-            id: "a3", label: "邏輯理解力強",
-            warm: "你擁有一顆靈活的大腦，遇到難題時總能閃現智慧的光芒。",
-            formal: "邏輯分析能力出色，面對複雜邏輯問題時能迅速釐清重點，表現優異。",
-            witty: "你的大腦運作速度簡直是 5G 等級，反應快到有時候連老師都快跟不上了。"
-        },
-        {
-            id: "a4", label: "需加強專注力",
-            warm: "如果你能把窗外的小鳥先放一邊，專注於課堂，表現一定會更驚人喔！",
-            formal: "學習穩定性仍有提升空間，若能增強課堂專注度，學業表現定能更趨完善。",
-            witty: "你似乎有一顆愛旅行的心，上課時思緒偶爾會飄到遠方，記得要準時回航喔。"
-        }
+const db = {
+    "📖 學習態度": [
+        {id:"a1", label:"積極發言", warm:"課堂上總能看到你積極舉手，勇敢分享獨到的見解。", formal:"課堂參與意識強烈，能主動針對課題內容進行深度的互動。", witty:"你是班上的討論火車頭，有了你的發言，課堂氣氛總是瞬間升溫。"},
+        {id:"a2", label:"作業工整", warm:"翻開你的作業本，就像欣賞一件藝術品，每一筆都看得到用心。", formal:"作業書寫規範且字跡工整，展現其嚴謹求實的學習風範。", witty:"你的字跡端正得像印刷機印出來的，讓老師批改時心情特別舒暢。"},
+        {id:"a3", label:"思維敏捷", warm:"你擁有靈活的大腦，遇到難題時總能閃現智慧的火花。", formal:"邏輯推理能力優異，能迅速掌握各學科的核心概念與重點。", witty:"你的大腦運作速度簡直是5G規格，反應快到讓大家都感到佩服。"},
+        {id:"a4", label:"需加強專注", warm:"如果你能將窗外的好奇心收回，專注於課業，表現會更驚人喔！", formal:"學習穩定性仍有提升空間，建議加強課堂專注度以優化學習效果。", witty:"你的思緒偶爾會到外太空旅行，記得要準時回航參加課堂冒險喔。"},
+        {id:"a5", label:"主動發問", warm:"老師很喜歡你愛問問題的習慣，這代表你一直在認真思考。", formal:"具備主動探索的精神，遇有疑惑能適時請益，學習進程扎實。", witty:"你就是班上的『十萬個為什麼』，這種鑽研到底的精神非常難得。"},
+        {id:"a6", label:"學習穩定", warm:"這學期你的表現穩如泰山，讓老師對你感到非常放心。", formal:"學業表現持平穩定，各項測驗皆能維持在一定水準，表現稱職。", witty:"你就像班上的『定海神針』，表現穩定的程度簡直讓人無可挑剔。"}
     ],
-    "品行生活": [
-        {
-            id: "c1", label: "誠實負責",
-            warm: "老師最欣賞你誠實無欺的品質，這比得到滿分更讓老師為你感到驕傲。",
-            formal: "為人正直誠實，對於交辦任務能展現極高的責任感與執行力。",
-            witty: "你就像是班上的『誠信大使』，做事踏實到讓人完全不需要擔心。"
-        },
-        {
-            id: "c2", label: "熱心助人",
-            warm: "你溫暖的雙手幫助了不少同學，班級因為有你而變得更加溫馨。",
-            formal: "具備良好的同理心，樂於協助同儕解決困難，為班級環境帶來正面影響。",
-            witty: "你簡直是我們班的『行動急救包』，哪裡有困難，哪裡就有你的身影。"
-        },
-        {
-            id: "c3", label: "活潑好動",
-            warm: "你全身充滿了能量，那份活力總是能感染身邊的每一個人。",
-            formal: "個性開朗外向，體力充沛，若能將這份動能轉化為自律力，表現將更佳。",
-            witty: "你體內的電池大概是核能級別的，永遠有無窮的體力去探索校園的每個角落。"
-        }
+    "🌱 品行生活": [
+        {id:"c1", label:"守法有禮", warm:"你是個懂事又有禮貌的孩子，見到師長總能親切問候。", formal:"品行端正且遵守校規，待人接物進退有據，足為同儕表率。", witty:"你簡直是班上的『禮貌大使』，優雅的表現為班級增色不少。"},
+        {id:"c2", label:"誠實負責", warm:"老師最欣賞你的誠實，這份正直的勇氣比滿分更重要。", formal:"處事誠實無欺，對於交辦任務皆能負責盡職，深受師長信任。", witty:"你就像是班上的誠信保險箱，做事靠譜的程度讓人百分百放心。"},
+        {id:"c3", label:"愛護公物", warm:"謝謝你默默為班級付出，把教室當成自己的家一樣愛護。", formal:"生活常規落實良好，愛惜公物並主動維持校園環境之整潔。", witty:"你大概是班上的『環境守護神』，公物在你的照顧下都保持得很好。"},
+        {id:"c4", label:"情緒穩定", warm:"你有一顆溫柔平靜的心，處理情緒的成熟度讓老師很驚訝。", formal:"具備優良的情緒調節能力，遇事冷靜不急躁，心理素質極佳。", witty:"你體內好像內建了穩壓器，任何時候都能保持淡定從容。"},
+        {id:"c5", label:"打掃認真", warm:"打掃時間總能看到你賣力的背影，把角落刷得亮晶晶。", formal:"勞動服務態度積極，執行整潔工作認真確實，不走馬看花。", witty:"你簡直是『清潔小隊長』，髒亂在你面前完全沒有生存的機會。"},
+        {id:"c6", label:"活力十足", warm:"你全身充滿朝氣，那份陽光般的笑容總能感染大家。", formal:"個性活潑外向且精力充沛，建議將這份活力轉化為學習動力。", witty:"你體內的電池大概是核能級的，永遠有消耗不完的青春活力。"}
     ],
-    "期許建議": [
-        {
-            id: "f1", label: "更上一層樓",
-            warm: "繼續保持這份熱情，老師相信你未來的路一定會繁花盛開。",
-            formal: "期許下學期能延續目前的優勢，在多元領域中持續深耕，追求卓越。",
-            witty: "目前的你已經很棒了，但老師覺得你還在『熱身階段』，期待你下學期火力全開！"
-        },
-        {
-            id: "f2", label: "建立自信心",
-            warm: "其實你比自己想像中還要優秀，大膽地站在舞台中央發光吧！",
-            formal: "建議建立更強的自我認同感，克服面對挑戰時的畏難情緒，未來可期。",
-            witty: "別再把你的才華藏起來了，老師已經準備好要當你的頭號粉絲囉！"
-        }
+    "🤝 人際互動": [
+        {id:"s1", label:"熱心助人", warm:"你是個熱心腸的孩子，常主動幫受困的同學解圍。", formal:"具備服務熱忱，樂於協助同儕解決困難，營造和諧班級氛圍。", witty:"你簡直是班上的『行動急救包』，哪裡有困難你就會出現在哪。"},
+        {id:"s2", label:"領導力強", warm:"在團體中你很有領導者的風範，能帶著大家一起前進。", formal:"展現卓越的領導天賦，能妥善分配團隊任務，組織力優異。", witty:"你天生自帶領袖氣場，大家都很願意跟隨你的指揮一起努力。"},
+        {id:"s3", label:"包容寬大", warm:"你懂得體諒他人的不完美，這份溫柔是非常珍貴的特質。", formal:"處事圓融且具備寬廣胸襟，能尊重並包容不同背景之意見。", witty:"你大概擁有班上最強的『寬容濾鏡』，總能看見別人的好處。"},
+        {id:"s4", label:"溝通良好", warm:"你很會表達自己的感受，也能耐心地傾聽別人的想法。", formal:"口語表達能力佳，在團隊中能扮演良好的溝通協調角色。", witty:"你就是班上的『金牌調解員』，再複雜的矛盾都能被你化解。"},
+        {id:"s5", label:"人緣極佳", warm:"大家都喜歡找你一起玩，你是班上的超強磁鐵。", formal:"社交能力優異，與同儕相處融洽，在群體中深具號召力。", witty:"你的人氣指數已經爆表了，簡直是班上的人緣王。"},
+        {id:"s6", label:"團體合作", warm:"在小組活動中，你總能盡力配合，是個完美的夥伴。", formal:"具備群體協作精神，在多人合作任務中能發揮穩定作用。", witty:"你是最棒的『神隊友』，跟你同組的同學都覺得非常幸運。"}
+    ],
+    "✨ 綜合表現": [
+        {id:"e1", label:"科展優異", warm:"你在科學探究上的專注與創意，讓這份成果格外精彩。", formal:"於科學競賽展現邏輯思辨長才，研究態度嚴謹，表現傑出。", witty:"你就像班上的『小小愛因斯坦』，對科學的熱忱大家有目共睹。"},
+        {id:"e2", label:"體育出色", warm:"球場上你矯健的身影，展現了無比的毅力與活力。", formal:"運動表現亮眼，具備優異的體適能基礎與不屈不撓的鬥志。", witty:"你根本是班上的『閃電俠』，在體育場上完全是你的主場。"},
+        {id:"e3", label:"藝術天賦", warm:"你的畫筆下色彩鮮艷，充滿了對世界的想像力。", formal:"美感素養深厚，藝術作品風格獨特且具備豐富的表達力。", witty:"你大概是班上的『小小畢卡索』，隨手一畫都充滿了藝術感。"},
+        {id:"e4", label:"資訊強項", warm:"看你熟練操作電腦的樣子，真的是個小科技達人。", formal:"資訊應用能力優異，能運用數位工具輔助學習，成效卓越。", witty:"你跟電腦大概有心靈感應，程式與設備在你手中都乖乖聽話。"},
+        {id:"e5", label:"音樂素養", warm:"悠揚的樂聲中，老師感受到了你對音樂的熱愛。", formal:"音感靈敏且具備優良的演奏技巧，展現深厚的音樂涵養。", witty:"你撥動音符的樣子太帥了，簡直是班上的『音樂大師』。"},
+        {id:"e6", label:"朗讀口才", warm:"你說故事時的神情好動人，大家都聽得入迷了。", formal:"語音圓潤且情感真摯，朗讀技巧純熟，具備卓越台風。", witty:"你只要一開口，全場的耳朵都會被你吸過去，口才一棒！"}
     ]
 };
 
-let allStudents = [];
-
-// 初始化 UI
-function initTags() {
-    const area = document.getElementById('optionsArea');
-    for (const [cat, items] of Object.entries(dataLib)) {
-        const div = document.createElement('div');
-        div.className = 'tag-section';
-        div.innerHTML = `<div class="tag-header">${cat}</div><div class="tag-grid"></div>`;
-        const grid = div.querySelector('.tag-grid');
-        
-        items.forEach(item => {
+// 初始化標籤區
+function init() {
+    const root = document.getElementById('tagsRoot');
+    for (let cat in db) {
+        const section = document.createElement('div');
+        section.className = 'category-block';
+        section.innerHTML = `<div class="category-title">${cat}</div><div class="tag-grid"></div>`;
+        const grid = section.querySelector('.tag-grid');
+        db[cat].forEach(item => {
             const label = document.createElement('label');
-            label.className = 'tag-btn';
-            label.innerHTML = `<input type="checkbox" value="${item.id}" data-cat="${cat}" onchange="refresh()"> <span>${item.label}</span>`;
+            label.className = 'tag-card';
+            label.innerHTML = `<input type="checkbox" value="${item.id}" onchange="updateOutput()"> <span>${item.label}</span>`;
             grid.appendChild(label);
         });
-        area.appendChild(div);
+        root.appendChild(section);
     }
 }
 
-// 核心生成邏輯
-function refresh() {
-    const name = document.getElementById('targetName').value || "該生";
+// 核心生成邏輯：取消所有格行
+function updateOutput() {
+    const name = document.getElementById('stuName').value || "該生";
     const tone = document.querySelector('input[name="tone"]:checked').value;
-    const wLen = document.querySelector('input[name="wLen"]:checked').value;
-    const selectedIds = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(i => i.value);
+    const len = document.querySelector('input[name="len"]:checked').value;
+    const checked = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(i => i.value);
     
-    // 更新選取樣式
-    document.querySelectorAll('.tag-btn').forEach(btn => {
-        btn.classList.toggle('checked', btn.querySelector('input').checked);
+    // 更新標籤樣式
+    document.querySelectorAll('.tag-card').forEach(card => {
+        card.classList.toggle('active', card.querySelector('input').checked);
     });
 
-    let parts = [];
-    selectedIds.forEach(id => {
-        for (let cat in dataLib) {
-            const item = dataLib[cat].find(i => i.id === id);
-            if (item) parts.push(item[tone]);
+    // 語氣開頭與結尾
+    const presets = {
+        warm: { intro: `${name}，這學期看著你不斷成長，老師心裡有說不出的感動。`, end: "繼續加油，老師會一直為你喝采！" },
+        formal: { intro: `${name}同學在本學期表現優異，具體詳述如下：`, end: "綜上所述，期許該生持續進步，未來發展大有可為。" },
+        witty: { intro: `哈囉${name}！這學期你完成了一段精彩的旅程。`, end: "保持你的獨特電力，讓大家繼續看到你的光芒！" }
+    };
+
+    if (len === 'long') {
+        presets.warm.intro = `親愛的${name}，不知不覺一個學期又過去了。在老師眼中，你是一個充滿無限可能性的孩子，每天都能在校園看見你努力的身影。`;
+        presets.formal.intro = `查${name}同學於本學期在校期間，守法習禮，課業與品德均衡發展。經本導師長期觀察，具體綜合評語如下：`;
+    }
+
+    let bodyParts = [];
+    checked.forEach(id => {
+        for(let cat in db) {
+            const target = db[cat].find(i => i.id === id);
+            if(target) bodyParts.push(target[tone]);
         }
     });
 
-    // 根據語氣設定開頭與結尾
-    let config = {
-        warm: { intro: `${name}，本學期看著你不斷成長，老師心裡有說不出的感動。`, end: "加油，老師會一直為你喝采！" },
-        formal: { intro: `${name}同學在本學期的校園生活中，各方面表現如下：`, end: "綜上所述，期許該生未來能持續進步，發揮所長。" },
-        witty: { intro: `哈囉${name}！時光飛逝，我們一起完成了一個精彩的學期。`, end: "繼續保持你的獨特電力，讓世界看見你！" }
-    };
-
-    let intro = config[tone].intro;
-    let closing = config[tone].end;
-
-    // 字數擴展
-    if (wLen == "200") {
-        if(tone === 'warm') intro = `親愛的${name}，不知不覺一個學期又過去了。在老師眼中，你是一個充滿無限可能性的孩子，每天都能在校園裡看見你努力的身影。`;
-        if(tone === 'formal') intro = `查${name}同學於本學期在校期間，守法習禮，課業與品德均衡發展。經本導師長期觀察，具體評語如下：`;
-    }
-
-    const body = parts.length > 0 ? parts.join(' ') : "（請勾選上方的表現標籤）";
-    const final = `${intro}\n\n${body}\n\n${closing}`;
+    const bodyText = bodyParts.length > 0 ? bodyParts.join('') : "（請勾選表現特質）";
+    // 最終組合：去除所有換行，確保是一個連續段落
+    const finalResult = `${presets[tone].intro}${bodyText}${presets[tone].end}`.replace(/\n/g, "");
     
-    document.getElementById('resultOutput').value = final;
-    document.getElementById('charCount').innerText = `字數：${final.length}`;
+    document.getElementById('finalOutput').value = finalResult;
+    document.getElementById('txtLen').innerText = `字數：${finalResult.length}`;
 }
 
 // Excel 匯入
-document.getElementById('upload').addEventListener('change', function(e) {
+document.getElementById('importFile').addEventListener('change', function(e) {
     const reader = new FileReader();
     reader.onload = (event) => {
         const wb = XLSX.read(new Uint8Array(event.target.result), {type: 'array'});
         const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-        allStudents = data.map(r => r['姓名'] || Object.values(r)[0]).filter(n => n);
-        renderStuList();
+        const names = data.map(r => r['姓名'] || Object.values(r)[0]).filter(n => n);
+        renderNames(names);
     };
     reader.readAsArrayBuffer(e.target.files[0]);
 });
 
-function renderStuList() {
-    const list = document.getElementById('stuList');
-    document.getElementById('stuCount').innerText = allStudents.length;
-    list.innerHTML = "";
-    allStudents.forEach(name => {
+function renderNames(names) {
+    const container = document.getElementById('stuContainer');
+    document.getElementById('stuTotal').innerText = names.length;
+    container.innerHTML = "";
+    names.forEach(n => {
         const d = document.createElement('div');
-        d.className = 'stu-item';
-        d.innerText = name;
+        d.className = 'stu-btn';
+        d.innerText = n;
         d.onclick = () => {
-            document.querySelectorAll('.stu-item').forEach(i => i.classList.remove('active'));
+            document.querySelectorAll('.stu-btn').forEach(b => b.classList.remove('active'));
             d.classList.add('active');
-            document.getElementById('targetName').value = name;
-            refresh();
+            document.getElementById('stuName').value = n;
+            updateOutput();
         };
-        list.appendChild(d);
+        container.appendChild(d);
     });
 }
 
-function quickSelect(type) {
+function applyTemplate(type) {
     const checks = document.querySelectorAll('input[type="checkbox"]');
-    checks.forEach(c => c.checked = false); // 先清空
-    
-    const maps = {
-        perfect: ['a1', 'a2', 'c1', 'f1'],
-        active: ['a1', 'a4', 'c3', 'f2'],
-        quiet: ['a2', 'c1', 'c2', 'f2']
+    checks.forEach(c => c.checked = false);
+    const map = {
+        A: ['a1','a2','a3','c1','c2','s1','s2'],
+        B: ['a5','a6','c5','s6'],
+        C: ['a4','c6','s5']
     };
-    
-    if(maps[type]) {
-        maps[type].forEach(id => {
-            const el = document.querySelector(`input[value="${id}"]`);
-            if(el) el.checked = true;
-        });
-    }
-    refresh();
+    if(map[type]) map[type].forEach(id => {
+        const target = document.querySelector(`input[value="${id}"]`);
+        if(target) target.checked = true;
+    });
+    updateOutput();
 }
 
-function resetForm() {
+function resetCheckboxes() {
     document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false);
-    document.getElementById('targetName').value = "";
-    refresh();
+    updateOutput();
 }
 
-function copyText() {
-    const area = document.getElementById('resultOutput');
+function copy() {
+    const area = document.getElementById('finalOutput');
     area.select();
     document.execCommand('copy');
     alert('評語已複製！');
 }
 
-initTags();
+init();
 </script>
-
 </body>
 </html>
