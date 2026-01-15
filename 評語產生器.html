@@ -3,142 +3,175 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>小學生評語產生器</title>
+    <title>進階版評語產生器</title>
     <style>
-        :root {
-            --primary-color: #4a90e2;
-            --secondary-color: #f5f7fa;
-            --text-color: #333;
-        }
-        body {
-            font-family: "Microsoft JhengHei", sans-serif;
-            background-color: #eef2f3;
-            color: var(--text-color);
-            display: flex;
-            justify-content: center;
-            padding: 20px;
-        }
-        .container {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            max-width: 600px;
-            width: 100%;
-        }
-        h2 { text-align: center; color: var(--primary-color); }
-        .input-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input, select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            box-sizing: border-box;
-        }
+        :root { --primary: #4a90e2; --bg: #f0f2f5; }
+        body { font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; background: var(--bg); padding: 20px; line-height: 1.6; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: var(--primary); margin-bottom: 30px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .section { border: 1px solid #eee; padding: 15px; border-radius: 8px; }
+        .section h3 { margin-top: 0; color: #555; font-size: 1rem; border-left: 4px solid var(--primary); padding-left: 10px; }
+        label { display: block; margin: 8px 0; cursor: pointer; }
+        input[type="text"], select { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        .result-area { margin-top: 30px; background: #f9f9f9; padding: 20px; border-radius: 8px; border: 1px dashed var(--primary); }
         .btn-group { display: flex; gap: 10px; margin-top: 20px; }
-        button {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: 0.3s;
-        }
-        .btn-generate { background-color: var(--primary-color); color: white; }
-        .btn-generate:hover { background-color: #357abd; }
-        .btn-copy { background-color: #2ecc71; color: white; }
-        .btn-copy:hover { background-color: #27ae60; }
-        
-        #result {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: var(--secondary-color);
-            border-left: 5px solid var(--primary-color);
-            min-height: 80px;
-            white-space: pre-wrap;
-            line-height: 1.6;
-        }
-        .footer { text-align: center; font-size: 12px; color: #888; margin-top: 20px; }
+        button { flex: 1; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-gen { background: var(--primary); color: white; }
+        .btn-copy { background: #2ecc71; color: white; }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        #output { min-height: 60px; font-size: 1.1rem; color: #333; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>📝 小學生評語產生器</h2>
+    <h1>📝 進階評語自動產生器</h1>
     
-    <div class="input-group">
-        <label>學生姓名</label>
-        <input type="text" id="studentName" placeholder="例如：王小明">
-    </div>
+    <div class="grid">
+        <div class="section" style="grid-column: span 2;">
+            <h3>基本資料</h3>
+            <div style="display: flex; gap: 20px;">
+                <div style="flex: 1;">
+                    <label>學生姓名</label>
+                    <input type="text" id="stuName" placeholder="請輸入姓名">
+                </div>
+                <div style="flex: 1;">
+                    <label>老師語氣</label>
+                    <select id="tone">
+                        <option value="warm">溫暖鼓勵 (多用形容詞)</option>
+                        <option value="formal">莊重正式 (簡潔明瞭)</option>
+                        <option value="expectation">殷切期盼 (側重未來規劃)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
 
-    <div class="input-group">
-        <label>表現主調</label>
-        <select id="tone">
-            <option value="excellent">優異穩定</option>
-            <option value="good">進步很大</option>
-            <option value="needsImprovement">仍需努力</option>
-            <option value="active">活潑好動</option>
-        </select>
+        <div class="section">
+            <h3>📖 學習表現</h3>
+            <select id="academic">
+                <option value="none">--請選擇--</option>
+                <option value="a1">思維敏捷，課堂發言踴躍</option>
+                <option value="a2">學習態度認真，作業工整</option>
+                <option value="a3">學業穩定，能按時完成任務</option>
+                <option value="a4">理解力強，但偶爾粗心</option>
+                <option value="a5">需多花心力於課業，加強基礎</option>
+            </select>
+        </div>
+
+        <div class="section">
+            <h3>🌱 品行生活</h3>
+            <select id="conduct">
+                <option value="none">--請選擇--</option>
+                <option value="c1">品德優良，堪為同學表率</option>
+                <option value="c2">活潑開朗，是班上的開心果</option>
+                <option value="c3">遵守校規，做事盡責認真</option>
+                <option value="c4">個性內斂，做事低調踏實</option>
+                <option value="c5">精力充沛，若能更加自律更好</option>
+            </select>
+        </div>
+
+        <div class="section">
+            <h3>🤝 人際互動</h3>
+            <select id="social">
+                <option value="none">--請選擇--</option>
+                <option value="s1">熱心助人，與同儕相處融洽</option>
+                <option value="s2">具備領導才能，深得同學信任</option>
+                <option value="s3">待人誠懇，謙沖有禮</option>
+                <option value="s4">樂於分享，團隊合作表現佳</option>
+                <option value="s5">宜多學習與人溝通的技巧</option>
+            </select>
+        </div>
+
+        <div class="section">
+            <h3>✨ 未來期許</h3>
+            <select id="future">
+                <option value="none">--請選擇--</option>
+                <option value="f1">期許下學期能更上一層樓</option>
+                <option value="f2">保持這份熱情，未來大有可為</option>
+                <option value="f3">若能改善粗心習慣，成績定能突飛猛進</option>
+                <option value="f4">加油！老師相信你的潛力不止於此</option>
+                <option value="f5">期待看到你更自信、更主動的一面</option>
+            </select>
+        </div>
     </div>
 
     <div class="btn-group">
-        <button class="btn-generate" onclick="generateComment()">產生評語</button>
-        <button class="btn-copy" onclick="copyText()">複製評語</button>
+        <button class="btn-gen" onclick="generate()">生成完整評語</button>
+        <button class="btn-copy" onclick="copy()">複製內容</button>
     </div>
 
-    <div id="result">點擊「產生評語」按鈕來生成內容...</div>
-
-    <div class="footer">本工具僅供參考，請老師根據學生實際情況調整。</div>
+    <div class="result-area">
+        <div id="output">評語將顯示於此...</div>
+    </div>
 </div>
 
 <script>
-    const database = {
-        opening: ["{name}本學期表現良好，", "{name}是一位聰明的孩子，", "{name}在校表現穩定，", "{name}個性溫和，"],
-        excellent: {
-            traits: ["學習態度認真專注，", "課堂上總是積極發言，", "作業書寫工整美觀，"],
-            social: ["與同學相處融洽，是老師的好幫手。", "深得同學喜愛，展現出領導才能。", "處事沉穩，展現出超越年齡的成熟。"],
-            closing: ["希望繼續保持，再創佳績！", "老師對你未來的表現充滿期待。", "期許你在未來的學習道路上更上一層樓。"]
+    const data = {
+        academic: {
+            a1: "學習方面，思維敏捷且課堂發言踴躍，展現強烈求知慾。",
+            a2: "學習態度極其認真，作業書寫工整，是學習的楷模。",
+            a3: "學業表現穩定，能踏實完成老師交辦的各項學習任務。",
+            a4: "理解能力優異，但在處理細節時若能更細心，表現會更完美。",
+            a5: "學習上需再投入更多專注力，建議加強基礎知識的累積。"
         },
-        good: {
-            traits: ["本學期在學業上有明顯進步，", "開始找到學習的樂趣，", "能夠按時完成老師交辦的任務，"],
-            social: ["待人誠懇有禮，", "熱心參與班級活動，", "懂得體諒他人，進步有目共睹。"],
-            closing: ["只要持之以恆，一定會更出色！", "加油，保持這份進步的動力。", "願你繼續保持好奇心，勇敢嘗試。"]
+        conduct: {
+            c1: "品德修養深厚，處事成熟穩重，堪為班級同學之表率。",
+            c2: "個性活潑開朗且富有幽默感，是班上不可或缺的開心果。",
+            c3: "在校遵守校規，對於生活常規的執行非常盡責認真。",
+            c4: "個性內斂沉穩，做事踏實且不張揚，深得老師信任。",
+            c5: "活力十足，若能將這份精力轉化為自律的動力，進步會更大。"
         },
-        needsImprovement: {
-            traits: ["學習上若能更專注，成績定能提升，", "偶爾會因為粗心而影響表現，", "作業繳交的準時度仍有進步空間，"],
-            social: ["建議多與同學正面溝通，", "在課堂規範上需更加自律，", "希望你能學會分配時間，平衡玩樂與學習。"],
-            closing: ["期待下學期看到煥然一新的你。", "老師相信你一定做得到，加油！", "調整心態，明天會更好。"]
+        social: {
+            s1: "人際關係極佳，樂於伸出援手幫助有需要的同學。",
+            s2: "展現出良好的領導天賦，在團體中能帶領同學共同進步。",
+            s3: "待人真誠有禮，與人應對進退得體，深受大家喜愛。",
+            s4: "具備良好的團隊合作精神，在小組活動中表現亮眼。",
+            s5: "人際溝通上可再多觀察他人需求，學習更圓融的互動方式。"
         },
-        active: {
-            traits: ["充滿活力，是班上的開心果，", "思維敏捷，對新鮮事物充滿好奇，", "體育表現亮眼，反應靈敏，"],
-            social: ["人緣極佳，樂於分享，", "做事乾脆利落，但也稍欠細心，", "熱情主動，總是積極參與各項競賽。"],
-            closing: ["若能動靜得宜，表現將更完美。", "將這份熱情轉化為學習的動力吧！", "期待你在擅長的領域發光發熱。"]
+        future: {
+            f1: "期待下學期能看到你更亮眼的表現，繼續加油！",
+            f2: "請務必保持這份學習熱情，老師相信你未來大有可為。",
+            f3: "若能克服粗心的小毛病，你的成績定能有突破性的飛躍。",
+            f4: "加油！老師對你充滿信心，相信你的潛力絕不僅限於此。",
+            f5: "希望你能給予自己更多信心，主動迎接未來的各項挑戰。"
         }
     };
 
-    function generateComment() {
-        const name = document.getElementById('studentName').value || "該生";
+    function generate() {
+        const name = document.getElementById('stuName').value || "該生";
         const tone = document.getElementById('tone').value;
-        const db = database[tone];
-
-        const open = database.opening[Math.floor(Math.random() * database.opening.length)];
-        const trait = db.traits[Math.floor(Math.random() * db.traits.length)];
-        const social = db.social[Math.floor(Math.random() * db.social.length)];
-        const close = db.closing[Math.floor(Math.random() * db.closing.length)];
-
-        let comment = open + trait + social + close;
-        comment = comment.replace(/{name}/g, name);
+        const sections = ['academic', 'conduct', 'social', 'future'];
         
-        document.getElementById('result').innerText = comment;
+        let commentParts = [];
+        sections.forEach(sec => {
+            const val = document.getElementById(sec).value;
+            if (val !== 'none') {
+                commentParts.push(data[sec][val]);
+            }
+        });
+
+        if (commentParts.length === 0) {
+            document.getElementById('output').innerText = "請至少選擇一個表現選項！";
+            return;
+        }
+
+        let finalComment = `${name}同學：\n${commentParts.join(' ')}`;
+        
+        // 根據語氣做微調（簡單範例）
+        if (tone === 'warm') {
+            finalComment = "親愛的" + finalComment.replace("：", "，老師想對你說：");
+        } else if (tone === 'expectation') {
+            finalComment += " 老師會一直為你加油的！";
+        }
+
+        document.getElementById('output').innerText = finalComment;
     }
 
-    function copyText() {
-        const text = document.getElementById('result').innerText;
-        navigator.clipboard.writeText(text).then(() => {
-            alert('評語已複製到剪貼簿！');
-        });
+    function copy() {
+        const text = document.getElementById('output').innerText;
+        navigator.clipboard.writeText(text);
+        alert("已複製到剪貼簿！");
     }
 </script>
 
