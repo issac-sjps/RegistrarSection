@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>114學年度 身分減免決策支援系統 v9.6</title>
+    <title>114學年度 身分減免決策支援系統 v9.93</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -28,9 +28,6 @@
         .matrix-row-header { @apply text-left bg-slate-50 font-bold text-slate-800; }
         .matrix-total { @apply font-bold text-blue-700 bg-blue-50; }
         .matrix-money { @apply text-right font-mono font-bold text-emerald-700 bg-emerald-50 px-4; }
-        .side-nav-item { @apply flex justify-between items-center px-4 py-3 cursor-pointer border-l-4 border-transparent hover:bg-slate-50 transition text-sm text-slate-600; }
-        .side-nav-item.active { @apply border-blue-600 bg-blue-50 text-blue-700 font-bold; }
-        .badge { @apply px-2 py-0.5 rounded-full text-xs font-bold; }
         
         @media print {
             @page { size: A4 portrait; margin: 10mm; }
@@ -48,7 +45,6 @@
             .ref-table th { background-color: #f0f0f0; text-align: center; font-weight: bold; }
 
             .print-header { text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 5px; font-family: "Noto Serif TC", serif; }
-            .print-sub-header { text-align: right; font-size: 10pt; margin-bottom: 5px; }
             .instruction-box { font-size: 9pt; border: 1px solid #000; padding: 8px; margin-bottom: 8px; font-family: "Noto Serif TC", serif; line-height: 1.4; }
             * { box-shadow: none !important; overflow: visible !important; }
         }
@@ -61,7 +57,7 @@
                 <div class="flex justify-between items-center h-16">
                     <div class="flex items-center gap-3">
                         <div class="bg-blue-600 text-white p-2 rounded-lg font-bold text-xl">減免</div>
-                        <h1 class="text-xl font-bold text-slate-800">決策支援系統 <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full">v9.6 新學期版</span></h1>
+                        <h1 class="text-xl font-bold text-slate-800">決策支援系統 <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full">v9.93 簽名日期完善版</span></h1>
                     </div>
                     <div class="flex items-center gap-3">
                         <button @click="fixData" class="btn btn-outline text-xs bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100">🛠️ 校正資料</button>
@@ -100,7 +96,16 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="card space-y-4">
                         <h3 class="font-bold text-lg border-b pb-2">1. 變數設定 (自動帶入內文)</h3>
-                        <div><label class="block text-xs font-bold text-slate-500 mb-1">學年度</label><input v-model="formConfig.year" class="w-full border p-2 rounded"></div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label class="block text-xs font-bold text-slate-500 mb-1">學年度</label><input v-model="formConfig.year" class="w-full border p-2 rounded"></div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">學期</label>
+                                <select v-model="formConfig.semester" class="w-full border p-2 rounded bg-white">
+                                    <option value="上學期">上學期</option>
+                                    <option value="下學期">下學期</option>
+                                </select>
+                            </div>
+                        </div>
                         <div><label class="block text-xs font-bold text-slate-500 mb-1">截止日期 ( &#123;&#123;deadline&#125;&#125; )</label><input v-model="formConfig.deadline" class="w-full border p-2 rounded"></div>
                         <div><label class="block text-xs font-bold text-slate-500 mb-1">註冊組分機 ( &#123;&#123;ext&#125;&#125; )</label><input v-model="formConfig.ext" class="w-full border p-2 rounded"></div>
                     </div>
@@ -109,6 +114,10 @@
                          <h3 class="font-bold text-lg border-b pb-2">2. 顯示選項</h3>
                          <div class="flex items-center gap-2"><input type="checkbox" id="showRef" v-model="formConfig.showRefTable" class="w-5 h-5"><label for="showRef" class="font-bold cursor-pointer">印出「減免項目一覽表」</label></div>
                          <div class="flex items-center gap-2"><input type="checkbox" id="showFooter" v-model="formConfig.showFooter" class="w-5 h-5"><label for="showFooter" class="font-bold cursor-pointer">印出「導師簽名」欄位</label></div>
+                         <div class="bg-blue-50 p-3 rounded text-sm text-blue-800 mt-2">
+                             <strong>預覽標頭：</strong><br>
+                             {{ formConfig.year }}學年度 {{ formConfig.semester }} 減免申請調查表(101)
+                         </div>
                     </div>
 
                     <div class="card md:col-span-2 space-y-2">
@@ -117,12 +126,6 @@
                             <span class="text-xs text-slate-500">可用 &#123;&#123;deadline&#125;&#125; 和 &#123;&#123;ext&#125;&#125; 代表上方設定的日期與分機</span>
                         </div>
                         <textarea v-model="formConfig.instructionsRaw" rows="6" class="w-full border border-slate-300 rounded p-3 text-sm focus:ring-2 focus:ring-blue-500 font-mono leading-relaxed" placeholder="請輸入說明，每一行會自動變成一個項目符號..."></textarea>
-                        <div class="bg-slate-50 p-3 rounded text-xs text-slate-600">
-                            <strong>預覽效果：</strong>
-                            <ol class="list-decimal pl-5 mt-1 space-y-1">
-                                <li v-for="(line, i) in parsedInstructions" :key="i">{{ line }}</li>
-                            </ol>
-                        </div>
                     </div>
 
                     <div class="card md:col-span-2 space-y-2">
@@ -143,7 +146,7 @@
                     <div class="text-indigo-900 font-bold text-2xl">🖨️ 準備列印</div>
                     <p class="text-indigo-600 max-w-lg">
                         系統將根據您在「⚙️ 表單設定」分頁中的內容，產生全校各班的 PDF。<br>
-                        目前的設定：學年度 <strong>{{formConfig.year}}</strong> / 截止日 <strong>{{formConfig.deadline}}</strong>
+                        目前的設定：<strong>{{formConfig.year}}學年度 {{formConfig.semester}}</strong> / 截止日 <strong>{{formConfig.deadline}}</strong>
                     </p>
                     <button @click="printAllForms" class="btn btn-primary text-xl px-10 py-4 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all">
                         🚀 一鍵列印全校表單
@@ -222,7 +225,7 @@
         <div :class="['print-area hidden', printMode]">
             <div v-if="printMode === 'forms'">
                 <div v-for="cls in sortedClasses" :key="cls" class="page-break">
-                    <div class="print-header">{{ formConfig.year }}學年度 減免申請調查表</div>
+                    <div class="print-header">{{ formConfig.year }}學年度 {{ formConfig.semester }} 減免申請調查表({{ cls }})</div>
                     <div class="instruction-box">
                         <strong>【填報說明】</strong>
                         <ol style="margin-top: 2px; padding-left: 20px; list-style-type: decimal;">
@@ -234,7 +237,7 @@
                         <div style="font-weight:bold; font-size:10pt; margin-bottom:2px;">表1--減免項目一覽表</div>
                         <table class="ref-table"><thead><tr><th width="35%">減免身份</th><th width="25%">減免項目</th><th width="40%">備註</th></tr></thead><tbody><tr v-for="(row, idx) in refTableData" :key="idx"><td>{{ row.id }}</td><td>{{ row.item }}</td><td>{{ row.note }}</td></tr></tbody></table>
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 2px; margin-top: 10px;"><div style="font-weight:bold; font-size:12pt;">表2--{{ cls }} 班級確認名單</div><div style="font-size:9pt;">列印日期：{{ new Date().toLocaleDateString() }}</div></div>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 2px; margin-top: 10px;"><div style="font-weight:bold; font-size:12pt;">表2--{{ cls }} 班級確認名單</div></div>
                     <table class="print-table">
                         <thead><tr>
                             <th width="8%">{{ formConfig.col1 }}</th>
@@ -249,10 +252,14 @@
                                 <td style="text-align:left; font-size:9pt; vertical-align: top;"><span v-if="s.note || s.mergedDetails" class="text-xs text-gray-500 block mb-1">{{ s.note }} {{ s.mergedDetails.replace(/\[|\]/g,'') }}</span></td>
                                 <td style="text-align:left; font-size:9pt; vertical-align: top;"><span v-if="s.siblings" class="text-xs text-gray-500 block">{{ s.siblings }}</span></td>
                             </tr>
-                            <tr v-for="n in Math.max(0, 5 - getStudentsByClass(cls).length)" :key="'empty'+n"><td style="height:35px"></td><td></td><td></td><td></td><td></td></tr>
+                            <tr v-for="n in 2" :key="'empty'+n"><td style="height:35px"></td><td></td><td></td><td></td><td></td></tr>
                         </tbody>
                     </table>
-                    <div v-if="formConfig.showFooter" class="print-footer text-right px-10" style="margin-top: 20px;"><span style="font-size: 12pt; font-weight: bold;">導師簽名：________________________</span></div>
+                    
+                    <div v-if="formConfig.showFooter" class="print-footer" style="margin-top: 25px; padding-right: 10px; text-align: right;">
+                        <span style="font-size: 12pt; font-weight: bold;">導師簽名：_______________________ &nbsp;&nbsp;&nbsp; 日期： _______ 年 _______ 月 _______ 日</span>
+                    </div>
+
                 </div>
             </div>
             <div v-if="printMode === 'analysis'"><div class="print-header">身分減免交叉分析統計表</div><table class="print-table"><thead><tr><th>類別</th><th v-for="c in uniqueClasses">{{c}}</th><th>總計</th></tr></thead><tbody><tr v-for="row in pivotData" :key="row.category"><td>{{ row.category }}</td><td v-for="c in uniqueClasses">{{ row.counts[c] || '-' }}</td><td>{{ row.total }}</td></tr></tbody></table></div>
@@ -281,9 +288,10 @@
                 const printMode = ref('');
                 const searchQuery = ref('');
 
-                // --- V9.5 設定邏輯 ---
+                // --- V9.92 設定邏輯 ---
                 const defaultConfig = {
-                    year: '114', 
+                    year: '114',
+                    semester: '上學期', // 新增學期預設值
                     deadline: '3/2(一)中午前', 
                     ext: '112',
                     instructionsRaw: `請於 {{deadline}} 交回此表至註冊組 (分機{{ext}}) ； 不論有無學生申請，都需要導師簽名，再交回註冊組。
@@ -325,13 +333,13 @@
                 onMounted(() => {
                     const savedData = localStorage.getItem('subsidy_v83_data');
                     if (savedData) { const data = JSON.parse(savedData); students.value = data.students || []; bookFees.value = data.fees || bookFees.value; }
-                    const savedConfig = localStorage.getItem('subsidy_config_v9_5');
+                    const savedConfig = localStorage.getItem('subsidy_config_v9_92'); // Update storage key
                     if (savedConfig) { formConfig.value = { ...defaultConfig, ...JSON.parse(savedConfig) }; }
                 });
 
                 watch(students, () => localStorage.setItem('subsidy_v83_data', JSON.stringify({ students: students.value, fees: bookFees.value })), { deep: true });
                 watch(bookFees, () => localStorage.setItem('subsidy_v83_data', JSON.stringify({ students: students.value, fees: bookFees.value })), { deep: true });
-                watch(formConfig, () => localStorage.setItem('subsidy_config_v9_5', JSON.stringify(formConfig.value)), { deep: true });
+                watch(formConfig, () => localStorage.setItem('subsidy_config_v9_92', JSON.stringify(formConfig.value)), { deep: true });
                 
                 const triggerImport = () => document.getElementById('fileInput').click();
                 const handleFile = (e) => { 
