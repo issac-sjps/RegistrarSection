@@ -105,6 +105,34 @@
             flex: 1;
         }
 
+        /* --- 班級數設定區塊 --- */
+        .class-config-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 3欄 */
+            gap: 15px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        .class-input-group {
+            display: flex;
+            align-items: center;
+        }
+        .class-input-group label {
+            width: 80px;
+            font-weight: bold;
+        }
+        .class-input-group input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+            color: #0056b3;
+        }
+
         /* --- 預覽與上傳頁面樣式 --- */
         .upload-section {
             text-align: center;
@@ -144,8 +172,7 @@
         .page {
             background: white;
             width: 210mm;
-            min-height: 297mm;
-            /* 螢幕上稍微留一點白邊模擬紙張，但列印時會被 @page 覆蓋 */
+            min-height: 297mm; /* 螢幕上維持 A4 高度感 */
             padding: 10mm; 
             box-sizing: border-box;
             margin-bottom: 25px;
@@ -200,11 +227,11 @@
             font-weight: bold;
         }
 
-        /* --- ★★★ 列印專用設定 (重點修改處) ★★★ --- */
+        /* --- 列印專用設定 (修正空白頁問題) --- */
         @media print {
             @page {
                 size: A4;
-                margin: 5mm; /* 強制設定印表機邊界為 0.5cm */
+                margin: 5mm; /* 邊界 0.5cm */
             }
             
             body { 
@@ -214,7 +241,7 @@
             }
             
             .tabs, .main-container { 
-                display: none; 
+                display: none; /* 隱藏非表單元素 */
             }
             
             #print-preview-container {
@@ -227,12 +254,16 @@
             .page {
                 box-shadow: none;
                 margin: 0;
+                /* 關鍵修正：列印時高度設為 auto，避免跟 @page margin 衝突導致溢出 */
                 width: 100%;
-                height: auto; /* 讓內容自然延伸，配合 @page 邊界 */
-                padding: 0;   /* 移除內部 padding，完全依賴 @page 的 5mm */
-                page-break-after: always;
+                min-height: 0; 
+                height: auto; 
+                padding: 0; 
+                border: none;
+                page-break-after: always; /* 每一班結束強制換頁 */
             }
             
+            /* 避免最後一頁印完後又多吐一張白紙 */
             .page:last-child { 
                 page-break-after: auto; 
             }
@@ -275,6 +306,37 @@
             </div>
 
             <div class="form-group" style="margin-top:20px;">
+                <label class="form-label">各年級班級數設定 (已預設)</label>
+                <div class="class-config-grid">
+                    <div class="class-input-group">
+                        <label>一年級：</label>
+                        <input type="number" id="class-cnt-1" min="0" value="6" onchange="refreshPreview()">
+                    </div>
+                    <div class="class-input-group">
+                        <label>二年級：</label>
+                        <input type="number" id="class-cnt-2" min="0" value="6" onchange="refreshPreview()">
+                    </div>
+                    <div class="class-input-group">
+                        <label>三年級：</label>
+                        <input type="number" id="class-cnt-3" min="0" value="7" onchange="refreshPreview()">
+                    </div>
+                    <div class="class-input-group">
+                        <label>四年級：</label>
+                        <input type="number" id="class-cnt-4" min="0" value="9" onchange="refreshPreview()">
+                    </div>
+                    <div class="class-input-group">
+                        <label>五年級：</label>
+                        <input type="number" id="class-cnt-5" min="0" value="8" onchange="refreshPreview()">
+                    </div>
+                    <div class="class-input-group">
+                        <label>六年級：</label>
+                        <input type="number" id="class-cnt-6" min="0" value="8" onchange="refreshPreview()">
+                    </div>
+                </div>
+                <div style="font-size:13px; color:#666; margin-top:5px;">💡 系統將合併「設定的班級」與「Excel 讀取到的班級」，若無資料則印出空白表。</div>
+            </div>
+
+            <div class="form-group" style="margin-top:20px;">
                 <label class="form-label">說明文字 (前言)</label>
                 <textarea id="text-intro" class="form-control">簿本費補助協助對象為中低收入戶及家庭突遭變故(經導師認定)致經濟陷入困境，無法順利就學，經認定需要幫助之學生。【本項申請以不重覆補助為原則，如已自行尋求社會資源補助者，請勿納入本次申請。】</textarea>
             </div>
@@ -286,8 +348,7 @@
 
             <div class="form-group">
                 <label class="form-label">說明事項 2 (繳回日期與地點) <span style="color:red; font-size:14px;">*已預設換行</span></label>
-                <textarea id="text-point2" class="form-control">請填寫下表，導師簽名後請於【2月26日(四)】中午前交至註冊組(分機112) ，<br>★若毋需提出申請，也請註明「無」，並簽名交回，感謝您的協助！</textarea>
-                <div style="font-size:13px; color:#666; margin-top:5px;">💡 提示：您可以在這裡直接修改日期，`&lt;br&gt;` 代表換行。</div>
+                <textarea id="text-point2" class="form-control">請填寫下表，導師簽名後請於【2月26日(四)】中午前交至註冊組(分機112) ，<br>★若毋需提出申請，也請註明「不申請」，並簽名交回，感謝您的協助！</textarea>
             </div>
 
             <div style="text-align:center; margin-top:30px;">
@@ -300,9 +361,9 @@
                 <h3 style="margin-top:0;">步驟：上傳 Excel 檔案</h3>
                 <input type="file" id="file-input" accept=".xlsx, .xls" style="font-size:16px; padding:10px;">
                 <p style="color:#666; font-size:14px; margin-top:10px;">
-                    * 系統將使用您在「參數設定」頁面設定的文字進行產生。<br>
+                    * 系統將自動合併「班級數設定」與「Excel 資料」。<br>
                     * Excel 欄位：班級, 姓名, 性別, 減免身分, 簿本金額<br>
-                    * <strong>列印設定：邊界已設為 0.5cm (5mm)</strong>
+                    * <strong>列印設定：邊界已設為 0.5cm (5mm)，已修正空白頁問題。</strong>
                 </p>
                 
                 <button class="btn-print" onclick="window.print()">🖨️ 列印所有班級申請單</button>
@@ -312,25 +373,28 @@
 
     <div id="print-preview-container">
         <div class="page" style="display:flex; justify-content:center; align-items:center; height: 297mm; color:#888; font-size: 24px; text-align:center;">
-            請至上方「參數設定」確認內容<br>並於「上傳與列印」分頁上傳檔案
+            資料讀取中...
         </div>
     </div>
 
     <script>
         // 全域變數
-        let globalClassNames = [];
-        let globalDataMap = {};
+        let globalDataMap = {}; // 存放 Excel 資料
+        let hasExcelLoaded = false; // 標記是否已讀取 Excel
 
         // 監聽
         document.getElementById('file-input').addEventListener('change', handleFile, false);
         
-        // 設定欄位變更時，即時更新預覽
         const settingInputs = ['input-year', 'input-semester', 'input-title-suffix', 'text-intro', 'text-point1', 'text-point2'];
         settingInputs.forEach(id => {
             document.getElementById(id).addEventListener('input', refreshPreview);
         });
 
-        // 分頁切換功能
+        // 初始化：直接產生預設的空白表單
+        window.addEventListener('DOMContentLoaded', () => {
+            refreshPreview();
+        });
+
         function switchTab(tabName) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -365,12 +429,7 @@
                 });
 
                 globalDataMap = groupBy(allStudents, '班級');
-                globalClassNames = Object.keys(globalDataMap).sort();
-
-                if(globalClassNames.length === 0) {
-                    alert("讀取不到資料，請確認 Excel 欄位正確");
-                    return;
-                }
+                hasExcelLoaded = true;
 
                 generateForms();
             };
@@ -379,25 +438,51 @@
         }
 
         function refreshPreview() {
-            if (globalClassNames.length > 0) {
-                generateForms();
-            }
+            generateForms();
         }
 
         function groupBy(array, key) {
             return array.reduce((result, currentValue) => {
                 if (currentValue[key]) {
-                    (result[currentValue[key]] = result[currentValue[key]] || []).push(currentValue);
+                    let k = String(currentValue[key]).trim();
+                    (result[k] = result[k] || []).push(currentValue);
                 }
                 return result;
             }, {});
+        }
+
+        function getAllTargetClasses() {
+            let classSet = new Set();
+
+            if (hasExcelLoaded) {
+                Object.keys(globalDataMap).forEach(k => classSet.add(k));
+            }
+
+            for (let grade = 1; grade <= 6; grade++) {
+                let countInput = document.getElementById('class-cnt-' + grade);
+                let count = parseInt(countInput.value) || 0;
+                
+                for (let c = 1; c <= count; c++) {
+                    let classNumStr = c < 10 ? ('0' + c) : ('' + c);
+                    let className = `${grade}${classNumStr}`;
+                    classSet.add(className);
+                }
+            }
+
+            return Array.from(classSet).sort();
         }
 
         function generateForms() {
             const container = document.getElementById('print-preview-container');
             container.innerHTML = ''; 
 
-            // 取得設定值
+            const targetClasses = getAllTargetClasses();
+
+            if (targetClasses.length === 0) {
+                container.innerHTML = '<div class="page" style="display:flex; justify-content:center; align-items:center; height: 297mm; color:#888; font-size: 24px; text-align:center;">請設定班級數或上傳 Excel</div>';
+                return;
+            }
+
             const year = document.getElementById('input-year').value;
             const semester = document.getElementById('input-semester').value;
             const titleSuffix = document.getElementById('input-title-suffix').value;
@@ -407,50 +492,80 @@
 
             const prevSemester = (semester === '上學期') ? '下學期' : '上學期';
 
-            globalClassNames.forEach(className => {
-                const students = globalDataMap[className];
+            targetClasses.forEach(className => {
+                const students = globalDataMap[className] || [];
                 const pageDiv = document.createElement('div');
                 pageDiv.className = 'page';
                 
                 let tableRows = '';
-                students.forEach(student => {
-                    const name = student['姓名'] || '';
-                    const gender = student['性別'] || '';
-                    let rawStatus = student['減免身分'] || '';
-                    const lastAmount = student['簿本金額'] || ''; 
-
-                    let displayStatus = rawStatus;
-                    if (rawStatus.includes('中低')) {
-                        displayStatus = '1.中低收';
-                    } else if (rawStatus.includes('變故') || rawStatus.includes('導師') || rawStatus.includes('家庭')) {
-                        displayStatus = '2.導師認定';
-                    }
-                    
+                
+                if (students.length === 0) {
+                    // --- 空班級顯示 (已修改文字與換行) ---
                     tableRows += `
                         <tr>
                             <td>${className}</td>
-                            <td>${name}</td>
-                            <td>${gender}</td>
-                            <td>${displayStatus}</td>
-                            <td>${lastAmount}</td>
+                            <td></td>
+                            <td></td>
+                            <td style="color:red; font-size:15px; line-height:1.4;">上次無人申請<br>如無申請，請留空白。<br>底下簽名後繳回。</td>
+                            <td></td>
                             <td></td>
                         </tr>
                     `;
-                });
+                    const rowsToAdd = 9; 
+                    for(let i=0; i < rowsToAdd; i++) {
+                        tableRows += `
+                            <tr>
+                                <td>&nbsp;</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                        `;
+                    }
 
-                const minRows = 15;
-                const rowsToAdd = Math.max(0, minRows - students.length);
-                for(let i=0; i < rowsToAdd; i++) {
-                     tableRows += `
-                        <tr>
-                            <td>&nbsp;</td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                        </tr>
-                    `;
+                } else {
+                    // 有資料顯示
+                    students.forEach(student => {
+                        const name = student['姓名'] || '';
+                        const gender = student['性別'] || '';
+                        let rawStatus = student['減免身分'] || '';
+                        const lastAmount = student['簿本金額'] || ''; 
+
+                        let displayStatus = rawStatus;
+                        if (rawStatus.includes('中低')) {
+                            displayStatus = '1.中低收';
+                        } else if (rawStatus.includes('變故') || rawStatus.includes('導師') || rawStatus.includes('家庭')) {
+                            displayStatus = '2.導師認定';
+                        }
+                        
+                        tableRows += `
+                            <tr>
+                                <td>${className}</td>
+                                <td>${name}</td>
+                                <td>${gender}</td>
+                                <td>${displayStatus}</td>
+                                <td>${lastAmount}</td>
+                                <td></td>
+                            </tr>
+                        `;
+                    });
+
+                    const minRows = 10;
+                    const rowsToAdd = Math.max(0, minRows - students.length);
+                    for(let i=0; i < rowsToAdd; i++) {
+                        tableRows += `
+                            <tr>
+                                <td>&nbsp;</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                        `;
+                    }
                 }
 
                 pageDiv.innerHTML = `
