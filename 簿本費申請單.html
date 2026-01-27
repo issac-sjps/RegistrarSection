@@ -3,161 +3,346 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>114學年度簿本費補助申請單列印系統</title>
+    <title>簿本費補助申請單產生器</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
     <style>
-        /* 網頁介面樣式 (螢幕上看到的) */
+        /* --- 全域設定 --- */
         body {
-            font-family: "標楷體", "DFKai-SB", sans-serif; /* 配合公文常用字體 */
-            background-color: #f0f0f0;
+            font-family: "標楷體", "DFKai-SB", "Taipei Sans TC", sans-serif;
+            background-color: #f0f2f5;
             margin: 0;
             padding: 20px;
         }
 
-        .control-panel {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-            text-align: center;
+        /* --- 分頁標籤樣式 --- */
+        .tabs {
+            display: flex;
+            justify-content: center;
+            max-width: 900px;
+            margin: 0 auto;
+            margin-bottom: -1px;
         }
 
-        .btn {
-            background-color: #2c3e50;
+        .tab-btn {
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            background: #e0e0e0;
+            border: 1px solid #ccc;
+            border-bottom: none;
+            border-radius: 10px 10px 0 0;
+            margin: 0 5px;
+            color: #555;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: #0056b3;
+            border-top: 3px solid #0056b3;
+            padding-bottom: 15px;
+            z-index: 10;
+        }
+
+        /* --- 主要內容區塊 --- */
+        .main-container {
+            background: white;
+            max-width: 900px;
+            margin: 0 auto 30px auto;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: 1px solid #ccc;
+            position: relative;
+            z-index: 5;
+        }
+
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* --- 設定頁面樣式 --- */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-label {
+            display: block;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        textarea.form-control {
+            resize: vertical;
+            min-height: 80px;
+            line-height: 1.5;
+        }
+        
+        .row {
+            display: flex;
+            gap: 20px;
+        }
+        .col {
+            flex: 1;
+        }
+
+        /* --- 預覽與上傳頁面樣式 --- */
+        .upload-section {
+            text-align: center;
+            padding: 40px;
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+        
+        .btn-print {
+            background-color: #0056b3;
             color: white;
             border: none;
-            padding: 10px 20px;
-            font-size: 16px;
+            padding: 15px 40px;
+            font-size: 20px;
             cursor: pointer;
-            border-radius: 4px;
-            margin: 5px;
+            border-radius: 8px;
+            font-weight: bold;
+            margin-top: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
+        .btn-print:hover { background-color: #004494; }
 
-        .btn:hover {
-            background-color: #34495e;
-        }
-
-        #file-input {
-            margin-right: 10px;
-        }
-
-        /* 預覽區域 */
-        #print-area {
-            background: #525659; /* 模擬 PDF 檢視背景 */
+        /* --- 預覽區 (模擬A4) --- */
+        #print-preview-container {
+            background: #525659;
             padding: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            min-height: 500px;
+            margin-top: 20px;
+            border-radius: 8px;
         }
 
-        /* A4 紙張樣式設定 */
+        /* --- A4 紙張樣式 (螢幕預覽用) --- */
         .page {
             background: white;
-            width: 210mm; /* A4 寬度 */
-            min-height: 297mm; /* A4 高度 */
-            padding: 20mm;
+            width: 210mm;
+            min-height: 297mm;
+            /* 螢幕上稍微留一點白邊模擬紙張，但列印時會被 @page 覆蓋 */
+            padding: 10mm; 
             box-sizing: border-box;
-            margin-bottom: 20px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            margin-bottom: 25px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
             position: relative;
         }
 
-        /* 表格樣式 */
+        /* --- 表格樣式 --- */
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
+            margin-top: 5px;
         }
-
         th, td {
             border: 1px solid black;
-            padding: 8px;
+            padding: 4px;
             text-align: center;
-            font-size: 14px;
+            font-size: 16px;
+            vertical-align: middle;
         }
-
         th {
-            background-color: #f9f9f9;
+            background-color: #f0f0f0;
+            font-weight: bold;
+            padding: 8px 4px;
+            line-height: 1.3;
         }
+        td { height: 38px; }
         
-        /* 標題與說明文字 */
         h1 {
             text-align: center;
-            font-size: 22px;
+            font-size: 26px;
             margin-bottom: 10px;
+            font-weight: bold;
+            line-height: 1.4;
         }
         
-        .header-info {
-            text-align: right;
-            font-size: 14px;
-            margin-bottom: 5px;
-        }
-
         .instructions {
-            font-size: 13px;
-            line-height: 1.4;
+            font-size: 15px;
+            line-height: 1.5;
             margin-bottom: 10px;
             text-align: justify;
         }
-
-        .instructions ul, .instructions ol {
-            padding-left: 20px;
+        .instructions ol {
+            padding-left: 28px;
             margin: 5px 0;
         }
 
         .footer {
             margin-top: 20px;
-            font-size: 16px;
+            font-size: 18px;
             text-align: right;
+            font-weight: bold;
         }
 
-        /* 重要：列印時的樣式設定 */
+        /* --- ★★★ 列印專用設定 (重點修改處) ★★★ --- */
         @media print {
-            body {
-                background: white;
-                padding: 0;
+            @page {
+                size: A4;
+                margin: 5mm; /* 強制設定印表機邊界為 0.5cm */
             }
-            .control-panel {
-                display: none; /* 隱藏控制面板 */
+            
+            body { 
+                background: white; 
+                padding: 0; 
+                margin: 0;
             }
-            #print-area {
+            
+            .tabs, .main-container { 
+                display: none; 
+            }
+            
+            #print-preview-container {
                 background: white;
                 padding: 0;
                 display: block;
+                margin: 0;
             }
+            
             .page {
                 box-shadow: none;
                 margin: 0;
                 width: 100%;
-                height: auto;
-                min-height: auto;
-                page-break-after: always; /* 每一班強制換頁 */
+                height: auto; /* 讓內容自然延伸，配合 @page 邊界 */
+                padding: 0;   /* 移除內部 padding，完全依賴 @page 的 5mm */
+                page-break-after: always;
             }
-            /* 最後一頁不要多出空白頁 */
-            .page:last-child {
-                page-break-after: auto;
+            
+            .page:last-child { 
+                page-break-after: auto; 
+            }
+            
+            th { 
+                background-color: #f0f0f0 !important; 
+                -webkit-print-color-adjust: exact; 
             }
         }
     </style>
 </head>
 <body>
 
-    <div class="control-panel no-print">
-        <h2>1. 選擇 Excel 檔案 -> 2. 預覽 -> 3. 列印</h2>
-        <input type="file" id="file-input" accept=".xlsx, .xls" />
-        <button class="btn" onclick="window.print()">列印所有班級申請單</button>
-        <p style="color:red; font-size:12px;">*請確認 Excel 欄位包含：班級、姓名、性別、減免身分、簿本金額</p>
+    <div class="tabs no-print">
+        <div class="tab-btn active" onclick="switchTab('settings')">⚙️ 參數設定</div>
+        <div class="tab-btn" onclick="switchTab('preview')">🖨️ 上傳與列印</div>
     </div>
 
-    <div id="print-area">
-        <div class="page" style="display:flex; justify-content:center; align-items:center; height: 297mm; color:#888;">
-            請上傳 Excel 檔案以生成表單...
+    <div class="main-container no-print">
+        
+        <div id="tab-settings" class="tab-content active">
+            <h2 style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:10px;">表單內容設定</h2>
+            
+            <div class="row">
+                <div class="col">
+                    <label class="form-label">學年度</label>
+                    <input type="number" id="input-year" class="form-control" value="114">
+                </div>
+                <div class="col">
+                    <label class="form-label">學期</label>
+                    <select id="input-semester" class="form-control">
+                        <option value="下學期" selected>下學期</option>
+                        <option value="上學期">上學期</option>
+                    </select>
+                </div>
+                <div class="col">
+                    <label class="form-label">標題後綴</label>
+                    <input type="text" id="input-title-suffix" class="form-control" value="簿本費補助班級申請單">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top:20px;">
+                <label class="form-label">說明文字 (前言)</label>
+                <textarea id="text-intro" class="form-control">簿本費補助協助對象為中低收入戶及家庭突遭變故(經導師認定)致經濟陷入困境，無法順利就學，經認定需要幫助之學生。【本項申請以不重覆補助為原則，如已自行尋求社會資源補助者，請勿納入本次申請。】</textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">說明事項 1 (補助範圍)</label>
+                <textarea id="text-point1" class="form-control">本案簿本費僅限於【家庭聯絡簿、國語、數學、自然探索(生活探索)】有題目的簿本皆可，不含空白簿本，每生補助不得超過200元。</textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">說明事項 2 (繳回日期與地點) <span style="color:red; font-size:14px;">*已預設換行</span></label>
+                <textarea id="text-point2" class="form-control">請填寫下表，導師簽名後請於【2月26日(四)】中午前交至註冊組(分機112) ，<br>★若毋需提出申請，也請註明「無」，並簽名交回，感謝您的協助！</textarea>
+                <div style="font-size:13px; color:#666; margin-top:5px;">💡 提示：您可以在這裡直接修改日期，`&lt;br&gt;` 代表換行。</div>
+            </div>
+
+            <div style="text-align:center; margin-top:30px;">
+                <button class="btn-print" style="padding:10px 30px; font-size:16px; background:#28a745;" onclick="switchTab('preview')">設定完成，前往上傳 ➔</button>
+            </div>
+        </div>
+
+        <div id="tab-preview" class="tab-content">
+            <div class="upload-section">
+                <h3 style="margin-top:0;">步驟：上傳 Excel 檔案</h3>
+                <input type="file" id="file-input" accept=".xlsx, .xls" style="font-size:16px; padding:10px;">
+                <p style="color:#666; font-size:14px; margin-top:10px;">
+                    * 系統將使用您在「參數設定」頁面設定的文字進行產生。<br>
+                    * Excel 欄位：班級, 姓名, 性別, 減免身分, 簿本金額<br>
+                    * <strong>列印設定：邊界已設為 0.5cm (5mm)</strong>
+                </p>
+                
+                <button class="btn-print" onclick="window.print()">🖨️ 列印所有班級申請單</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="print-preview-container">
+        <div class="page" style="display:flex; justify-content:center; align-items:center; height: 297mm; color:#888; font-size: 24px; text-align:center;">
+            請至上方「參數設定」確認內容<br>並於「上傳與列印」分頁上傳檔案
         </div>
     </div>
 
     <script>
+        // 全域變數
+        let globalClassNames = [];
+        let globalDataMap = {};
+
+        // 監聽
         document.getElementById('file-input').addEventListener('change', handleFile, false);
+        
+        // 設定欄位變更時，即時更新預覽
+        const settingInputs = ['input-year', 'input-semester', 'input-title-suffix', 'text-intro', 'text-point1', 'text-point2'];
+        settingInputs.forEach(id => {
+            document.getElementById(id).addEventListener('input', refreshPreview);
+        });
+
+        // 分頁切換功能
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            if(tabName === 'settings') {
+                document.querySelectorAll('.tab-btn')[0].classList.add('active');
+                document.getElementById('tab-settings').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab-btn')[1].classList.add('active');
+                document.getElementById('tab-preview').classList.add('active');
+            }
+        }
 
         function handleFile(e) {
             const files = e.target.files;
@@ -170,75 +355,96 @@
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, {type: 'array'});
 
-                // 準備存放所有資料的陣列
                 let allStudents = [];
 
-                // 讀取所有工作表 (一年級, 二年級...)
                 workbook.SheetNames.forEach(sheetName => {
                     const worksheet = workbook.Sheets[sheetName];
-                    // 將 Excel 轉為 JSON，預設第一列為標題
                     const json = XLSX.utils.sheet_to_json(worksheet);
-                    
-                    // 簡單清理資料（過濾掉完全空的行）
-                    const cleanData = json.filter(row => row['班級'] && row['姓名']);
+                    const cleanData = json.filter(row => row['班級']); 
                     allStudents = allStudents.concat(cleanData);
                 });
 
-                // 根據「班級」進行分組
-                const classes = groupBy(allStudents, '班級');
-                
-                // 排序班級 (例如 101, 102...)
-                const sortedClassNames = Object.keys(classes).sort();
+                globalDataMap = groupBy(allStudents, '班級');
+                globalClassNames = Object.keys(globalDataMap).sort();
 
-                // 生成 HTML
-                generateForms(sortedClassNames, classes);
+                if(globalClassNames.length === 0) {
+                    alert("讀取不到資料，請確認 Excel 欄位正確");
+                    return;
+                }
+
+                generateForms();
             };
 
             reader.readAsArrayBuffer(f);
         }
 
+        function refreshPreview() {
+            if (globalClassNames.length > 0) {
+                generateForms();
+            }
+        }
+
         function groupBy(array, key) {
             return array.reduce((result, currentValue) => {
-                (result[currentValue[key]] = result[currentValue[key]] || []).push(currentValue);
+                if (currentValue[key]) {
+                    (result[currentValue[key]] = result[currentValue[key]] || []).push(currentValue);
+                }
                 return result;
             }, {});
         }
 
-        function generateForms(classNames, dataMap) {
-            const container = document.getElementById('print-area');
-            container.innerHTML = ''; // 清空預覽區
+        function generateForms() {
+            const container = document.getElementById('print-preview-container');
+            container.innerHTML = ''; 
 
-            classNames.forEach(className => {
-                const students = dataMap[className];
-                
-                // 創建每一頁的 HTML 結構
+            // 取得設定值
+            const year = document.getElementById('input-year').value;
+            const semester = document.getElementById('input-semester').value;
+            const titleSuffix = document.getElementById('input-title-suffix').value;
+            const introText = document.getElementById('text-intro').value;
+            const point1Text = document.getElementById('text-point1').value;
+            const point2Text = document.getElementById('text-point2').value;
+
+            const prevSemester = (semester === '上學期') ? '下學期' : '上學期';
+
+            globalClassNames.forEach(className => {
+                const students = globalDataMap[className];
                 const pageDiv = document.createElement('div');
                 pageDiv.className = 'page';
                 
-                // 表格內容
                 let tableRows = '';
                 students.forEach(student => {
-                    // 確保數值存在，若無則留空
+                    const name = student['姓名'] || '';
                     const gender = student['性別'] || '';
-                    const status = student['減免身分'] || '';
-                    const amount = student['簿本金額'] || '';
+                    let rawStatus = student['減免身分'] || '';
+                    const lastAmount = student['簿本金額'] || ''; 
+
+                    let displayStatus = rawStatus;
+                    if (rawStatus.includes('中低')) {
+                        displayStatus = '1.中低收';
+                    } else if (rawStatus.includes('變故') || rawStatus.includes('導師') || rawStatus.includes('家庭')) {
+                        displayStatus = '2.導師認定';
+                    }
                     
                     tableRows += `
                         <tr>
                             <td>${className}</td>
-                            <td>${student['姓名']}</td>
+                            <td>${name}</td>
                             <td>${gender}</td>
-                            <td>${status}</td>
-                            <td>${amount}</td>
+                            <td>${displayStatus}</td>
+                            <td>${lastAmount}</td>
+                            <td></td>
                         </tr>
                     `;
                 });
 
-                // 補足空行 (讓表格看起來有一致的高度，方便老師手寫新增)
-                for(let i=0; i < (15 - students.length); i++) {
+                const minRows = 15;
+                const rowsToAdd = Math.max(0, minRows - students.length);
+                for(let i=0; i < rowsToAdd; i++) {
                      tableRows += `
                         <tr>
                             <td>&nbsp;</td>
+                            <td></td>
                             <td></td>
                             <td></td>
                             <td></td>
@@ -248,31 +454,33 @@
                 }
 
                 pageDiv.innerHTML = `
-                    <h1>114學年度上學期簿本費補助班級申請單(${className})</h1>
+                    <h1>${year}學年度${semester}${titleSuffix}(${className})</h1>
                     
                     <div class="instructions">
                         <b>說明：</b>
-                        <br>簿本費補助協助對象為中低收入戶及家庭突遭變故(經導師認定)致經濟陷入困境，無法順利就學，經認定需要幫助之學生。【本項申請以不重覆補助為原則，如已自行尋求社會資源補助者，請勿納入本次申請。】
-                        <ol style="margin-top:5px; padding-left:24px;">
-                            <li>本案簿本費僅限於【家庭聯絡簿、國語、數學、自然探索(生活探索)】有題目的簿本皆可，不含空白簿本，每生補助不得超過200元。</li>
-                            <li>請填寫下表，導師簽名後請於9月05日(五)中午前交至註冊組(分機112) ，★若毋需提出申請，也請註明「無」，並簽名交回，感謝您的協助！</li>
+                        ${introText}
+                        <ol>
+                            <li>${point1Text}</li>
+                            <li>${point2Text}</li>
                         </ol>
                     </div>
 
                     <table>
                         <thead>
                             <tr>
-                                <th width="10%">班級</th>
-                                <th width="15%">學生姓名</th>
-                                <th width="10%">性別</th>
-                                <th width="45%" style="text-align:left;">
+                                <th width="8%">班級</th>
+                                <th width="12%">學生姓名</th>
+                                <th width="6%">性別</th>
+                                <th width="34%" style="text-align:left; font-size:15px; padding-left:10px;">
                                     簿本費減免身分<br>
-                                    <span style="font-weight:normal; font-size:12px;">
-                                    j中低收入戶 k家庭突遭變故(導師認定)<br>
-                                    l 低收入戶學生申請學產基金，請勿納入本次申請。(低收入戶學生_不補助)
+                                    <span style="font-weight:normal; font-size:13px; line-height:1.4; display:block; margin-top:2px;">
+                                    1.中低收入戶<br>
+                                    2.家庭突遭變故(導師認定)<br>
+                                    ☆低收入戶學生申請學產基金，請勿納入本次申請。
                                     </span>
                                 </th>
-                                <th width="20%">簿本費金額<br>(單位：元/每位學生)</th>
+                                <th width="18%">上次簿本費<br>申請金額<br><span style="font-size:14px;">(${prevSemester})</span></th>
+                                <th width="22%" style="background-color:#fffbea;">本次簿本費<br>申請金額<br><span style="font-size:13px; font-weight:normal;">(請導師填寫金額)<br>(或改不申請)</span></th>
                             </tr>
                         </thead>
                         <tbody>
