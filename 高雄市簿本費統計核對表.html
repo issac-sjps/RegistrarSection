@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>高雄市書籍費補助檢核系統</title>
+    <title>高雄市書籍費補助檢核系統 (含分頁總數)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: "Microsoft JhengHei", sans-serif; background-color: #f4f7f6; padding: 20px; color: #333; }
@@ -17,7 +17,8 @@
         button.active { background: #2c3e50; font-weight: bold; }
         button.nav-btn { background: #95a5a6; font-size: 16px; }
         button.nav-btn.active { background: #8e44ad; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 15px; }
+        .grade-count-info { margin: 15px 0 5px 0; font-weight: bold; color: #2980b9; font-size: 16px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 15px; }
         th, td { border: 1px solid #ddd; padding: 12px; text-align: center; }
         th { background-color: #ecf0f1; color: #2c3e50; }
         tr:nth-child(even) { background-color: #f9f9f9; }
@@ -40,7 +41,7 @@
     <h1>高雄市書籍費補助檢核系統</h1>
 
     <div class="upload-section no-print">
-        <p>請上傳包含學生資料的 Excel 檔案 (.xlsx)</p>
+        <p>請上傳包含學生資料的 Excel 檔案 (.xlsx)<br><small>(請確保分頁名稱包含「一年級」至「六年級」字樣)</small></p>
         <input type="file" id="uploadExcel" accept=".xlsx, .xls">
     </div>
 
@@ -53,12 +54,13 @@
 
         <div id="listView">
             <div class="grade-tabs" id="gradeTabs"></div>
+            <div id="gradeInfoDisplay" class="grade-count-info"></div>
             <div id="tableContainer"></div>
         </div>
 
         <div id="summaryView" style="display:none;">
             <h3>(表一) 各年級書籍費撥款統計表</h3>
-            <table id="summaryTable">
+            <table>
                 <thead>
                     <tr><th>年段</th><th>申請學生人數</th><th>每人申請補助金額</th><th>小計</th><th>備註</th></tr>
                 </thead>
@@ -81,8 +83,7 @@
                 <thead>
                     <tr><th>身分別</th><th>學生人數</th><th>申請總金額</th><th>合計</th></tr>
                 </thead>
-                <tbody id="identityBody">
-                    </tbody>
+                <tbody id="identityBody"></tbody>
                 <tfoot>
                     <tr class="total-row">
                         <td>全校申請合計</td>
@@ -99,8 +100,8 @@
 <script>
     let rawData = [];
     let gradeCounts = { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0 };
-    let gradePrices = { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0 };
-    let idCategoryStats = {};
+    let gradePrices = { "1": 1009, "2": 952, "3": 1171, "4": 1184, "5": 1213, "6": 1109 };
+    const gradeMap = { "一年級": "1", "二年級": "2", "三年級": "3", "四年級": "4", "五年級": "5", "六年級": "6" };
 
     document.getElementById('uploadExcel').addEventListener('change', function(e) {
         const file = e.target.files[0];
@@ -108,9 +109,32 @@
         reader.onload = function(event) {
             const data = new Uint8Array(event.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
-            rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+            rawData = [];
+            
+            workbook.SheetNames.forEach(sheetName => {
+                let gradeKey = "";
+                for (let key in gradeMap) {
+                    if (sheetName.includes(key)) {
+                        gradeKey = gradeMap[key];
+                        break;
+                    }
+                }
+                if (gradeKey) {
+                    const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+                    sheetData.forEach(row => {
+                        row._detectedGrade = gradeKey;
+                        rawData.push(row);
+                    });
+                }
+            });
+
+            if (rawData.length === 0) {
+                alert("找不到正確年級分頁。");
+                return;
+            }
+            
             processData();
-            initTabs();
+            initTabs(); // 重新初始化按鈕以顯示人數
             renderTable("1");
             renderSummary();
             renderIdentitySummary();
@@ -122,7 +146,7 @@
     function processData() {
         gradeCounts = { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0 };
         rawData.forEach(row => {
-            const grade = String(row['班級'] || '').charAt(0);
+            const grade = row._detectedGrade;
             if (gradeCounts.hasOwnProperty(grade) && checkStatus(row).hasAny) {
                 gradeCounts[grade]++;
             }
@@ -133,15 +157,9 @@
         document.getElementById('listView').style.display = view === 'list' ? 'block' : 'none';
         document.getElementById('summaryView').style.display = view === 'summary' ? 'block' : 'none';
         document.getElementById('identityView').style.display = view === 'identity' ? 'block' : 'none';
-        
         document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.classList.remove('active');
-            if (view === 'list' && btn.innerText.includes('1')) btn.classList.add('active');
-            if (view === 'summary' && btn.innerText.includes('2')) btn.classList.add('active');
-            if (view === 'identity' && btn.innerText.includes('3')) btn.classList.add('active');
+            btn.classList.toggle('active', (view === 'list' && btn.innerText.includes('1')) || (view === 'summary' && btn.innerText.includes('2')) || (view === 'identity' && btn.innerText.includes('3')));
         });
-
-        if (view === 'identity') renderIdentitySummary();
     }
 
     function initTabs() {
@@ -149,7 +167,8 @@
         tabsContainer.innerHTML = '';
         for (let i = 1; i <= 6; i++) {
             const btn = document.createElement('button');
-            btn.innerText = i + ' 年級名單';
+            const count = gradeCounts[i.toString()];
+            btn.innerText = i + ' 年級名單 (' + count + '人)';
             btn.onclick = () => renderTable(i.toString());
             btn.id = 'btn-grade-' + i;
             tabsContainer.appendChild(btn);
@@ -159,10 +178,17 @@
     function renderTable(grade) {
         document.querySelectorAll('.grade-tabs button').forEach(b => b.classList.remove('active'));
         if(document.getElementById('btn-grade-' + grade)) document.getElementById('btn-grade-' + grade).classList.add('active');
+        
+        // 顯示該年級人數資訊
+        const infoDisplay = document.getElementById('gradeInfoDisplay');
+        infoDisplay.innerText = `該年級符合補助總人數：${gradeCounts[grade]} 人`;
+
         const container = document.getElementById('tableContainer');
-        const filtered = rawData.filter(row => String(row['班級'] || '').charAt(0) === grade && checkStatus(row).hasAny);
+        const filtered = rawData.filter(row => row._detectedGrade === grade && checkStatus(row).hasAny);
         let html = `<table><thead><tr><th>班級</th><th>座號</th><th>姓名</th><th>符合項目</th></tr></thead><tbody>`;
-        filtered.forEach(row => { html += `<tr><td>${row['班級']||''}</td><td>${row['座號']||''}</td><td>${row['姓名']||''}</td><td>${checkStatus(row).tagsHtml}</td></tr>`; });
+        filtered.forEach(row => { 
+            html += `<tr><td>${row['班級']||''}</td><td>${row['座號']||''}</td><td>${row['姓名']||''}</td><td>${checkStatus(row).tagsHtml}</td></tr>`; 
+        });
         container.innerHTML = html + `</tbody></table>`;
     }
 
@@ -173,8 +199,9 @@
         const gradeNames = ["一", "二", "三", "四", "五", "六"];
         for (let i = 1; i <= 6; i++) {
             totalS += gradeCounts[i];
+            const subtotal = gradeCounts[i] * gradePrices[i];
             const row = document.createElement('tr');
-            row.innerHTML = `<td>${gradeNames[i-1]}年級</td><td>${gradeCounts[i]}</td><td><input type="number" value="${gradePrices[i]}" oninput="updatePrice(${i}, this.value)"></td><td id="subtotal-${i}">0</td><td></td>`;
+            row.innerHTML = `<td>${gradeNames[i-1]}年級</td><td>${gradeCounts[i]}</td><td><input type="number" value="${gradePrices[i]}" oninput="updatePrice(${i}, this.value)"></td><td>${subtotal.toLocaleString()}</td><td></td>`;
             body.appendChild(row);
         }
         document.getElementById('totalStudents_G').innerText = totalS;
@@ -183,8 +210,8 @@
 
     function updatePrice(grade, value) {
         gradePrices[grade] = parseFloat(value) || 0;
-        document.getElementById(`subtotal-${grade}`).innerText = (gradeCounts[grade] * gradePrices[grade]).toLocaleString();
-        calculateGrandTotal();
+        renderSummary();
+        renderIdentitySummary();
     }
 
     function calculateGrandTotal() {
@@ -201,46 +228,35 @@
             { id: 'lowIncome', label: '低收入戶學生' },
             { id: 'midLowSingle', label: '中低收入單親家庭學生' }
         ];
-
         let stats = { disability: { count: 0, total: 0 }, merit: { count: 0, total: 0 }, indigenous: { count: 0, total: 0 }, lowIncome: { count: 0, total: 0 }, midLowSingle: { count: 0, total: 0 } };
 
         rawData.forEach(row => {
             const status = checkStatus(row);
             if (!status.hasAny) return;
-            const grade = String(row['班級'] || '').charAt(0);
+            const grade = row._detectedGrade;
             const price = gradePrices[grade] || 0;
-            // 優先權判定 (依據圖片順序)
             let cat = '';
             if (row['4.身障(學)(社)'] || row['6.身障(學)'] || row['8.重身障(學)'] || row['5.身障(家)(社)'] || row['7.身障(家)']) cat = 'disability';
             else if (row['11.功勳']) cat = 'merit';
             else if (row['9.原民生'] || row['10.原民清寒(原)']) cat = 'indigenous';
             else if (row['1.低收(社)']) cat = 'lowIncome';
             else if (row['2.中低收(社)'] && row['3.單親(社)']) cat = 'midLowSingle';
-
             if (cat) { stats[cat].count++; stats[cat].total += price; }
         });
 
         const body = document.getElementById('identityBody');
         body.innerHTML = '';
         let totalStudents = 0, grandTotal = 0, subTotalOther = 0;
-
         categories.forEach((c, idx) => {
             totalStudents += stats[c.id].count;
             grandTotal += stats[c.id].total;
             if (idx > 0) subTotalOther += stats[c.id].total;
-
             const row = document.createElement('tr');
             let totalCell = (idx === 0) ? `<td>${stats[c.id].total.toLocaleString()}</td>` : (idx === 1 ? `<td rowspan="4">${subTotalOther.toLocaleString()}</td>` : '');
-            
-            // 手動修正合併單元格顯示邏輯，如果正在渲染後面的行，不顯示最後一欄
-            if (idx > 1) {
-                row.innerHTML = `<td>${c.label}</td><td>${stats[c.id].count}</td><td>${stats[c.id].total.toLocaleString()}</td>`;
-            } else {
-                row.innerHTML = `<td>${c.label}</td><td>${stats[c.id].count}</td><td>${stats[c.id].total.toLocaleString()}</td>${totalCell}`;
-            }
+            if (idx > 1) { row.innerHTML = `<td>${c.label}</td><td>${stats[c.id].count}</td><td>${stats[c.id].total.toLocaleString()}</td>`; }
+            else { row.innerHTML = `<td>${c.label}</td><td>${stats[c.id].count}</td><td>${stats[c.id].total.toLocaleString()}</td>${totalCell}`; }
             body.appendChild(row);
         });
-
         document.getElementById('totalStudents_I').innerText = totalStudents;
         document.getElementById('grandTotalAmount_I').innerText = grandTotal.toLocaleString();
         document.getElementById('grandTotalAmount_I2').innerText = grandTotal.toLocaleString();
@@ -253,7 +269,7 @@
         if (row['11.功勳']) { res.hasAny = true; res.tagsHtml += '<span class="status-tag bg-grey">功勳</span>'; }
         if (row['9.原民生'] || row['10.原民清寒(原)']) { res.hasAny = true; res.tagsHtml += '<span class="status-tag bg-green">原住民</span>'; }
         if (row['1.低收(社)']) { res.hasAny = true; res.tagsHtml += '<span class="status-tag bg-red">低收</span>'; }
-        if (row['2.u中低收(社)'] && row['3.單親(社)']) { res.hasAny = true; res.tagsHtml += '<span class="status-tag bg-purple">中低單親</span>'; }
+        if (row['2.中低收(社)'] && row['3.單親(社)']) { res.hasAny = true; res.tagsHtml += '<span class="status-tag bg-purple">中低單親</span>'; }
         return res;
     }
 </script>
