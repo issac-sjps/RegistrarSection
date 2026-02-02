@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高雄市書籍費補助檢核系統</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: "Microsoft JhengHei", sans-serif; background-color: #f4f7f6; padding: 20px; color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; text-align: center; margin-bottom: 30px; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .upload-section { text-align: center; padding: 20px; border: 2px dashed #bdc3c7; border-radius: 8px; margin-bottom: 30px; }
+        .nav-tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+        .grade-tabs { display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+        button { padding: 10px 18px; cursor: pointer; border: none; border-radius: 5px; background: #3498db; color: white; transition: 0.3s; font-size: 14px; }
+        button:hover { background: #2980b9; }
+        button.active { background: #2c3e50; font-weight: bold; }
+        button.nav-btn { background: #95a5a6; font-size: 16px; }
+        button.nav-btn.active { background: #8e44ad; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 15px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: center; }
+        th { background-color: #ecf0f1; color: #2c3e50; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        input[type="number"] { width: 100px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; text-align: right; }
+        .status-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-right: 5px; color: white; }
+        .bg-blue { background: #3498db; }
+        .bg-green { background: #27ae60; }
+        .bg-orange { background: #e67e22; }
+        .bg-red { background: #e74c3c; }
+        .bg-purple { background: #9b59b6; }
+        .bg-grey { background: #7f8c8d; }
+        .total-row { font-weight: bold; background-color: #f1f8ff !important; }
+        .no-print { margin-bottom: 20px; }
+        @media print { .no-print, .upload-section, .nav-tabs, .grade-tabs { display: none; } .container { box-shadow: none; border: none; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>高雄市書籍費補助檢核系統</h1>
+
+    <div class="upload-section no-print">
+        <p>請上傳包含學生資料的 Excel 檔案 (.xlsx)</p>
+        <input type="file" id="uploadExcel" accept=".xlsx, .xls">
+    </div>
+
+    <div id="resultArea" style="display:none;">
+        <div class="nav-tabs no-print">
+            <button class="nav-btn active" onclick="switchView('list')">1. 名單檢核</button>
+            <button class="nav-btn" onclick="switchView('summary')">2. 各年級統計</button>
+            <button class="nav-btn" onclick="switchView('identity')">3. 身分別總表</button>
+        </div>
+
+        <div id="listView">
+            <div class="grade-tabs" id="gradeTabs"></div>
+            <div id="tableContainer"></div>
+        </div>
+
+        <div id="summaryView" style="display:none;">
+            <h3>(表一) 各年級書籍費撥款統計表</h3>
+            <table id="summaryTable">
+                <thead>
+                    <tr><th>年段</th><th>申請學生人數</th><th>每人申請補助金額</th><th>小計</th><th>備註</th></tr>
+                </thead>
+                <tbody id="summaryBody"></tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td>全校申請合計</td>
+                        <td id="totalStudents_G">0</td>
+                        <td style="background: #eee;"></td>
+                        <td id="grandTotalAmount_G">0</td>
+                        <td>左欄填列數字</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div id="identityView" style="display:none;">
+            <h3>(表二) 各身分類別經費統計總表</h3>
+            <table>
+                <thead>
+                    <tr><th>身分別</th><th>學生人數</th><th>申請總金額</th><th>合計</th></tr>
+                </thead>
+                <tbody id="identityBody">
+                    </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td>全校申請合計</td>
+                        <td id="totalStudents_I">0</td>
+                        <td id="grandTotalAmount_I">0</td>
+                        <td id="grandTotalAmount_I2">0</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let rawData = [];
+    let gradeCounts = { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0 };
+    let gradePrices = { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0 };
+    let idCategoryStats = {};
+
+    document.getElementById('uploadExcel').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const data = new Uint8Array(event.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+            processData();
+            initTabs();
+            renderTable("1");
+            renderSummary();
+            renderIdentitySummary();
+            document.getElementById('resultArea').style.display = 'block';
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    function processData() {
+        gradeCounts = { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0 };
+        rawData.forEach(row => {
+            const grade = String(row['班級'] || '').charAt(0);
+            if (gradeCounts.hasOwnProperty(grade) && checkStatus(row).hasAny) {
+                gradeCounts[grade]++;
+            }
+        });
+    }
+
+    function switchView(view) {
+        document.getElementById('listView').style.display = view === 'list' ? 'block' : 'none';
+        document.getElementById('summaryView').style.display = view === 'summary' ? 'block' : 'none';
+        document.getElementById('identityView').style.display = view === 'identity' ? 'block' : 'none';
+        
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (view === 'list' && btn.innerText.includes('1')) btn.classList.add('active');
+            if (view === 'summary' && btn.innerText.includes('2')) btn.classList.add('active');
+            if (view === 'identity' && btn.innerText.includes('3')) btn.classList.add('active');
+        });
+
+        if (view === 'identity') renderIdentitySummary();
+    }
+
+    function initTabs() {
+        const tabsContainer = document.getElementById('gradeTabs');
+        tabsContainer.innerHTML = '';
+        for (let i = 1; i <= 6; i++) {
+            const btn = document.createElement('button');
+            btn.innerText = i + ' 年級名單';
+            btn.onclick = () => renderTable(i.toString());
+            btn.id = 'btn-grade-' + i;
+            tabsContainer.appendChild(btn);
+        }
+    }
+
+    function renderTable(grade) {
+        document.querySelectorAll('.grade-tabs button').forEach(b => b.classList.remove('active'));
+        if(document.getElementById('btn-grade-' + grade)) document.getElementById('btn-grade-' + grade).classList.add('active');
+        const container = document.getElementById('tableContainer');
+        const filtered = rawData.filter(row => String(row['班級'] || '').charAt(0) === grade && checkStatus(row).hasAny);
+        let html = `<table><thead><tr><th>班級</th><th>座號</th><th>姓名</th><th>符合項目</th></tr></thead><tbody>`;
+        filtered.forEach(row => { html += `<tr><td>${row['班級']||''}</td><td>${row['座號']||''}</td><td>${row['姓名']||''}</td><td>${checkStatus(row).tagsHtml}</td></tr>`; });
+        container.innerHTML = html + `</tbody></table>`;
+    }
+
+    function renderSummary() {
+        const body = document.getElementById('summaryBody');
+        body.innerHTML = '';
+        let totalS = 0;
+        const gradeNames = ["一", "二", "三", "四", "五", "六"];
+        for (let i = 1; i <= 6; i++) {
+            totalS += gradeCounts[i];
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${gradeNames[i-1]}年級</td><td>${gradeCounts[i]}</td><td><input type="number" value="${gradePrices[i]}" oninput="updatePrice(${i}, this.value)"></td><td id="subtotal-${i}">0</td><td></td>`;
+            body.appendChild(row);
+        }
+        document.getElementById('totalStudents_G').innerText = totalS;
+        calculateGrandTotal();
+    }
+
+    function updatePrice(grade, value) {
+        gradePrices[grade] = parseFloat(value) || 0;
+        document.getElementById(`subtotal-${grade}`).innerText = (gradeCounts[grade] * gradePrices[grade]).toLocaleString();
+        calculateGrandTotal();
+    }
+
+    function calculateGrandTotal() {
+        let grandTotal = 0;
+        for (let i = 1; i <= 6; i++) grandTotal += gradeCounts[i] * gradePrices[i];
+        document.getElementById('grandTotalAmount_G').innerText = grandTotal.toLocaleString();
+    }
+
+    function renderIdentitySummary() {
+        const categories = [
+            { id: 'disability', label: '身心障礙學生、身心障礙人士子女' },
+            { id: 'merit', label: '功勳及公教遺族' },
+            { id: 'indigenous', label: '原住民籍學生' },
+            { id: 'lowIncome', label: '低收入戶學生' },
+            { id: 'midLowSingle', label: '中低收入單親家庭學生' }
+        ];
+
+        let stats = { disability: { count: 0, total: 0 }, merit: { count: 0, total: 0 }, indigenous: { count: 0, total: 0 }, lowIncome: { count: 0, total: 0 }, midLowSingle: { count: 0, total: 0 } };
+
+        rawData.forEach(row => {
+            const status = checkStatus(row);
+            if (!status.hasAny) return;
+            const grade = String(row['班級'] || '').charAt(0);
+            const price = gradePrices[grade] || 0;
+            // 優先權判定 (依據圖片順序)
+            let cat = '';
+            if (row['4.身障(學)(社)'] || row['6.身障(學)'] || row['8.重身障(學)'] || row['5.身障(家)(社)'] || row['7.身障(家)']) cat = 'disability';
+            else if (row['11.功勳']) cat = 'merit';
+            else if (row['9.原民生'] || row['10.原民清寒(原)']) cat = 'indigenous';
+            else if (row['1.低收(社)']) cat = 'lowIncome';
+            else if (row['2.中低收(社)'] && row['3.單親(社)']) cat = 'midLowSingle';
+
+            if (cat) { stats[cat].count++; stats[cat].total += price; }
+        });
+
+        const body = document.getElementById('identityBody');
+        body.innerHTML = '';
+        let totalStudents = 0, grandTotal = 0, subTotalOther = 0;
+
+        categories.forEach((c, idx) => {
+            totalStudents += stats[c.id].count;
+            grandTotal += stats[c.id].total;
+            if (idx > 0) subTotalOther += stats[c.id].total;
+
+            const row = document.createElement('tr');
+            let totalCell = (idx === 0) ? `<td>${stats[c.id].total.toLocaleString()}</td>` : (idx === 1 ? `<td rowspan="4">${subTotalOther.toLocaleString()}</td>` : '');
+            
+            // 手動修正合併單元格顯示邏輯，如果正在渲染後面的行，不顯示最後一欄
+            if (idx > 1) {
+                row.innerHTML = `<td>${c.label}</td><td>${stats[c.id].count}</td><td>${stats[c.id].total.toLocaleString()}</td>`;
+            } else {
+                row.innerHTML = `<td>${c.label}</td><td>${stats[c.id].count}</td><td>${stats[c.id].total.toLocaleString()}</td>${totalCell}`;
+            }
+            body.appendChild(row);
+        });
+
+        document.getElementById('totalStudents_I').innerText = totalStudents;
+        document.getElementById('grandTotalAmount_I').innerText = grandTotal.toLocaleString();
+        document.getElementById('grandTotalAmount_I2').innerText = grandTotal.toLocaleString();
+    }
+
+    function checkStatus(row) {
+        const res = { hasAny: false, tagsHtml: '' };
+        if (row['4.身障(學)(社)'] || row['6.身障(學)'] || row['8.重身障(學)']) { res.hasAny = true; res.tagsHtml += '<span class="status-tag bg-blue">身障生</span>'; }
+        if (row['5.身障(家)(社)'] || row['7.身障(家)']) { res.hasAny = true; res.tagsHtml += '<span class="status-tag bg-orange">身障子女</span>'; }
+        if (row['11.功勳']) { res.hasAny = true; res.tagsHtml += '<span class="status-tag bg-grey">功勳</span>'; }
+        if (row['9.原民生'] || row['10.原民清寒(原)']) { res.hasAny = true; res.tagsHtml += '<span class="status-tag bg-green">原住民</span>'; }
+        if (row['1.低收(社)']) { res.hasAny = true; res.tagsHtml += '<span class="status-tag bg-red">低收</span>'; }
+        if (row['2.u中低收(社)'] && row['3.單親(社)']) { res.hasAny = true; res.tagsHtml += '<span class="status-tag bg-purple">中低單親</span>'; }
+        return res;
+    }
+</script>
+</body>
+</html>
