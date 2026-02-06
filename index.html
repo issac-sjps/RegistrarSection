@@ -10,7 +10,6 @@
             --accent-blue: #3498db;
             --accent-green: #27ae60;
             --accent-purple: #8e44ad;
-            --accent-orange: #e67e22; /* 新增橘色系 */
             --bg-color: #f4f7f6;
             --card-bg: #ffffff;
         }
@@ -65,10 +64,9 @@
         }
 
         /* 個別卡片顏色設定 */
-        .card.subsidy { border-top-color: var(--accent-blue); }
+        .card.registrar { border-top-color: var(--accent-blue); }
         .card.learning { border-top-color: var(--accent-green); }
         .card.github { border-top-color: var(--accent-purple); }
-        .card.printing { border-top-color: var(--accent-orange); } /* 新增 */
 
         .card h2 {
             margin-top: 0;
@@ -82,13 +80,24 @@
         .link-group {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px; /* 按鈕間距稍微縮小以容納更多按鈕 */
+        }
+
+        /* 分類標籤樣式 */
+        .group-label {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            margin-top: 10px;
+            margin-bottom: -5px;
+            font-weight: bold;
+            padding-left: 5px;
+            border-left: 3px solid #bdc3c7;
         }
 
         a.btn {
             text-decoration: none;
             color: white;
-            padding: 12px 15px;
+            padding: 10px 15px; /* 上下padding稍微縮小 */
             border-radius: 8px;
             text-align: center;
             font-weight: bold;
@@ -96,6 +105,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 0.95rem;
         }
 
         a.btn:hover {
@@ -103,10 +113,9 @@
         }
 
         /* 主按鈕顏色 */
-        .subsidy .btn { background-color: var(--accent-blue); }
+        .registrar .btn { background-color: var(--accent-blue); }
         .learning .btn { background-color: var(--accent-green); }
         .github .btn { background-color: var(--accent-purple); }
-        .printing .btn { background-color: var(--accent-orange); } /* 新增 */
         
         /* 次要按鈕樣式 */
         .btn.secondary {
@@ -114,12 +123,12 @@
             border: 2px solid; 
         }
 
-        /* 補助申請 - 次要按鈕顏色 */
-        .subsidy .btn.secondary {
+        /* 註冊組 - 次要按鈕顏色 */
+        .registrar .btn.secondary {
             color: var(--accent-blue);
             border-color: var(--accent-blue);
         }
-        .subsidy .btn.secondary:hover {
+        .registrar .btn.secondary:hover {
             background-color: #eaf6fd;
         }
 
@@ -141,15 +150,6 @@
             background-color: #f5eef8;
         }
 
-        /* 通知單套印 - 次要按鈕顏色 (預留未來使用) */
-        .printing .btn.secondary {
-            color: var(--accent-orange);
-            border-color: var(--accent-orange);
-        }
-        .printing .btn.secondary:hover {
-            background-color: #fdf2e9;
-        }
-
         footer {
             margin-top: auto;
             padding-top: 40px;
@@ -167,16 +167,44 @@
 
     <div class="container">
 
-        <div class="card subsidy">
-            <h2>💰 補助申請</h2>
+        <div class="card registrar">
+            <h2>📁 註冊組業務專區</h2>
             <div class="link-group">
                 <a href="https://issac-sjps.github.io/RegistrarSection/" class="btn" target="_blank">
                     進入補助申請首頁
                 </a>
-                <a href="https://issac-sjps.github.io/RegistrarSection/身分減免名單檢核" class="btn secondary" target="_blank">
+
+                <div class="group-label">費用與補助</div>
+                <a href="https://issac-sjps.github.io/RegistrarSection/身分減免名單檢核.html" class="btn secondary" target="_blank">
                     身分減免名單檢核
                 </a>
-            </div>
+                <a href="https://issac-sjps.github.io/RegistrarSection/簿本費申請單.html" class="btn secondary" target="_blank">
+                    簿本費申請單
+                </a>
+                <a href="https://issac-sjps.github.io/RegistrarSection/高雄市簿本費統計核對表.html" class="btn secondary" target="_blank">
+                    高雄市簿本費統計核對表
+                </a>
+
+                <div class="group-label">評語與成績</div>
+                <a href="https://issac-sjps.github.io/RegistrarSection/期末評語大師.html" class="btn secondary" target="_blank">
+                    期末評語大師
+                </a>
+                <a href="https://issac-sjps.github.io/RegistrarSection/評語產生器.html" class="btn secondary" target="_blank">
+                    評語產生器
+                </a>
+
+                <div class="group-label">名冊與其他業務</div>
+                <a href="https://issac-sjps.github.io/RegistrarSection/國中分發班級名冊列印.html" class="btn secondary" target="_blank">
+                    國中分發班級名冊列印
+                </a>
+                <a href="https://issac-sjps.github.io/RegistrarSection/學資網個人比較.html" class="btn secondary" target="_blank">
+                    學資網個人比較
+                </a>
+                <a href="https://issac-sjps.github.io/RegistrarSection/領獎金通知單套印.html" class="btn secondary" target="_blank">
+                    領獎金通知單套印
+                </a>
+
+                </div>
         </div>
 
         <div class="card learning">
@@ -202,15 +230,6 @@
                 </a>
                 <a href="https://issac-sjps.github.io/Home/" class="btn secondary" target="_blank">
                     GitHub Pages 首頁 (Home)
-                </a>
-            </div>
-        </div>
-
-        <div class="card printing">
-            <h2>🖨️ 通知單套印</h2>
-            <div class="link-group">
-                <a href="https://issac-sjps.github.io/RegistrarSection/%E9%80%9A%E7%9F%A5%E5%96%AE%E5%A5%97%E5%8D%B0" class="btn" target="_blank">
-                    進入通知單套印網頁
                 </a>
             </div>
         </div>
