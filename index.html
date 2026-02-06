@@ -43,10 +43,10 @@
 
         .container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); /* 稍微加寬以容納更多內容 */
             gap: 25px;
             width: 100%;
-            max-width: 1000px;
+            max-width: 1100px;
         }
 
         .card {
@@ -80,14 +80,14 @@
         .link-group {
             display: flex;
             flex-direction: column;
-            gap: 12px; /* 按鈕間距稍微縮小以容納更多按鈕 */
+            gap: 12px;
         }
 
         /* 分類標籤樣式 */
         .group-label {
             font-size: 0.85rem;
             color: #7f8c8d;
-            margin-top: 10px;
+            margin-top: 12px;
             margin-bottom: -5px;
             font-weight: bold;
             padding-left: 5px;
@@ -97,7 +97,7 @@
         a.btn {
             text-decoration: none;
             color: white;
-            padding: 10px 15px; /* 上下padding稍微縮小 */
+            padding: 10px 15px;
             border-radius: 8px;
             text-align: center;
             font-weight: bold;
@@ -203,8 +203,7 @@
                 <a href="https://issac-sjps.github.io/RegistrarSection/領獎金通知單套印.html" class="btn secondary" target="_blank">
                     領獎金通知單套印
                 </a>
-
-                </div>
+            </div>
         </div>
 
         <div class="card learning">
@@ -213,11 +212,21 @@
                 <a href="https://issac-sjps.github.io/LearningAssistance/" class="btn" target="_blank">
                     進入學習扶助首頁
                 </a>
-                <a href="https://issac-sjps.github.io/LearningAssistance/%E8%80%83%E8%A9%A6%E9%80%9A%E7%9F%A5%E5%96%AE%E8%88%87%E4%B8%8A%E8%AA%B2%E6%84%8F%E9%A1%98%E8%AA%BF%E6%9F%A5%E8%A1%A8" class="btn secondary" target="_blank">
-                    考試通知與意願調查表
-                </a>
-                <a href="https://issac-sjps.github.io/LearningAssistance/%E5%AD%B8%E7%BF%92%E6%89%B6%E5%8A%A9%E7%B7%A8%E7%8F%AD%E7%B6%B2" class="btn secondary" target="_blank">
+
+                <div class="group-label">編班與學生資料</div>
+                <a href="https://issac-sjps.github.io/LearningAssistance/學習扶助編班網.html" class="btn secondary" target="_blank">
                     學習扶助編班網
+                </a>
+                <a href="https://issac-sjps.github.io/LearningAssistance/比對是否有學障學生.html" class="btn secondary" target="_blank">
+                    比對是否有學障學生
+                </a>
+                <a href="https://issac-sjps.github.io/LearningAssistance/學生家長電話產出.html" class="btn secondary" target="_blank">
+                    學生家長電話產出
+                </a>
+
+                <div class="group-label">通知單</div>
+                <a href="https://issac-sjps.github.io/LearningAssistance/學扶通知單套印.html" class="btn secondary" target="_blank">
+                    學扶通知單套印
                 </a>
             </div>
         </div>
