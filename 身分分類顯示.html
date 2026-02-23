@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>學生補助身分名單整理工具</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, '微軟正黑體';
+            background-color: #f4f7f6;
+            color: #333;
+            padding: 20px;
+            max-width: 1200px;
+            margin: auto;
+        }
+        .header {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 { margin-top: 0; color: #2c3e50; }
+        input[type="file"] {
+            padding: 10px;
+            border: 2px dashed #bdc3c7;
+            border-radius: 5px;
+            background-color: #fafafa;
+            cursor: pointer;
+            width: 100%;
+            max-width: 400px;
+        }
+        .category-card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .category-title {
+            background-color: #34495e;
+            color: white;
+            padding: 15px;
+            margin: 0;
+            font-size: 1.2em;
+            display: flex;
+            justify-content: space-between;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        th { background-color: #f9fbfb; font-weight: 600; }
+        tr:hover { background-color: #f5f5f5; }
+        .multi-tag {
+            background-color: #e74c3c;
+            color: white;
+            font-size: 0.85em;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            display: inline-block;
+        }
+        .multi-details {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-top: 4px;
+        }
+        #loading { display: none; color: #2980b9; font-weight: bold; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>📊 學生補助身分名單整理工具</h1>
+        <p>請上傳包含補助身分資料的 Excel 檔案。系統會自動讀取所有工作表，並依據「最優補助身分」進行分類，同時標註具備多重身分的學生。</p>
+        <input type="file" id="excel-file" accept=".xlsx, .xls">
+        <div id="loading">讀取與整理中，請稍候...</div>
+    </div>
+
+    <div id="output"></div>
+
+    <script>
+        // 定義需要檢查是否有資料的補助細項欄位名稱
+        const subsidyColumns = [
+            '1.低收(社)', '2.中低收(社)', '3.單親(社)', '4.身障(學)(社)', 
+            '5.身障(家)(社)', '6.身障(學)', '7.身障(家)', '8.重身障(學)', 
+            '9.原民生', '10.原民清寒(原)', '11.功勳', '12.導師認定'
+        ];
+
+        document.getElementById('excel-file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('output').innerHTML = '';
+
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                // 使用 SheetJS 讀取 Excel
+                const workbook = XLSX.read(data, {type: 'array'});
+                
+                let allStudents = [];
+
+                // 迴圈處理每一個工作表 (一到六年級)
+                workbook.SheetNames.forEach(sheetName => {
+                    const worksheet = workbook.Sheets[sheetName];
+                    // 將工作表轉為 JSON 物件陣列 (預設第一行為標題列)
+                    const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                    
+                    json.forEach(row => {
+                        // 檢查是否有班級與姓名，排除空白列
+                        if (!row['班級'] || !row['姓名']) return;
+
+                        let optimalType = String(row['最優補助身分']).trim();
+                        if (!optimalType) optimalType = '未分類/未填寫最優身分';
+
+                        // 判斷是否有多重身分：檢查細項欄位有幾個是有內容的
+                        let matchedCategories = [];
+                        subsidyColumns.forEach(col => {
+                            let cellValue = String(row[col] || '').trim();
+                            // 如果該欄位有內容 (符合、已建檔等任何文字)
+                            if (cellValue !== '') {
+                                matchedCategories.push(col);
+                            }
+                        });
+
+                        allStudents.push({
+                            classInfo: `${row['班級']}`,
+                            seatNo: row['座號'],
+                            name: row['姓名'],
+                            optimalType: optimalType,
+                            isMulti: matchedCategories.length > 1,
+                            multiDetails: matchedCategories.join(', ')
+                        });
+                    });
+                });
+
+                // 將資料依據「最優補助身分」分群
+                const groupedData = {};
+                allStudents.forEach(student => {
+                    if (!groupedData[student.optimalType]) {
+                        groupedData[student.optimalType] = [];
+                    }
+                    groupedData[student.optimalType].push(student);
+                });
+
+                // 渲染畫面
+                renderOutput(groupedData);
+                document.getElementById('loading').style.display = 'none';
+            };
+
+            reader.readAsArrayBuffer(file);
+        });
+
+        function renderOutput(groupedData) {
+            const outputDiv = document.getElementById('output');
+            
+            // 取得所有身分類別並排序 (讓數字開頭的排序比較好看)
+            const categories = Object.keys(groupedData).sort();
+
+            if (categories.length === 0) {
+                outputDiv.innerHTML = '<p>找不到符合格式的資料，請確認 Excel 的欄位名稱是否正確 (如：班級、姓名、最優補助身分等)。</p>';
+                return;
+            }
+
+            categories.forEach(category => {
+                const students = groupedData[category];
+                // 依照班級跟座號排序
+                students.sort((a, b) => {
+                    if (a.classInfo !== b.classInfo) return a.classInfo.localeCompare(b.classInfo);
+                    return Number(a.seatNo) - Number(b.seatNo);
+                });
+
+                const count = students.length;
+
+                let html = `
+                    <div class="category-card">
+                        <h2 class="category-title">
+                            <span>${category}</span>
+                            <span>共 ${count} 人</span>
+                        </h2>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th width="15%">班級-座號</th>
+                                    <th width="20%">姓名</th>
+                                    <th width="65%">備註 (多重身分標記)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                students.forEach(std => {
+                    let tagsHtml = '';
+                    if (std.isMulti) {
+                        tagsHtml = `
+                            <span class="multi-tag">★ 多重類別</span>
+                            <div class="multi-details">符合項目：${std.multiDetails}</div>
+                        `;
+                    }
+
+                    html += `
+                        <tr>
+                            <td>${std.classInfo} - ${std.seatNo}</td>
+                            <td>${std.name}</td>
+                            <td>${tagsHtml}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                outputDiv.innerHTML += html;
+            });
+        }
+    </script>
+</body>
+</html>
