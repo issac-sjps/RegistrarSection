@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>學生補助身分名單整理工具 (完整詳細版)</title>
+    <title>學生補助身分名單整理工具 (交叉比對進階版)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body {
@@ -11,7 +11,7 @@
             background-color: #f4f7f6;
             color: #333;
             padding: 20px;
-            max-width: 100%; /* 讓畫面可以使用整個螢幕寬度 */
+            max-width: 100%;
             margin: auto;
         }
         .header {
@@ -33,29 +33,45 @@
             margin-bottom: 15px;
         }
         
-        /* 分類按鈕區塊樣式 */
-        #filter-buttons {
+        /* 篩選控制器區塊 */
+        .filter-section {
+            background-color: #f8f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e5e8e8;
+            margin-bottom: 15px;
+            display: none; /* 讀取完檔案才顯示 */
+        }
+        .filter-row {
             display: flex;
+            align-items: center;
             flex-wrap: wrap;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
+        }
+        .filter-row:last-child { margin-bottom: 0; }
+        .filter-label {
+            font-weight: bold;
+            color: #34495e;
+            width: 80px;
+            flex-shrink: 0;
         }
         .filter-btn {
-            background-color: #ecf0f1;
+            background-color: #fff;
             border: 1px solid #bdc3c7;
-            padding: 8px 15px;
+            padding: 6px 14px;
             border-radius: 20px;
             cursor: pointer;
             font-weight: bold;
-            color: #2c3e50;
+            color: #7f8c8d;
             transition: all 0.2s ease;
+            font-size: 0.9em;
         }
-        .filter-btn:hover { background-color: #d5dbdb; }
-        .filter-btn.active {
-            background-color: #3498db;
-            color: white;
-            border-color: #2980b9;
-        }
+        .filter-btn:hover { background-color: #ecf0f1; color: #2c3e50; }
+        
+        /* 年級和類別的 Active 顏色區分一下 */
+        .grade-btn.active { background-color: #16a085; color: white; border-color: #1abc9c; }
+        .category-btn.active { background-color: #3498db; color: white; border-color: #2980b9; }
 
         .category-card {
             background-color: #fff;
@@ -74,13 +90,9 @@
             justify-content: space-between;
         }
         
-        /* 表格與水平捲軸樣式 */
-        .table-responsive {
-            width: 100%;
-            overflow-x: auto; /* 內容過寬時產生水平捲軸 */
-        }
+        .table-responsive { width: 100%; overflow-x: auto; }
         table {
-            width: max-content; /* 讓表格依照內容自動延展寬度 */
+            width: max-content;
             min-width: 100%;
             border-collapse: collapse;
         }
@@ -88,20 +100,21 @@
             padding: 10px 12px;
             text-align: left;
             border-bottom: 1px solid #ecf0f1;
-            border-right: 1px solid #f0f0f0; /* 增加垂直分隔線讓多欄位更易讀 */
-            white-space: nowrap; /* 防止表格內容自動換行導致排版混亂 */
+            border-right: 1px solid #f0f0f0;
+            white-space: nowrap;
             font-size: 0.95em;
         }
-        th { 
-            background-color: #f9fbfb; 
-            font-weight: 600; 
-            position: sticky; 
-            top: 0;
+        /* 針對序號欄位特別設定 */
+        th:first-child, td:first-child { 
+            text-align: center; 
+            font-weight: bold; 
+            color: #2c3e50; 
+            background-color: #fcfdfe;
         }
+        th { background-color: #f9fbfb; font-weight: 600; position: sticky; top: 0; }
         tr:hover { background-color: #fdfefe; }
         
-        /* 多重身分特別標記 */
-        .multi-row { background-color: #fff3ef !important; } /* 整列微紅底色 */
+        .multi-row { background-color: #fff3ef !important; }
         .multi-tag {
             background-color: #e74c3c;
             color: white;
@@ -113,23 +126,33 @@
         }
 
         #loading { display: none; color: #2980b9; font-weight: bold; margin-top: 10px; }
+        #no-data { text-align: center; padding: 30px; color: #7f8c8d; font-size: 1.1em; display: none; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h1>📊 學生補助身分名單整理工具 (完整版)</h1>
-        <p>請上傳 Excel 檔案。讀取完成後，你可以點擊下方的按鈕快速篩選各分類。表格已包含原始檔案的所有詳細欄位，若內容超出螢幕，請向右滑動查看。</p>
+        <h1>📊 學生補助身分名單整理工具 (交叉比對版)</h1>
+        <p>上傳 Excel 檔案後，你可以自由點選「年級」與「身分類別」進行交叉比對。表格最前方的「序號」會跟著你的篩選結果自動重新計算。</p>
         <input type="file" id="excel-file" accept=".xlsx, .xls">
         <div id="loading">讀取與整理中，請稍候...</div>
         
-        <div id="filter-buttons"></div>
+        <div class="filter-section" id="filter-section">
+            <div class="filter-row">
+                <div class="filter-label">📚 年級篩選</div>
+                <div id="grade-buttons"></div>
+            </div>
+            <div class="filter-row">
+                <div class="filter-label">🏷️ 類別篩選</div>
+                <div id="category-buttons"></div>
+            </div>
+        </div>
     </div>
 
     <div id="output"></div>
+    <div id="no-data">🔍 該篩選條件下沒有符合的學生名單喔！</div>
 
     <script>
-        // 定義 Excel 中所有的原始欄位順序 (確保不省略任何內容)
         const allColumns = [
             '班級', '座號', '姓名', '性別', '身分證號', '最優補助身分',
             '1.低收(社)', '2.中低收(社)', '3.單親(社)', '4.身障(學)(社)', 
@@ -137,12 +160,16 @@
             '9.原民生', '10.原民清寒(原)', '11.功勳', '12.導師認定', '兄弟姊妹'
         ];
 
-        // 用來判斷是否為多重身分的細項欄位
         const subsidyColumns = [
             '1.低收(社)', '2.中低收(社)', '3.單親(社)', '4.身障(學)(社)', 
             '5.身障(家)(社)', '6.身障(學)', '7.身障(家)', '8.重身障(學)', 
             '9.原民生', '10.原民清寒(原)', '11.功勳', '12.導師認定'
         ];
+
+        // 儲存全域資料與當前篩選狀態
+        let globalStudents = [];
+        let currentGrade = 'all';
+        let currentCategory = 'all';
 
         document.getElementById('excel-file').addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -150,37 +177,45 @@
 
             document.getElementById('loading').style.display = 'block';
             document.getElementById('output').innerHTML = '';
-            document.getElementById('filter-buttons').innerHTML = '';
+            document.getElementById('filter-section').style.display = 'none';
+            document.getElementById('no-data').style.display = 'none';
 
             const reader = new FileReader();
             
             reader.onload = function(e) {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, {type: 'array'});
-                let allStudents = [];
+                globalStudents = [];
+                let gradesSet = new Set();
+                let categoriesSet = new Set();
 
                 workbook.SheetNames.forEach(sheetName => {
                     const worksheet = workbook.Sheets[sheetName];
                     const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
                     
                     json.forEach(row => {
-                        if (!row['班級'] || !row['姓名']) return;
+                        let classStr = String(row['班級'] || '').trim();
+                        if (!classStr || !row['姓名']) return;
+
+                        // 取班級的第一個字元當作年級 (例如 601 取 6)
+                        let gradeMatch = classStr.match(/^\d/);
+                        let grade = gradeMatch ? gradeMatch[0] + '年級' : '其他';
+                        gradesSet.add(grade);
 
                         let optimalType = String(row['最優補助身分'] || '').trim();
                         if (!optimalType) optimalType = '未分類/未填寫最優身分';
+                        categoriesSet.add(optimalType);
 
-                        // 計算多重身分
                         let matchedCategories = [];
                         subsidyColumns.forEach(col => {
-                            let cellValue = String(row[col] || '').trim();
-                            if (cellValue !== '') {
+                            if (String(row[col] || '').trim() !== '') {
                                 matchedCategories.push(col);
                             }
                         });
 
-                        // 儲存該學生的完整資料與多重標記狀態
-                        allStudents.push({
-                            originalData: row, // 保留原始的所有欄位資料
+                        globalStudents.push({
+                            originalData: row,
+                            grade: grade,
                             optimalType: optimalType,
                             isMulti: matchedCategories.length > 1,
                             multiCount: matchedCategories.length
@@ -188,40 +223,86 @@
                     });
                 });
 
-                const groupedData = {};
-                allStudents.forEach(student => {
-                    if (!groupedData[student.optimalType]) {
-                        groupedData[student.optimalType] = [];
-                    }
-                    groupedData[student.optimalType].push(student);
-                });
-
-                // 產生畫面與按鈕
-                renderUI(groupedData);
+                // 初始化篩選器
+                initFilters(Array.from(gradesSet).sort(), Array.from(categoriesSet).sort());
                 document.getElementById('loading').style.display = 'none';
+                document.getElementById('filter-section').style.display = 'block';
+                
+                // 渲染畫面
+                renderTables();
             };
 
             reader.readAsArrayBuffer(file);
         });
 
-        function renderUI(groupedData) {
-            const outputDiv = document.getElementById('output');
-            const btnContainer = document.getElementById('filter-buttons');
-            const categories = Object.keys(groupedData).sort();
+        function initFilters(grades, categories) {
+            // 年級按鈕
+            let gradeHtml = `<button class="filter-btn grade-btn active" onclick="setFilter('grade', 'all', this)">全部年級</button>`;
+            grades.forEach(g => {
+                gradeHtml += `<button class="filter-btn grade-btn" onclick="setFilter('grade', '${g}', this)">${g}</button>`;
+            });
+            document.getElementById('grade-buttons').innerHTML = gradeHtml;
 
-            if (categories.length === 0) {
-                outputDiv.innerHTML = '<p>找不到符合格式的資料，請確認 Excel 的欄位名稱。</p>';
+            // 類別按鈕
+            let catHtml = `<button class="filter-btn category-btn active" onclick="setFilter('category', 'all', this)">全部類別</button>`;
+            categories.forEach(c => {
+                catHtml += `<button class="filter-btn category-btn" onclick="setFilter('category', '${c}', this)">${c}</button>`;
+            });
+            document.getElementById('category-buttons').innerHTML = catHtml;
+            
+            // 重置狀態
+            currentGrade = 'all';
+            currentCategory = 'all';
+        }
+
+        // 點擊按鈕後更新狀態並重新渲染表格
+        function setFilter(type, value, btnElement) {
+            if (type === 'grade') {
+                currentGrade = value;
+                document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('active'));
+            } else {
+                currentCategory = value;
+                document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+            }
+            btnElement.classList.add('active');
+            renderTables();
+        }
+
+        function renderTables() {
+            const outputDiv = document.getElementById('output');
+            const noDataMsg = document.getElementById('no-data');
+            outputDiv.innerHTML = '';
+
+            // 1. 根據選擇的年級與類別過濾資料
+            let filteredStudents = globalStudents.filter(std => {
+                let matchGrade = (currentGrade === 'all' || std.grade === currentGrade);
+                let matchCat = (currentCategory === 'all' || std.optimalType === currentCategory);
+                return matchGrade && matchCat;
+            });
+
+            if (filteredStudents.length === 0) {
+                noDataMsg.style.display = 'block';
                 return;
+            } else {
+                noDataMsg.style.display = 'none';
             }
 
-            // 建立「顯示全部」按鈕
-            btnContainer.innerHTML = `<button class="filter-btn active" onclick="filterCategory('all', this)">顯示全部</button>`;
+            // 2. 將過濾後的資料依照「最優補助身分」重新分群
+            const groupedData = {};
+            filteredStudents.forEach(std => {
+                if (!groupedData[std.optimalType]) groupedData[std.optimalType] = [];
+                groupedData[std.optimalType].push(std);
+            });
 
-            // 建立各分類按鈕與報表區塊
-            categories.forEach((category, index) => {
-                // 建立按鈕
-                btnContainer.innerHTML += `<button class="filter-btn" onclick="filterCategory('cat-${index}', this)">${category}</button>`;
+            const categoriesToRender = Object.keys(groupedData).sort();
 
+            // 3. 組合 Header (加入最前面的「序號」欄位)
+            let thHtml = `<th>序號</th>`;
+            allColumns.forEach(col => { thHtml += `<th>${col}</th>`; });
+            thHtml += `<th>系統多重標記</th>`;
+
+            // 4. 產生表格
+            categoriesToRender.forEach(category => {
                 const students = groupedData[category];
                 // 排序：班級 -> 座號
                 students.sort((a, b) => {
@@ -231,19 +312,16 @@
                     return Number(a.originalData['座號'] || 0) - Number(b.originalData['座號'] || 0);
                 });
 
-                // 組合表格 Header (包含原始欄位 + 系統判定欄位)
-                let thHtml = '';
-                allColumns.forEach(col => { thHtml += `<th>${col}</th>`; });
-                thHtml += `<th>系統多重標記</th>`;
-
-                // 組合學生資料列
                 let trHtml = '';
+                // 使用 index 變數作為動態序號
+                let index = 1; 
                 students.forEach(std => {
                     let rowClass = std.isMulti ? 'multi-row' : '';
                     let tagHtml = std.isMulti ? `<span class="multi-tag">★ 多重 (${std.multiCount}項)</span>` : '';
                     
                     trHtml += `<tr class="${rowClass}">`;
-                    // 依照設定好的 allColumns 順序倒出資料，避免省略
+                    trHtml += `<td>${index++}</td>`; // 填入當前序號並+1
+
                     allColumns.forEach(col => {
                         let cellData = std.originalData[col] !== undefined ? std.originalData[col] : '';
                         trHtml += `<td>${cellData}</td>`;
@@ -251,9 +329,8 @@
                     trHtml += `<td>${tagHtml}</td></tr>`;
                 });
 
-                // 建立該分類的完整卡片
                 let html = `
-                    <div class="category-card" id="cat-${index}">
+                    <div class="category-card">
                         <h2 class="category-title">
                             <span>${category}</span>
                             <span>共 ${students.length} 人</span>
@@ -267,28 +344,6 @@
                     </div>
                 `;
                 outputDiv.innerHTML += html;
-            });
-        }
-
-        // 處理按鈕過濾顯示邏輯
-        function filterCategory(targetId, btnElement) {
-            // 更新按鈕的視覺狀態 (Active)
-            const buttons = document.querySelectorAll('.filter-btn');
-            buttons.forEach(btn => btn.classList.remove('active'));
-            btnElement.classList.add('active');
-
-            // 控制卡片的顯示或隱藏
-            const cards = document.querySelectorAll('.category-card');
-            cards.forEach(card => {
-                if (targetId === 'all') {
-                    card.style.display = 'block';
-                } else {
-                    if (card.id === targetId) {
-                        card.style.display = 'block';
-                    } else {
-                        card.style.display = 'none';
-                    }
-                }
             });
         }
     </script>
