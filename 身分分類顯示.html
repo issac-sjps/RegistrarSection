@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>學生補助身分名單整理工具</title>
+    <title>學生補助身分名單整理工具 (完整詳細版)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body {
@@ -11,7 +11,7 @@
             background-color: #f4f7f6;
             color: #333;
             padding: 20px;
-            max-width: 1200px;
+            max-width: 100%; /* 讓畫面可以使用整個螢幕寬度 */
             margin: auto;
         }
         .header {
@@ -30,12 +30,38 @@
             cursor: pointer;
             width: 100%;
             max-width: 400px;
+            margin-bottom: 15px;
         }
+        
+        /* 分類按鈕區塊樣式 */
+        #filter-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .filter-btn {
+            background-color: #ecf0f1;
+            border: 1px solid #bdc3c7;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #2c3e50;
+            transition: all 0.2s ease;
+        }
+        .filter-btn:hover { background-color: #d5dbdb; }
+        .filter-btn.active {
+            background-color: #3498db;
+            color: white;
+            border-color: #2980b9;
+        }
+
         .category-card {
             background-color: #fff;
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            margin-bottom: 20px;
+            margin-bottom: 30px;
             overflow: hidden;
         }
         .category-title {
@@ -47,47 +73,71 @@
             display: flex;
             justify-content: space-between;
         }
-        table {
+        
+        /* 表格與水平捲軸樣式 */
+        .table-responsive {
             width: 100%;
+            overflow-x: auto; /* 內容過寬時產生水平捲軸 */
+        }
+        table {
+            width: max-content; /* 讓表格依照內容自動延展寬度 */
+            min-width: 100%;
             border-collapse: collapse;
         }
         th, td {
-            padding: 12px 15px;
+            padding: 10px 12px;
             text-align: left;
             border-bottom: 1px solid #ecf0f1;
+            border-right: 1px solid #f0f0f0; /* 增加垂直分隔線讓多欄位更易讀 */
+            white-space: nowrap; /* 防止表格內容自動換行導致排版混亂 */
+            font-size: 0.95em;
         }
-        th { background-color: #f9fbfb; font-weight: 600; }
-        tr:hover { background-color: #f5f5f5; }
+        th { 
+            background-color: #f9fbfb; 
+            font-weight: 600; 
+            position: sticky; 
+            top: 0;
+        }
+        tr:hover { background-color: #fdfefe; }
+        
+        /* 多重身分特別標記 */
+        .multi-row { background-color: #fff3ef !important; } /* 整列微紅底色 */
         .multi-tag {
             background-color: #e74c3c;
             color: white;
             font-size: 0.85em;
-            padding: 3px 8px;
-            border-radius: 12px;
-            margin-left: 10px;
+            padding: 4px 8px;
+            border-radius: 4px;
             display: inline-block;
+            font-weight: bold;
         }
-        .multi-details {
-            font-size: 0.9em;
-            color: #7f8c8d;
-            margin-top: 4px;
-        }
+
         #loading { display: none; color: #2980b9; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h1>📊 學生補助身分名單整理工具</h1>
-        <p>請上傳包含補助身分資料的 Excel 檔案。系統會自動讀取所有工作表，並依據「最優補助身分」進行分類，同時標註具備多重身分的學生。</p>
+        <h1>📊 學生補助身分名單整理工具 (完整版)</h1>
+        <p>請上傳 Excel 檔案。讀取完成後，你可以點擊下方的按鈕快速篩選各分類。表格已包含原始檔案的所有詳細欄位，若內容超出螢幕，請向右滑動查看。</p>
         <input type="file" id="excel-file" accept=".xlsx, .xls">
         <div id="loading">讀取與整理中，請稍候...</div>
+        
+        <div id="filter-buttons"></div>
     </div>
 
     <div id="output"></div>
 
     <script>
-        // 定義需要檢查是否有資料的補助細項欄位名稱
+        // 定義 Excel 中所有的原始欄位順序 (確保不省略任何內容)
+        const allColumns = [
+            '班級', '座號', '姓名', '性別', '身分證號', '最優補助身分',
+            '1.低收(社)', '2.中低收(社)', '3.單親(社)', '4.身障(學)(社)', 
+            '5.身障(家)(社)', '6.身障(學)', '7.身障(家)', '8.重身障(學)', 
+            '9.原民生', '10.原民清寒(原)', '11.功勳', '12.導師認定', '兄弟姊妹'
+        ];
+
+        // 用來判斷是否為多重身分的細項欄位
         const subsidyColumns = [
             '1.低收(社)', '2.中低收(社)', '3.單親(社)', '4.身障(學)(社)', 
             '5.身障(家)(社)', '6.身障(學)', '7.身障(家)', '8.重身障(學)', 
@@ -100,51 +150,44 @@
 
             document.getElementById('loading').style.display = 'block';
             document.getElementById('output').innerHTML = '';
+            document.getElementById('filter-buttons').innerHTML = '';
 
             const reader = new FileReader();
             
             reader.onload = function(e) {
                 const data = new Uint8Array(e.target.result);
-                // 使用 SheetJS 讀取 Excel
                 const workbook = XLSX.read(data, {type: 'array'});
-                
                 let allStudents = [];
 
-                // 迴圈處理每一個工作表 (一到六年級)
                 workbook.SheetNames.forEach(sheetName => {
                     const worksheet = workbook.Sheets[sheetName];
-                    // 將工作表轉為 JSON 物件陣列 (預設第一行為標題列)
                     const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
                     
                     json.forEach(row => {
-                        // 檢查是否有班級與姓名，排除空白列
                         if (!row['班級'] || !row['姓名']) return;
 
-                        let optimalType = String(row['最優補助身分']).trim();
+                        let optimalType = String(row['最優補助身分'] || '').trim();
                         if (!optimalType) optimalType = '未分類/未填寫最優身分';
 
-                        // 判斷是否有多重身分：檢查細項欄位有幾個是有內容的
+                        // 計算多重身分
                         let matchedCategories = [];
                         subsidyColumns.forEach(col => {
                             let cellValue = String(row[col] || '').trim();
-                            // 如果該欄位有內容 (符合、已建檔等任何文字)
                             if (cellValue !== '') {
                                 matchedCategories.push(col);
                             }
                         });
 
+                        // 儲存該學生的完整資料與多重標記狀態
                         allStudents.push({
-                            classInfo: `${row['班級']}`,
-                            seatNo: row['座號'],
-                            name: row['姓名'],
+                            originalData: row, // 保留原始的所有欄位資料
                             optimalType: optimalType,
                             isMulti: matchedCategories.length > 1,
-                            multiDetails: matchedCategories.join(', ')
+                            multiCount: matchedCategories.length
                         });
                     });
                 });
 
-                // 將資料依據「最優補助身分」分群
                 const groupedData = {};
                 allStudents.forEach(student => {
                     if (!groupedData[student.optimalType]) {
@@ -153,76 +196,99 @@
                     groupedData[student.optimalType].push(student);
                 });
 
-                // 渲染畫面
-                renderOutput(groupedData);
+                // 產生畫面與按鈕
+                renderUI(groupedData);
                 document.getElementById('loading').style.display = 'none';
             };
 
             reader.readAsArrayBuffer(file);
         });
 
-        function renderOutput(groupedData) {
+        function renderUI(groupedData) {
             const outputDiv = document.getElementById('output');
-            
-            // 取得所有身分類別並排序 (讓數字開頭的排序比較好看)
+            const btnContainer = document.getElementById('filter-buttons');
             const categories = Object.keys(groupedData).sort();
 
             if (categories.length === 0) {
-                outputDiv.innerHTML = '<p>找不到符合格式的資料，請確認 Excel 的欄位名稱是否正確 (如：班級、姓名、最優補助身分等)。</p>';
+                outputDiv.innerHTML = '<p>找不到符合格式的資料，請確認 Excel 的欄位名稱。</p>';
                 return;
             }
 
-            categories.forEach(category => {
+            // 建立「顯示全部」按鈕
+            btnContainer.innerHTML = `<button class="filter-btn active" onclick="filterCategory('all', this)">顯示全部</button>`;
+
+            // 建立各分類按鈕與報表區塊
+            categories.forEach((category, index) => {
+                // 建立按鈕
+                btnContainer.innerHTML += `<button class="filter-btn" onclick="filterCategory('cat-${index}', this)">${category}</button>`;
+
                 const students = groupedData[category];
-                // 依照班級跟座號排序
+                // 排序：班級 -> 座號
                 students.sort((a, b) => {
-                    if (a.classInfo !== b.classInfo) return a.classInfo.localeCompare(b.classInfo);
-                    return Number(a.seatNo) - Number(b.seatNo);
+                    let classA = String(a.originalData['班級'] || '');
+                    let classB = String(b.originalData['班級'] || '');
+                    if (classA !== classB) return classA.localeCompare(classB);
+                    return Number(a.originalData['座號'] || 0) - Number(b.originalData['座號'] || 0);
                 });
 
-                const count = students.length;
+                // 組合表格 Header (包含原始欄位 + 系統判定欄位)
+                let thHtml = '';
+                allColumns.forEach(col => { thHtml += `<th>${col}</th>`; });
+                thHtml += `<th>系統多重標記</th>`;
 
+                // 組合學生資料列
+                let trHtml = '';
+                students.forEach(std => {
+                    let rowClass = std.isMulti ? 'multi-row' : '';
+                    let tagHtml = std.isMulti ? `<span class="multi-tag">★ 多重 (${std.multiCount}項)</span>` : '';
+                    
+                    trHtml += `<tr class="${rowClass}">`;
+                    // 依照設定好的 allColumns 順序倒出資料，避免省略
+                    allColumns.forEach(col => {
+                        let cellData = std.originalData[col] !== undefined ? std.originalData[col] : '';
+                        trHtml += `<td>${cellData}</td>`;
+                    });
+                    trHtml += `<td>${tagHtml}</td></tr>`;
+                });
+
+                // 建立該分類的完整卡片
                 let html = `
-                    <div class="category-card">
+                    <div class="category-card" id="cat-${index}">
                         <h2 class="category-title">
                             <span>${category}</span>
-                            <span>共 ${count} 人</span>
+                            <span>共 ${students.length} 人</span>
                         </h2>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th width="15%">班級-座號</th>
-                                    <th width="20%">姓名</th>
-                                    <th width="65%">備註 (多重身分標記)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                `;
-
-                students.forEach(std => {
-                    let tagsHtml = '';
-                    if (std.isMulti) {
-                        tagsHtml = `
-                            <span class="multi-tag">★ 多重類別</span>
-                            <div class="multi-details">符合項目：${std.multiDetails}</div>
-                        `;
-                    }
-
-                    html += `
-                        <tr>
-                            <td>${std.classInfo} - ${std.seatNo}</td>
-                            <td>${std.name}</td>
-                            <td>${tagsHtml}</td>
-                        </tr>
-                    `;
-                });
-
-                html += `
-                            </tbody>
-                        </table>
+                        <div class="table-responsive">
+                            <table>
+                                <thead><tr>${thHtml}</tr></thead>
+                                <tbody>${trHtml}</tbody>
+                            </table>
+                        </div>
                     </div>
                 `;
                 outputDiv.innerHTML += html;
+            });
+        }
+
+        // 處理按鈕過濾顯示邏輯
+        function filterCategory(targetId, btnElement) {
+            // 更新按鈕的視覺狀態 (Active)
+            const buttons = document.querySelectorAll('.filter-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+
+            // 控制卡片的顯示或隱藏
+            const cards = document.querySelectorAll('.category-card');
+            cards.forEach(card => {
+                if (targetId === 'all') {
+                    card.style.display = 'block';
+                } else {
+                    if (card.id === targetId) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                }
             });
         }
     </script>
