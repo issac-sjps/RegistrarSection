@@ -16,13 +16,14 @@
         h1 {
             text-align: center;
             color: #2c3e50;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 15px; /* 標題與計數標籤的間距 */
+            gap: 15px; 
         }
-        /* 標題旁邊的計數標籤樣式 */
+        
+        /* 標題旁邊的總計數標籤 */
         .count-badge-incomplete {
             font-size: 0.5em;
             background-color: #fdebd0;
@@ -44,6 +45,24 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
+        /* 標題下方的狀態統計區塊 */
+        .stats-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-badge {
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stat-safe { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .stat-urgent { background-color: #ffebef; color: #c62828; border: 1px solid #ffcdd2; }
+        .stat-overdue { background-color: #34495e; color: #fff; border: 1px solid #2c3e50; }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -64,7 +83,6 @@
             font-weight: bold;
             white-space: nowrap;
         }
-        /* 調整各欄位比例 */
         .col-idx { width: 4%; }
         .col-name { width: 30%; text-align: left; }
         .col-doc { width: 14%; }
@@ -72,7 +90,6 @@
         .col-countdown { width: 12%; }
         .col-status { width: 14%; }
 
-        /* 日期輸入框樣式 (白底) */
         input[type="text"].date-input {
             padding: 8px;
             border: 1px solid #ccc;
@@ -84,13 +101,8 @@
             font-size: 0.95em;
             background-color: #fff;
         }
-        input[type="text"].date-input:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
-        }
+        input[type="text"].date-input:focus { outline: none; border-color: #3498db; box-shadow: 0 0 5px rgba(52, 152, 219, 0.5); }
 
-        /* 公文輸入框樣式 (灰底，與備註區隔) */
         input[type="text"].doc-input {
             padding: 8px;
             border: 1px solid #bbb;
@@ -103,13 +115,8 @@
             background-color: #fafafa;
             color: #444;
         }
-        input[type="text"].doc-input:focus {
-            outline: none;
-            border-color: #e67e22;
-            background-color: #fff;
-        }
+        input[type="text"].doc-input:focus { outline: none; border-color: #e67e22; background-color: #fff; }
         
-        /* 備註輸入框樣式 (灰底) */
         input[type="text"].remark-input {
             width: 95%;
             padding: 6px;
@@ -121,11 +128,7 @@
             margin-top: 8px;
             box-sizing: border-box;
         }
-        input[type="text"].remark-input:focus {
-            border-color: #e67e22;
-            background-color: #fff;
-            outline: none;
-        }
+        input[type="text"].remark-input:focus { border-color: #e67e22; background-color: #fff; outline: none; }
         
         a { color: #2980b9; text-decoration: none; font-weight: bold; }
         a:hover { text-decoration: underline; color: #1a5276; }
@@ -174,11 +177,7 @@
             50% { opacity: 0.1; }
             100% { opacity: 1; }
         }
-        .blink-urgent {
-            color: #e74c3c;
-            font-weight: bold;
-            animation: blink-animation 1s infinite;
-        }
+        .blink-urgent { color: #e74c3c; font-weight: bold; animation: blink-animation 1s infinite; }
     </style>
 </head>
 <body>
@@ -187,6 +186,8 @@
         📝 學校補助與獎學金申請備忘錄 
         <span id="top-counter"></span>
     </h1>
+    
+    <div id="stats-container" class="stats-container"></div>
 
     <table>
         <thead>
@@ -208,56 +209,14 @@
 
     <script>
         const tasks = [
-            { 
-                name: "學產基金(低收申請)", 
-                defaultDeadline: "115/03/23 (一)", 
-                defaultDoc: "11530873100",
-                defaultRemark: "" 
-            },
-            { 
-                name: "書籍費申請(高雄市)", 
-                defaultDeadline: "115/03/16 (一)", 
-                defaultDoc: "11530473300",
-                defaultRemark: "" 
-            },
-            { 
-                name: "簿本費申請(高雄市)", 
-                defaultDeadline: "115/03/16 (一)", 
-                defaultDoc: "11530473600",
-                defaultRemark: "" 
-            },
-            { 
-                name: "代收代辦費(學前教育署)", 
-                defaultDeadline: "115/02/26 (四)", 
-                defaultDoc: "11530765200",
-                defaultRemark: "國中表單：16211；國小表單：16210" 
-            },
-            { 
-                name: "代收代辦費-差額(高雄市)", 
-                defaultDeadline: "", 
-                defaultDoc: "",
-                defaultRemark: "" 
-            },
-            { 
-                name: "<a href='https://scholarship.coia.gov.tw' target='_blank'>原住民獎學金(高雄市) 🔗</a>", 
-                defaultDeadline: "115/03/20 (五)", 
-                defaultDoc: "11530279800",
-                defaultRemark: "" 
-            },
-            { 
-                name: "原住民獎學金(國教署)", 
-                defaultDeadline: "115/03/02 (一)", 
-                defaultDoc: "11530838600",
-                defaultRemark: "",
-                fixedLinks: "寄送至鼓山高中圖書館：<a href='mailto:brary@kusjh.kh.edu.tw'>brary@kusjh.kh.edu.tw 📧</a>"
-            },
-            { 
-                name: "原住民清寒助學金", 
-                defaultDeadline: "115/03/29 (日)", 
-                defaultDoc: "11530982800",
-                defaultRemark: "",
-                fixedLinks: "轉學填寫：<a href='https://forms.gle/UNCY1Q1nMZ8erGdy8' target='_blank'>Google表單🔗</a><br>放棄請領：<a href='https://forms.gle/ZSRYBggBzWYGbngx8' target='_blank'>Google表單🔗</a>"
-            }
+            { name: "學產基金(低收申請)", defaultDeadline: "115/03/23 (一)", defaultDoc: "11530873100", defaultRemark: "" },
+            { name: "書籍費申請(高雄市)", defaultDeadline: "115/03/16 (一)", defaultDoc: "11530473300", defaultRemark: "" },
+            { name: "簿本費申請(高雄市)", defaultDeadline: "115/03/16 (一)", defaultDoc: "11530473600", defaultRemark: "" },
+            { name: "代收代辦費(學前教育署)", defaultDeadline: "115/02/26 (四)", defaultDoc: "11530765200", defaultRemark: "國中表單：16211；國小表單：16210" },
+            { name: "代收代辦費-差額(高雄市)", defaultDeadline: "", defaultDoc: "", defaultRemark: "" },
+            { name: "<a href='https://scholarship.coia.gov.tw' target='_blank'>原住民獎學金(高雄市) 🔗</a>", defaultDeadline: "115/03/20 (五)", defaultDoc: "11530279800", defaultRemark: "" },
+            { name: "原住民獎學金(國教署)", defaultDeadline: "115/03/02 (一)", defaultDoc: "11530838600", defaultRemark: "", fixedLinks: "寄送至鼓山高中圖書館：<a href='mailto:brary@kusjh.kh.edu.tw'>brary@kusjh.kh.edu.tw 📧</a>" },
+            { name: "原住民清寒助學金", defaultDeadline: "115/03/29 (日)", defaultDoc: "11530982800", defaultRemark: "", fixedLinks: "轉學填寫：<a href='https://forms.gle/UNCY1Q1nMZ8erGdy8' target='_blank'>Google表單🔗</a><br>放棄請領：<a href='https://forms.gle/ZSRYBggBzWYGbngx8' target='_blank'>Google表單🔗</a>" }
         ];
 
         const tbody = document.getElementById('memo-body');
@@ -283,7 +242,7 @@
                 let linksHtml = task.fixedLinks ? `<div class="fixed-links">${task.fixedLinks}</div>` : '';
 
                 const tr = document.createElement('tr');
-                tr.id = rowId = `row-${index}`;
+                tr.id = `row-${index}`;
                 tr.className = rowClass;
                 
                 tr.innerHTML = `
@@ -293,41 +252,67 @@
                         ${linksHtml}
                         <input type="text" class="remark-input" value="${savedRemark}" onchange="saveData('remark', ${index}, this.value)" placeholder="自訂備註...">
                     </td>
-                    <td>
-                        <input type="text" class="doc-input" value="${savedDoc}" onchange="saveData('doc', ${index}, this.value)" placeholder="填寫文號">
-                    </td>
-                    <td>
-                        <input type="text" class="date-input" id="deadline-${index}" value="${savedDeadline}" placeholder="如 1150329" onchange="processDate(this, ${index}, 'deadline')">
-                    </td>
-                    <td id="countdown-${index}">
-                        </td>
-                    <td>
-                        <input type="text" class="date-input" id="completion-${index}" value="${savedCompletion}" placeholder="如 1150329" onchange="processDate(this, ${index}, 'completion')">
-                    </td>
-                    <td>
-                        <span id="badge-${index}" class="badge ${badgeClass}">${badgeText}</span>
-                    </td>
+                    <td><input type="text" class="doc-input" value="${savedDoc}" onchange="saveData('doc', ${index}, this.value)" placeholder="填寫文號"></td>
+                    <td><input type="text" class="date-input" id="deadline-${index}" value="${savedDeadline}" placeholder="如 1150329" onchange="processDate(this, ${index}, 'deadline')"></td>
+                    <td id="countdown-${index}"></td>
+                    <td><input type="text" class="date-input" id="completion-${index}" value="${savedCompletion}" placeholder="如 1150329" onchange="processDate(this, ${index}, 'completion')"></td>
+                    <td><span id="badge-${index}" class="badge ${badgeClass}">${badgeText}</span></td>
                 `;
                 tbody.appendChild(tr);
                 
                 updateCountdown(index, savedDeadline);
             });
 
-            // 初始化時計算一次總數量
+            // 初始化時計算總數量與狀態統計
             updateTotalCount();
         }
 
-        // 計算頂部的未完成項目數量
+        // 計算頂部的總數量與細部統計
         function updateTotalCount() {
             let incompleteCount = 0;
+            let safeCount = 0;
+            let urgentCount = 0;
+            let overdueCount = 0;
             
             for (let i = 0; i < tasks.length; i++) {
                 const savedCompletion = localStorage.getItem(`completion-${i}`) || '';
+                let savedDeadline = localStorage.getItem(`deadline-${i}`);
+                if (savedDeadline === null) savedDeadline = tasks[i].defaultDeadline;
+                
+                // 只統計「未完成」的項目
                 if (savedCompletion === '') {
                     incompleteCount++;
+                    
+                    if (!savedDeadline) {
+                        safeCount++; // 沒寫期限視為安全
+                        continue;
+                    }
+
+                    const digits = savedDeadline.replace(/\D/g, '');
+                    if (digits.length >= 7) {
+                        const y = parseInt(digits.substring(0, 3)) + 1911;
+                        const m = parseInt(digits.substring(3, 5)) - 1; 
+                        const d = parseInt(digits.substring(5, 7));
+                        const targetDate = new Date(y, m, d);
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const diffTime = targetDate - today;
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        
+                        if (diffDays > 10) {
+                            safeCount++;
+                        } else if (diffDays >= 0) {
+                            urgentCount++;
+                        } else {
+                            overdueCount++;
+                        }
+                    } else {
+                        safeCount++;
+                    }
                 }
             }
 
+            // 更新標題旁邊的總計數
             const counterElement = document.getElementById('top-counter');
             if (incompleteCount > 0) {
                 counterElement.className = 'count-badge-incomplete';
@@ -335,6 +320,19 @@
             } else {
                 counterElement.className = 'count-badge-complete';
                 counterElement.innerText = '🎉 全數完成';
+            }
+
+            // 更新標題下方的統計列
+            const statsContainer = document.getElementById('stats-container');
+            if (incompleteCount > 0) {
+                statsContainer.innerHTML = `
+                    <span class="stat-badge stat-safe">🟢 時間充裕：${safeCount} 項</span>
+                    <span class="stat-badge stat-urgent">🔴 緊急：${urgentCount} 項</span>
+                    <span class="stat-badge stat-overdue">⚫ 逾期：${overdueCount} 項</span>
+                `;
+                statsContainer.style.display = 'flex';
+            } else {
+                statsContainer.style.display = 'none'; // 全數完成就隱藏統計列
             }
         }
 
@@ -345,6 +343,7 @@
                 saveData(type, index, '');
                 if (type === 'completion') updateStatus(index, '');
                 if (type === 'deadline') updateCountdown(index, '');
+                updateTotalCount(); // 日期清空也要重算
                 return;
             }
 
@@ -365,6 +364,9 @@
             saveData(type, index, val);
             if (type === 'completion') updateStatus(index, val);
             if (type === 'deadline') updateCountdown(index, val); 
+            
+            // 只要修改了任何日期，就重新計算頂部的統計
+            updateTotalCount();
         }
 
         function updateCountdown(index, dateStr) {
@@ -373,17 +375,14 @@
                 cdCell.innerHTML = '<span style="color: #999;">-</span>';
                 return;
             }
-            
             const digits = dateStr.replace(/\D/g, '');
             if (digits.length >= 7) {
                 const y = parseInt(digits.substring(0, 3)) + 1911;
                 const m = parseInt(digits.substring(3, 5)) - 1; 
                 const d = parseInt(digits.substring(5, 7));
-                
                 const targetDate = new Date(y, m, d);
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-                
                 const diffTime = targetDate - today;
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                 
@@ -406,7 +405,6 @@
         function updateStatus(index, value) {
             const row = document.getElementById(`row-${index}`);
             const badge = document.getElementById(`badge-${index}`);
-            
             if (value !== '') {
                 row.className = 'status-complete';
                 badge.className = 'badge badge-green';
@@ -416,9 +414,6 @@
                 badge.className = 'badge badge-red';
                 badge.innerHTML = '❌ 未完成';
             }
-
-            // 更新完成狀態時，同步更新頂部計數器
-            updateTotalCount();
         }
 
         function saveData(type, index, value) {
