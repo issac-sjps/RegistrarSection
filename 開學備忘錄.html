@@ -46,9 +46,8 @@
         .col-countdown { width: 12%; }
         .col-status { width: 14%; }
 
-        /* 公文與日期輸入框樣式 */
-        input[type="text"].date-input,
-        input[type="text"].doc-input {
+        /* 日期輸入框樣式 (白底) */
+        input[type="text"].date-input {
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
@@ -57,15 +56,34 @@
             max-width: 130px;
             text-align: center;
             font-size: 0.95em;
+            background-color: #fff;
         }
-        input[type="text"].date-input:focus,
-        input[type="text"].doc-input:focus {
+        input[type="text"].date-input:focus {
             outline: none;
             border-color: #3498db;
             box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
         }
+
+        /* 公文輸入框樣式 (灰底，與備註區隔) */
+        input[type="text"].doc-input {
+            padding: 8px;
+            border: 1px solid #bbb;
+            border-radius: 4px;
+            font-family: inherit;
+            width: 90%;
+            max-width: 130px;
+            text-align: center;
+            font-size: 0.95em;
+            background-color: #fafafa; /* 灰底色 */
+            color: #444;
+        }
+        input[type="text"].doc-input:focus {
+            outline: none;
+            border-color: #e67e22; /* 點擊時外框變橘色，跟備註一樣 */
+            background-color: #fff; /* 點擊時變回白底方便閱讀 */
+        }
         
-        /* 備註輸入框樣式 */
+        /* 備註輸入框樣式 (灰底) */
         input[type="text"].remark-input {
             width: 95%;
             padding: 6px;
@@ -297,7 +315,6 @@
             if (type === 'deadline') updateCountdown(index, val); 
         }
 
-        // 全新的倒數天數分級判斷邏輯
         function updateCountdown(index, dateStr) {
             const cdCell = document.getElementById(`countdown-${index}`);
             if (!dateStr) {
@@ -318,7 +335,6 @@
                 const diffTime = targetDate - today;
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                 
-                // 判斷邏輯：>10天(綠)、6~10天(紅)、1~5天(紅閃爍)、0天(底色紅閃爍)、逾期(灰)
                 if (diffDays > 10) {
                     cdCell.innerHTML = `<span style="color: #27ae60; font-weight: bold;">剩餘 ${diffDays} 天</span>`;
                 } else if (diffDays > 5) {
