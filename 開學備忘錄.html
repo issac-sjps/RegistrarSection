@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>學校補助與獎學金申請備忘錄</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, 'Microsoft JhengHei';
+            background-color: #f4f7f6;
+            color: #333;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background-color: #34495e;
+            color: white;
+            font-weight: bold;
+        }
+        input[type="date"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+        /* 預設未完成狀態 (淡紅色) */
+        .status-incomplete {
+            background-color: #ffebee; 
+            transition: background-color 0.3s ease;
+        }
+        /* 已完成狀態 (淡綠色) */
+        .status-complete {
+            background-color: #e8f5e9;
+            transition: background-color 0.3s ease;
+        }
+        .badge {
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        .badge-red {
+            background-color: #ffcdd2;
+            color: #c62828;
+        }
+        .badge-green {
+            background-color: #c8e6c9;
+            color: #2e7d32;
+        }
+        .clear-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .clear-btn:hover {
+            background-color: #c0392b;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>📝 學校補助與獎學金申請備忘錄</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th>項次</th>
+                <th style="text-align: left;">申請項目</th>
+                <th>截止日期 (僅記錄)</th>
+                <th>完成日期 (填寫即變色)</th>
+                <th>狀態</th>
+            </tr>
+        </thead>
+        <tbody id="memo-body">
+            </tbody>
+    </table>
+
+    <button class="clear-btn" onclick="clearAllData()">⚠️ 清除所有紀錄 (重新開始)</button>
+
+    <script>
+        // 你的待辦事項清單
+        const tasks = [
+            "學產基金(低收申請)",
+            "書籍費申請(高雄市)",
+            "簿本費申請(高雄市)",
+            "代收代辦費(國教署)",
+            "代收代辦費差額(高雄市)",
+            "原住民獎學金(高雄市)",
+            "原住民獎學金(國教署)",
+            "原住民清寒助學金"
+        ];
+
+        const tbody = document.getElementById('memo-body');
+
+        // 初始化表格
+        function initTable() {
+            tbody.innerHTML = '';
+            tasks.forEach((task, index) => {
+                const rowId = `row-${index}`;
+                // 從 LocalStorage 讀取已存檔的資料
+                const savedDeadline = localStorage.getItem(`deadline-${index}`) || '';
+                const savedCompletion = localStorage.getItem(`completion-${index}`) || '';
+                
+                // 判斷狀態
+                const isComplete = savedCompletion !== '';
+                const rowClass = isComplete ? 'status-complete' : 'status-incomplete';
+                const badgeClass = isComplete ? 'badge-green' : 'badge-red';
+                const badgeText = isComplete ? '✔️ 已完成' : '❌ 未完成';
+
+                const tr = document.createElement('tr');
+                tr.id = rowId;
+                tr.className = rowClass;
+                
+                tr.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td style="text-align: left; font-weight: bold;">${task}</td>
+                    <td>
+                        <input type="date" id="deadline-${index}" value="${savedDeadline}" onchange="saveData('deadline', ${index}, this.value)">
+                    </td>
+                    <td>
+                        <input type="date" id="completion-${index}" value="${savedCompletion}" onchange="updateStatus(${index}, this.value)">
+                    </td>
+                    <td>
+                        <span id="badge-${index}" class="badge ${badgeClass}">${badgeText}</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 更新完成狀態與顏色
+        function updateStatus(index, value) {
+            // 儲存完成日期
+            saveData('completion', index, value);
+            
+            const row = document.getElementById(`row-${index}`);
+            const badge = document.getElementById(`badge-${index}`);
+            
+            if (value !== '') {
+                // 如果有填寫日期 -> 變綠色完成
+                row.className = 'status-complete';
+                badge.className = 'badge badge-green';
+                badge.innerHTML = '✔️ 已完成';
+            } else {
+                // 如果清除日期 -> 變回紅色未完成
+                row.className = 'status-incomplete';
+                badge.className = 'badge badge-red';
+                badge.innerHTML = '❌ 未完成';
+            }
+        }
+
+        // 儲存資料到瀏覽器 (LocalStorage)
+        function saveData(type, index, value) {
+            localStorage.setItem(`${type}-${index}`, value);
+        }
+
+        // 清除所有紀錄
+        function clearAllData() {
+            if (confirm("確定要清除所有的日期紀錄嗎？這會讓所有項目回到未完成狀態。")) {
+                localStorage.clear();
+                initTable(); // 重新載入表格
+            }
+        }
+
+        // 網頁載入時執行
+        window.onload = initTable;
+    </script>
+</body>
+</html>
