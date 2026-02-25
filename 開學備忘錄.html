@@ -9,7 +9,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, 'Microsoft JhengHei';
             background-color: #f4f7f6;
             color: #333;
-            max-width: 900px;
+            max-width: 950px;
             margin: 40px auto;
             padding: 20px;
         }
@@ -29,24 +29,56 @@
             padding: 15px;
             text-align: center;
             border-bottom: 1px solid #eee;
+            vertical-align: middle;
         }
         th {
             background-color: #34495e;
             color: white;
             font-weight: bold;
         }
-        input[type="date"] {
+        /* 改為文字輸入框的樣式 */
+        input[type="text"].date-input {
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
             font-family: inherit;
+            width: 130px;
+            text-align: center;
+            font-size: 0.95em;
         }
-        /* 預設未完成狀態 (淡紅色) */
+        input[type="text"].date-input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+        }
+        /* 自訂備註的輸入框樣式 */
+        input[type="text"].remark-input {
+            width: 90%;
+            padding: 4px;
+            border: 1px dashed #aaa;
+            border-radius: 3px;
+            background-color: #fafafa;
+            color: #555;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        input[type="text"].remark-input:focus {
+            border-color: #e67e22;
+            background-color: #fff;
+            outline: none;
+        }
+        a {
+            color: #2980b9;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+            color: #1a5276;
+        }
         .status-incomplete {
             background-color: #ffebee; 
             transition: background-color 0.3s ease;
         }
-        /* 已完成狀態 (淡綠色) */
         .status-complete {
             background-color: #e8f5e9;
             transition: background-color 0.3s ease;
@@ -56,15 +88,11 @@
             border-radius: 12px;
             font-weight: bold;
             font-size: 0.9em;
+            display: inline-block;
+            min-width: 65px;
         }
-        .badge-red {
-            background-color: #ffcdd2;
-            color: #c62828;
-        }
-        .badge-green {
-            background-color: #c8e6c9;
-            color: #2e7d32;
-        }
+        .badge-red { background-color: #ffcdd2; color: #c62828; }
+        .badge-green { background-color: #c8e6c9; color: #2e7d32; }
         .clear-btn {
             display: block;
             margin: 20px auto;
@@ -76,8 +104,12 @@
             cursor: pointer;
             font-size: 16px;
         }
-        .clear-btn:hover {
-            background-color: #c0392b;
+        .clear-btn:hover { background-color: #c0392b; }
+        .remark-text {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+            line-height: 1.4;
         }
     </style>
 </head>
@@ -90,8 +122,8 @@
             <tr>
                 <th>項次</th>
                 <th style="text-align: left;">申請項目</th>
-                <th>截止日期 (僅記錄)</th>
-                <th>完成日期 (填寫即變色)</th>
+                <th>截止日期</th>
+                <th>完成日期</th>
                 <th>狀態</th>
             </tr>
         </thead>
@@ -102,28 +134,46 @@
     <button class="clear-btn" onclick="clearAllData()">⚠️ 清除所有紀錄 (重新開始)</button>
 
     <script>
-        // 你的待辦事項清單
+        // 待辦事項清單 (包含預設日期與備註)
         const tasks = [
-            "學產基金(低收申請)",
-            "書籍費申請(高雄市)",
-            "簿本費申請(高雄市)",
-            "代收代辦費(國教署)",
-            "代收代辦費差額(高雄市)",
-            "原住民獎學金(高雄市)",
-            "原住民獎學金(國教署)",
-            "原住民清寒助學金"
+            { name: "學產基金(低收申請)", defaultDeadline: "115/03/23 (一)" },
+            { name: "書籍費申請(高雄市)", defaultDeadline: "115/03/16 (一)" },
+            { name: "簿本費申請(高雄市)", defaultDeadline: "115/03/16 (一)" },
+            { 
+                name: "代收代辦費(學前教育署)", 
+                defaultDeadline: "115/02/26 (四)", 
+                editableRemark: true,
+                defaultRemark: "國中表單：16211；國小表單：16210"
+            },
+            { name: "代收代辦費-差額(高雄市)", defaultDeadline: "" },
+            { name: "<a href='https://scholarship.coia.gov.tw' target='_blank'>原住民獎學金(高雄市) 🔗</a>", defaultDeadline: "115/03/20 (五)" },
+            { name: "原住民獎學金(國教署)", defaultDeadline: "115/03/02 (一)" },
+            { 
+                name: "原住民清寒助學金", 
+                defaultDeadline: "115/03/29 (日)",
+                fixedRemark: "轉學填寫於此<a href='https://forms.gle/UNCY1Q1nMZ8erGdy8' target='_blank'>Google表單🔗</a>，<br>放棄請領填寫於此<a href='https://forms.gle/ZSRYBggBzWYGbngx8' target='_blank'>Google表單🔗</a>"
+            }
         ];
 
         const tbody = document.getElementById('memo-body');
 
-        // 初始化表格
         function initTable() {
             tbody.innerHTML = '';
             tasks.forEach((task, index) => {
                 const rowId = `row-${index}`;
-                // 從 LocalStorage 讀取已存檔的資料
-                const savedDeadline = localStorage.getItem(`deadline-${index}`) || '';
+                
+                // 讀取日期資料 (如果 localStorage 沒資料且不是空字串，才用預設日期)
+                let savedDeadline = localStorage.getItem(`deadline-${index}`);
+                if (savedDeadline === null) savedDeadline = task.defaultDeadline;
+                
                 const savedCompletion = localStorage.getItem(`completion-${index}`) || '';
+                
+                // 讀取備註資料 (針對可編輯的備註)
+                let savedRemark = '';
+                if (task.editableRemark) {
+                    savedRemark = localStorage.getItem(`remark-${index}`);
+                    if (savedRemark === null) savedRemark = task.defaultRemark;
+                }
                 
                 // 判斷狀態
                 const isComplete = savedCompletion !== '';
@@ -131,18 +181,29 @@
                 const badgeClass = isComplete ? 'badge-green' : 'badge-red';
                 const badgeText = isComplete ? '✔️ 已完成' : '❌ 未完成';
 
+                // 處理備註欄位的 HTML
+                let remarkHtml = '';
+                if (task.editableRemark) {
+                    remarkHtml = `<div class="remark-text">備註：<input type="text" class="remark-input" value="${savedRemark}" onchange="saveData('remark', ${index}, this.value)" placeholder="可在此自訂備註..."></div>`;
+                } else if (task.fixedRemark) {
+                    remarkHtml = `<div class="remark-text">備註：${task.fixedRemark}</div>`;
+                }
+
                 const tr = document.createElement('tr');
                 tr.id = rowId;
                 tr.className = rowClass;
                 
                 tr.innerHTML = `
                     <td>${index + 1}</td>
-                    <td style="text-align: left; font-weight: bold;">${task}</td>
-                    <td>
-                        <input type="date" id="deadline-${index}" value="${savedDeadline}" onchange="saveData('deadline', ${index}, this.value)">
+                    <td style="text-align: left;">
+                        <span style="font-weight: bold; font-size: 1.1em;">${task.name}</span>
+                        ${remarkHtml}
                     </td>
                     <td>
-                        <input type="date" id="completion-${index}" value="${savedCompletion}" onchange="updateStatus(${index}, this.value)">
+                        <input type="text" class="date-input" id="deadline-${index}" value="${savedDeadline}" placeholder="如 1150329" onchange="processDate(this, ${index}, 'deadline')">
+                    </td>
+                    <td>
+                        <input type="text" class="date-input" id="completion-${index}" value="${savedCompletion}" placeholder="如 1150329" onchange="processDate(this, ${index}, 'completion')">
                     </td>
                     <td>
                         <span id="badge-${index}" class="badge ${badgeClass}">${badgeText}</span>
@@ -152,41 +213,70 @@
             });
         }
 
-        // 更新完成狀態與顏色
-        function updateStatus(index, value) {
-            // 儲存完成日期
-            saveData('completion', index, value);
+        // 處理日期輸入並自動轉換格式 (如 1150329 -> 115/03/29 (日))
+        function processDate(inputElement, index, type) {
+            let val = inputElement.value.trim();
             
+            // 如果輸入框被清空
+            if (val === '') {
+                saveData(type, index, '');
+                if (type === 'completion') updateStatus(index, '');
+                return;
+            }
+
+            // 只抓取數字部分
+            let digits = val.replace(/\D/g, '');
+            
+            // 如果剛好是 7 碼數字 (例如 1150329)
+            if (digits.length === 7) {
+                let y = parseInt(digits.substring(0, 3)); // 115
+                let m = parseInt(digits.substring(3, 5)); // 03
+                let d = parseInt(digits.substring(5, 7)); // 29
+                
+                // 轉換為西元年取得星期幾 (民國年 + 1911)
+                let dateObj = new Date(y + 1911, m - 1, d);
+                let days = ['日', '一', '二', '三', '四', '五', '六'];
+                let dayStr = days[dateObj.getDay()];
+                
+                // 組合回漂亮的格式
+                val = `${y}/${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')} (${dayStr})`;
+                inputElement.value = val;
+            }
+
+            // 存檔並更新狀態
+            saveData(type, index, val);
+            if (type === 'completion') updateStatus(index, val);
+        }
+
+        // 單純更新紅綠燈視覺狀態
+        function updateStatus(index, value) {
             const row = document.getElementById(`row-${index}`);
             const badge = document.getElementById(`badge-${index}`);
             
             if (value !== '') {
-                // 如果有填寫日期 -> 變綠色完成
                 row.className = 'status-complete';
                 badge.className = 'badge badge-green';
                 badge.innerHTML = '✔️ 已完成';
             } else {
-                // 如果清除日期 -> 變回紅色未完成
                 row.className = 'status-incomplete';
                 badge.className = 'badge badge-red';
                 badge.innerHTML = '❌ 未完成';
             }
         }
 
-        // 儲存資料到瀏覽器 (LocalStorage)
+        // 儲存資料到 LocalStorage
         function saveData(type, index, value) {
             localStorage.setItem(`${type}-${index}`, value);
         }
 
-        // 清除所有紀錄
+        // 清除所有紀錄 (包含自訂備註與完成狀態)
         function clearAllData() {
-            if (confirm("確定要清除所有的日期紀錄嗎？這會讓所有項目回到未完成狀態。")) {
+            if (confirm("確定要清除所有的日期與自訂備註紀錄嗎？這會讓所有項目回到初始狀態。")) {
                 localStorage.clear();
-                initTable(); // 重新載入表格
+                initTable();
             }
         }
 
-        // 網頁載入時執行
         window.onload = initTable;
     </script>
 </body>
