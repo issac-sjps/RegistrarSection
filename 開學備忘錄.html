@@ -187,7 +187,7 @@
     <button class="clear-btn" onclick="clearAllData()">⚠️ 清除所有紀錄 (還原原廠設定)</button>
 
     <script>
-        // 預設資料庫
+        // 預設資料庫 (已經為原住民清寒助學金加上超連結)
         const defaultTasks = [
             { id: "id_1", name: "學產基金(低收申請)", deadline: "115/03/23 (一)", doc: "11530873100", remark: "", completion: "" },
             { id: "id_2", name: "書籍費申請(高雄市)", deadline: "115/03/16 (一)", doc: "11530473300", remark: "", completion: "" },
@@ -196,7 +196,7 @@
             { id: "id_5", name: "代收代辦費-差額(高雄市)", deadline: "", doc: "", remark: "", completion: "" },
             { id: "id_6", name: "<a href='https://scholarship.coia.gov.tw' target='_blank'>原住民獎學金(高雄市) 🔗</a>", deadline: "115/03/20 (五)", doc: "11530279800", remark: "", completion: "" },
             { id: "id_7", name: "原住民獎學金(國教署)", deadline: "115/03/02 (一)", doc: "11530838600", remark: "", completion: "", fixedLinks: "寄送至鼓山高中圖書館：<a href='mailto:brary@kusjh.kh.edu.tw'>brary@kusjh.kh.edu.tw 📧</a>" },
-            { id: "id_8", name: "原住民清寒助學金", deadline: "115/03/29 (日)", doc: "11530982800", remark: "", completion: "", fixedLinks: "轉學填寫：<a href='https://forms.gle/UNCY1Q1nMZ8erGdy8' target='_blank'>Google表單🔗</a><br>放棄請領：<a href='https://forms.gle/ZSRYBggBzWYGbngx8' target='_blank'>Google表單🔗</a>" }
+            { id: "id_8", name: "<a href='https://cip.ntcu.edu.tw/home' target='_blank'>原住民清寒助學金 🔗</a>", deadline: "115/03/29 (日)", doc: "11530982800", remark: "", completion: "", fixedLinks: "轉學填寫：<a href='https://forms.gle/UNCY1Q1nMZ8erGdy8' target='_blank'>Google表單🔗</a><br>放棄請領：<a href='https://forms.gle/ZSRYBggBzWYGbngx8' target='_blank'>Google表單🔗</a>" }
         ];
 
         let tasks = [];
@@ -268,7 +268,7 @@
                 tr.addEventListener('dragenter', handleDragEnter);
                 tr.addEventListener('dragleave', handleDragLeave);
 
-                let nameAttr = isEditMode ? `contenteditable="true" onblur="updateField(${index}, 'name', this.innerText)"` : "";
+                let nameAttr = isEditMode ? `contenteditable="true" onblur="updateField(${index}, 'name', this.innerHTML)"` : "";
 
                 tr.innerHTML = `
                     <td class="col-drag">
@@ -327,7 +327,7 @@
             window.scrollTo(0, document.body.scrollHeight);
         }
         function deleteTask(index) {
-            if (confirm(`確定要刪除「${tasks[index].name.replace(/<[^>]+>/g, '')}」嗎？\n刪除後無法復原喔！`)) {
+            if (confirm(`確定要刪除這個項目嗎？\n刪除後無法復原喔！`)) {
                 tasks.splice(index, 1);
                 saveAll();
                 renderTable();
