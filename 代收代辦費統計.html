@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>學生補助身分轉換表單</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: "微軟正黑體", sans-serif; padding: 20px; background-color: #f4f7f6; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .controls { margin-bottom: 20px; padding: 15px; background: #eef2f5; border-radius: 5px; }
+        input[type="file"], input[type="text"] { padding: 8px; margin-right: 10px; }
+        button { padding: 10px 15px; background-color: #0056b3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #004494; }
+        .btn-success { background-color: #28a745; margin-left: 10px;}
+        .btn-success:hover { background-color: #218838; }
+        
+        /* 表格樣式設定，盡量還原你的圖片 */
+        .table-wrapper { overflow-x: auto; margin-top: 20px; }
+        table { border-collapse: collapse; width: 100%; min-width: 1000px; font-size: 14px; text-align: center; }
+        th, td { border: 1px solid #000; padding: 8px; }
+        th { background-color: #ffff99; font-weight: bold; }
+        .header-yellow { background-color: #ffff99; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>📊 學生補助身分轉換工具</h2>
+    
+    <div class="controls">
+        <label>1. 輸入學校名稱：</label>
+        <input type="text" id="schoolNameInput" placeholder="例如：快樂國小">
+        <br><br>
+        <label>2. 上傳原始 Excel 檔：</label>
+        <input type="file" id="excelFile" accept=".xlsx, .xls">
+        <button onclick="processFile()">產生表格</button>
+        <button class="btn-success" onclick="downloadExcel()" id="downloadBtn" style="display:none;">📥 下載新 Excel</button>
+    </div>
+
+    <div class="table-wrapper">
+        <table id="resultTable" style="display:none;">
+            <thead>
+                <tr>
+                    <th rowspan="3">項次</th>
+                    <th rowspan="3">校名</th>
+                    <th rowspan="3">導師姓名</th>
+                    <th rowspan="3">學生姓名</th>
+                    <th colspan="6">學生身分</th>
+                    <th colspan="4">項目及金額</th>
+                </tr>
+                <tr>
+                    <th colspan="2">低收入戶</th>
+                    <th colspan="2">中低收入戶</th>
+                    <th colspan="2">家庭突遭變故<br>(導師認定)</th>
+                    <th rowspan="2">家長會費<br>(每學期最高<br>100元)</th>
+                    <th rowspan="2">教科用書書籍費<br>(國中每學期最高<br>500元)</th>
+                    <th rowspan="2">學生團體保險費<br>(233元)</th>
+                    <th rowspan="2">小計</th>
+                </tr>
+                <tr>
+                    <th>男</th>
+                    <th>女</th>
+                    <th>男</th>
+                    <th>女</th>
+                    <th>男</th>
+                    <th>女</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    function processFile() {
+        const fileInput = document.getElementById('excelFile');
+        const schoolName = document.getElementById('schoolNameInput').value;
+        const file = fileInput.files[0];
+
+        if (!file) {
+            alert("請先選擇 Excel 檔案！");
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = ""; // 清空之前的結果
+            let count = 1;
+
+            // 走訪每一個工作表 (一到六年級)
+            workbook.SheetNames.forEach(sheetName => {
+                const worksheet = workbook.Sheets[sheetName];
+                // 將工作表轉為 JSON 陣列
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, {defval: ""});
+
+                jsonData.forEach(row => {
+                    // 取得需要判斷的欄位
+                    const name = row['姓名'] || row['學生姓名'] || "";
+                    const gender = row['性別'] || "";
+                    const bestStatus = row['最優補助身分'] || "";
+
+                    if (!name) return; // 如果沒有名字就跳過空白行
+
+                    // 判斷身分 (使用 includes 避免格式些微差異)
+                    let isLowIncome = bestStatus.includes("1.低收") || bestStatus.includes("1. 低收");
+                    let isMidLowIncome = bestStatus.includes("2.中低收") || bestStatus.includes("2. 中低收");
+                    let isTeacherApprove = bestStatus.includes("12.導師認定") || bestStatus.includes("12. 導師認定");
+
+                    // 如果三種身分都不是，就不列入此表
+                    if (!isLowIncome && !isMidLowIncome && !isTeacherApprove) {
+                        return; 
+                    }
+
+                    // 準備打勾 (V) 的變數
+                    let lowM = "", lowF = "", midM = "", midF = "", teachM = "", teachF = "";
+
+                    if (isLowIncome) {
+                        if (gender === "男") lowM = "V";
+                        if (gender === "女") lowF = "V";
+                    } else if (isMidLowIncome) {
+                        if (gender === "男") midM = "V";
+                        if (gender === "女") midF = "V";
+                    } else if (isTeacherApprove) {
+                        if (gender === "男") teachM = "V";
+                        if (gender === "女") teachF = "V";
+                    }
+
+                    // 建立表格 HTML 內容
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${count++}</td>
+                        <td>${schoolName}</td>
+                        <td></td> <td>${name}</td>
+                        <td>${lowM}</td>
+                        <td>${lowF}</td>
+                        <td>${midM}</td>
+                        <td>${midF}</td>
+                        <td>${teachM}</td>
+                        <td>${teachF}</td>
+                        <td></td> <td></td> <td></td> <td></td> `;
+                    tableBody.appendChild(tr);
+                });
+            });
+
+            // 顯示表格與下載按鈕
+            document.getElementById('resultTable').style.display = "table";
+            document.getElementById('downloadBtn').style.display = "inline-block";
+            
+            if(count === 1) {
+                alert("沒有找到符合（低收/中低收/導師認定）條件的學生喔！請確認 Excel 欄位名稱是否正確。");
+            }
+        };
+
+        reader.readAsArrayBuffer(file);
+    }
+
+    function downloadExcel() {
+        // 抓取畫面上剛剛生成的 HTML 表格
+        const table = document.getElementById('resultTable');
+        // 使用 SheetJS 將 HTML 表格直接轉成 Excel 活頁簿 (這樣可以完美保留雙層標題列)
+        const wb = XLSX.utils.table_to_book(table, {sheet: "補助名冊"});
+        
+        // 匯出下載
+        XLSX.writeFile(wb, "學生補助名冊彙整.xlsx");
+    }
+</script>
+
+</body>
+</html>
