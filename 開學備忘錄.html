@@ -13,121 +13,89 @@
             margin: 30px auto;
             padding: 20px;
         }
+        .header-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
         h1 {
             text-align: center;
             color: #2c3e50;
-            margin-bottom: 15px;
+            margin: 0 0 15px 0;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 15px; 
         }
         
-        /* 標題旁邊的總計數標籤 */
-        .count-badge-incomplete {
-            font-size: 0.5em;
-            background-color: #fdebd0;
-            color: #e74c3c;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-weight: bold;
-            vertical-align: middle;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .count-badge-complete {
-            font-size: 0.5em;
-            background-color: #e8f5e9;
-            color: #27ae60;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-weight: bold;
-            vertical-align: middle;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        /* 標題下方的狀態統計區塊 */
-        .stats-container {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-        .stat-badge {
-            padding: 6px 15px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: bold;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+        /* 計數標籤與統計 */
+        .count-badge-incomplete { font-size: 0.5em; background-color: #fdebd0; color: #e74c3c; padding: 5px 12px; border-radius: 20px; font-weight: bold; vertical-align: middle; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .count-badge-complete { font-size: 0.5em; background-color: #e8f5e9; color: #27ae60; padding: 5px 12px; border-radius: 20px; font-weight: bold; vertical-align: middle; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .stats-container { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+        .stat-badge { padding: 6px 15px; border-radius: 20px; font-size: 0.9em; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .stat-safe { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
         .stat-urgent { background-color: #ffebef; color: #c62828; border: 1px solid #ffcdd2; }
         .stat-overdue { background-color: #34495e; color: #fff; border: 1px solid #2c3e50; }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background-color: #fff;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            overflow: hidden;
+        /* 操作按鈕區塊 */
+        .action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
         }
-        th, td {
-            padding: 12px 8px;
-            text-align: center;
-            border-bottom: 1px solid #eee;
-            vertical-align: middle;
-        }
-        th {
-            background-color: #34495e;
-            color: white;
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 15px;
             font-weight: bold;
-            white-space: nowrap;
+            transition: 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
+        .btn-edit { background-color: #3498db; color: white; }
+        .btn-edit:hover { background-color: #2980b9; }
+        .btn-edit.active { background-color: #e67e22; }
+        
+        .btn-add { background-color: #27ae60; color: white; display: block; margin: 20px auto; font-size: 16px; padding: 10px 20px; }
+        .btn-add:hover { background-color: #2196f3; }
+
+        /* 表格樣式 */
+        table { width: 100%; border-collapse: collapse; background-color: #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; }
+        th, td { padding: 12px 8px; text-align: center; border-bottom: 1px solid #eee; vertical-align: middle; }
+        th { background-color: #34495e; color: white; font-weight: bold; white-space: nowrap; }
+        
+        .col-drag { width: 8%; display: none; } /* 預設隱藏操作欄 */
         .col-idx { width: 4%; }
-        .col-name { width: 30%; text-align: left; }
+        .col-name { width: 26%; text-align: left; }
         .col-doc { width: 14%; }
         .col-date { width: 13%; }
         .col-countdown { width: 12%; }
-        .col-status { width: 14%; }
+        .col-status { width: 13%; }
 
-        input[type="text"].date-input {
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-family: inherit;
-            width: 90%;
-            max-width: 130px;
-            text-align: center;
-            font-size: 0.95em;
-            background-color: #fff;
-        }
-        input[type="text"].date-input:focus { outline: none; border-color: #3498db; box-shadow: 0 0 5px rgba(52, 152, 219, 0.5); }
-
-        input[type="text"].doc-input {
-            padding: 8px;
-            border: 1px solid #bbb;
-            border-radius: 4px;
-            font-family: inherit;
-            width: 90%;
-            max-width: 130px;
-            text-align: center;
-            font-size: 0.95em;
-            background-color: #fafafa;
-            color: #444;
-        }
-        input[type="text"].doc-input:focus { outline: none; border-color: #e67e22; background-color: #fff; }
+        /* 編輯模式下的拖曳列與按鈕 */
+        .edit-mode .col-drag { display: table-cell; }
+        .edit-mode .col-idx { display: none; } /* 編輯時隱藏序號 */
+        .drag-handle { cursor: grab; font-size: 1.2em; color: #7f8c8d; margin-right: 5px; }
+        .drag-handle:active { cursor: grabbing; }
+        .action-icon { cursor: pointer; margin: 0 3px; font-size: 1.1em; color: #555; background: #f0f0f0; padding: 4px; border-radius: 4px; }
+        .action-icon:hover { background: #e0e0e0; }
+        .delete-icon:hover { background: #ffcdd2; color: #c62828; }
         
-        input[type="text"].remark-input {
-            width: 95%;
-            padding: 6px;
-            border: 1px dashed #aaa;
-            border-radius: 4px;
-            background-color: #fafafa;
-            color: #444;
-            font-size: 0.9em;
-            margin-top: 8px;
-            box-sizing: border-box;
-        }
+        /* 拖曳時的視覺回饋 */
+        tr.dragging { opacity: 0.5; background-color: #f1c40f !important; }
+
+        /* 編輯模式下的名稱輸入框 */
+        .editable-name { outline: none; padding: 2px 4px; border-radius: 4px; transition: 0.2s; }
+        .edit-mode .editable-name { border-bottom: 2px dashed #e67e22; cursor: text; background-color: #fffaf0; }
+        .edit-mode .editable-name:focus { background-color: #fff; border-bottom: 2px solid #e67e22; }
+
+        /* 輸入框與標籤樣式 */
+        input[type="text"].date-input, input[type="text"].doc-input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; width: 90%; max-width: 130px; text-align: center; font-size: 0.95em; background-color: #fff; }
+        input[type="text"].date-input:focus { outline: none; border-color: #3498db; box-shadow: 0 0 5px rgba(52, 152, 219, 0.5); }
+        input[type="text"].doc-input { border: 1px solid #bbb; background-color: #fafafa; color: #444; }
+        input[type="text"].doc-input:focus { outline: none; border-color: #e67e22; background-color: #fff; }
+        input[type="text"].remark-input { width: 95%; padding: 6px; border: 1px dashed #aaa; border-radius: 4px; background-color: #fafafa; color: #444; font-size: 0.9em; margin-top: 8px; box-sizing: border-box; }
         input[type="text"].remark-input:focus { border-color: #e67e22; background-color: #fff; outline: none; }
         
         a { color: #2980b9; text-decoration: none; font-weight: bold; }
@@ -135,63 +103,36 @@
         
         .status-incomplete { background-color: #ffebee; transition: 0.3s; }
         .status-complete { background-color: #e8f5e9; transition: 0.3s; }
-        
-        .badge {
-            padding: 6px 12px;
-            border-radius: 15px;
-            font-weight: bold;
-            font-size: 0.9em;
-            display: inline-block;
-            min-width: 65px;
-        }
+        .badge { padding: 6px 12px; border-radius: 15px; font-weight: bold; font-size: 0.9em; display: inline-block; min-width: 65px; }
         .badge-red { background-color: #ffcdd2; color: #c62828; }
         .badge-green { background-color: #c8e6c9; color: #2e7d32; }
         
-        .clear-btn {
-            display: block;
-            margin: 20px auto;
-            padding: 10px 20px;
-            background-color: #e74c3c;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: 0.2s;
-        }
+        .clear-btn { display: block; margin: 10px auto; padding: 10px 20px; background-color: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; }
         .clear-btn:hover { background-color: #c0392b; }
         
-        .fixed-links {
-            font-size: 0.85em;
-            background-color: #f0f4f8;
-            padding: 6px;
-            border-radius: 4px;
-            margin-top: 6px;
-            line-height: 1.5;
-            color: #555;
-            border-left: 3px solid #3498db;
-        }
-
-        @keyframes blink-animation {
-            0% { opacity: 1; }
-            50% { opacity: 0.1; }
-            100% { opacity: 1; }
-        }
+        .fixed-links { font-size: 0.85em; background-color: #f0f4f8; padding: 6px; border-radius: 4px; margin-top: 6px; line-height: 1.5; color: #555; border-left: 3px solid #3498db; }
+        @keyframes blink-animation { 0% { opacity: 1; } 50% { opacity: 0.1; } 100% { opacity: 1; } }
         .blink-urgent { color: #e74c3c; font-weight: bold; animation: blink-animation 1s infinite; }
     </style>
 </head>
 <body>
 
-    <h1>
-        📝 學校補助與獎學金申請備忘錄 
-        <span id="top-counter"></span>
-    </h1>
-    
-    <div id="stats-container" class="stats-container"></div>
+    <div class="header-container">
+        <h1>
+            📝 學校補助與獎學金申請備忘錄 
+            <span id="top-counter"></span>
+        </h1>
+        <div id="stats-container" class="stats-container"></div>
+        
+        <div class="action-bar">
+            <div></div> <button id="edit-btn" class="btn btn-edit" onclick="toggleEditMode()">✏️ 進入編輯模式</button>
+        </div>
+    </div>
 
-    <table>
+    <table id="main-table">
         <thead>
             <tr>
+                <th class="col-drag">操作 (拖曳或點擊)</th>
                 <th class="col-idx">項次</th>
                 <th class="col-name">申請項目與備註</th>
                 <th class="col-doc">公文文號</th>
@@ -205,229 +146,244 @@
             </tbody>
     </table>
 
-    <button class="clear-btn" onclick="clearAllData()">⚠️ 清除所有紀錄 (重新開始)</button>
+    <button id="add-btn" class="btn btn-add" style="display:none;" onclick="addNewTask()">➕ 新增自訂項目</button>
+    <button class="clear-btn" onclick="clearAllData()">⚠️ 清除所有紀錄 (還原原廠設定)</button>
 
     <script>
-        const tasks = [
-            { name: "學產基金(低收申請)", defaultDeadline: "115/03/23 (一)", defaultDoc: "11530873100", defaultRemark: "" },
-            { name: "書籍費申請(高雄市)", defaultDeadline: "115/03/16 (一)", defaultDoc: "11530473300", defaultRemark: "" },
-            { name: "簿本費申請(高雄市)", defaultDeadline: "115/03/16 (一)", defaultDoc: "11530473600", defaultRemark: "" },
-            { name: "代收代辦費(學前教育署)", defaultDeadline: "115/02/26 (四)", defaultDoc: "11530765200", defaultRemark: "國中表單：16211；國小表單：16210" },
-            { name: "代收代辦費-差額(高雄市)", defaultDeadline: "", defaultDoc: "", defaultRemark: "" },
-            { name: "<a href='https://scholarship.coia.gov.tw' target='_blank'>原住民獎學金(高雄市) 🔗</a>", defaultDeadline: "115/03/20 (五)", defaultDoc: "11530279800", defaultRemark: "" },
-            { name: "原住民獎學金(國教署)", defaultDeadline: "115/03/02 (一)", defaultDoc: "11530838600", defaultRemark: "", fixedLinks: "寄送至鼓山高中圖書館：<a href='mailto:brary@kusjh.kh.edu.tw'>brary@kusjh.kh.edu.tw 📧</a>" },
-            { name: "原住民清寒助學金", defaultDeadline: "115/03/29 (日)", defaultDoc: "11530982800", defaultRemark: "", fixedLinks: "轉學填寫：<a href='https://forms.gle/UNCY1Q1nMZ8erGdy8' target='_blank'>Google表單🔗</a><br>放棄請領：<a href='https://forms.gle/ZSRYBggBzWYGbngx8' target='_blank'>Google表單🔗</a>" }
+        // 預設資料庫
+        const defaultTasks = [
+            { id: "id_1", name: "學產基金(低收申請)", deadline: "115/03/23 (一)", doc: "11530873100", remark: "", completion: "" },
+            { id: "id_2", name: "書籍費申請(高雄市)", deadline: "115/03/16 (一)", doc: "11530473300", remark: "", completion: "" },
+            { id: "id_3", name: "簿本費申請(高雄市)", deadline: "115/03/16 (一)", doc: "11530473600", remark: "", completion: "" },
+            { id: "id_4", name: "代收代辦費(學前教育署)", deadline: "115/02/26 (四)", doc: "11530765200", remark: "國中表單：16211；國小表單：16210", completion: "" },
+            { id: "id_5", name: "代收代辦費-差額(高雄市)", deadline: "", doc: "", remark: "", completion: "" },
+            { id: "id_6", name: "<a href='https://scholarship.coia.gov.tw' target='_blank'>原住民獎學金(高雄市) 🔗</a>", deadline: "115/03/20 (五)", doc: "11530279800", remark: "", completion: "" },
+            { id: "id_7", name: "原住民獎學金(國教署)", deadline: "115/03/02 (一)", doc: "11530838600", remark: "", completion: "", fixedLinks: "寄送至鼓山高中圖書館：<a href='mailto:brary@kusjh.kh.edu.tw'>brary@kusjh.kh.edu.tw 📧</a>" },
+            { id: "id_8", name: "原住民清寒助學金", deadline: "115/03/29 (日)", doc: "11530982800", remark: "", completion: "", fixedLinks: "轉學填寫：<a href='https://forms.gle/UNCY1Q1nMZ8erGdy8' target='_blank'>Google表單🔗</a><br>放棄請領：<a href='https://forms.gle/ZSRYBggBzWYGbngx8' target='_blank'>Google表單🔗</a>" }
         ];
 
-        const tbody = document.getElementById('memo-body');
+        let tasks = [];
+        let isEditMode = false;
+        let dragStartIndex = null;
 
-        function initTable() {
+        // 讀取與升級資料庫 (支援將舊版獨立欄位轉移至新版 JSON)
+        function loadData() {
+            let storedJson = localStorage.getItem('memo_tasks_v2');
+            if (storedJson) {
+                tasks = JSON.parse(storedJson);
+            } else {
+                // 如果有舊版資料，進行無痛升級
+                let hasOldData = localStorage.getItem('deadline-0') !== null;
+                tasks = JSON.parse(JSON.stringify(defaultTasks));
+                if (hasOldData) {
+                    tasks.forEach((t, i) => {
+                        t.deadline = localStorage.getItem(`deadline-${i}`) ?? t.deadline;
+                        t.completion = localStorage.getItem(`completion-${i}`) ?? t.completion;
+                        t.doc = localStorage.getItem(`doc-${i}`) ?? t.doc;
+                        t.remark = localStorage.getItem(`remark-${i}`) ?? t.remark;
+                    });
+                    saveAll(); // 存成新版
+                }
+            }
+        }
+
+        function saveAll() {
+            localStorage.setItem('memo_tasks_v2', JSON.stringify(tasks));
+        }
+
+        // 切換編輯模式
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            const table = document.getElementById('main-table');
+            const btn = document.getElementById('edit-btn');
+            const addBtn = document.getElementById('add-btn');
+            
+            if (isEditMode) {
+                table.classList.add('edit-mode');
+                btn.classList.add('active');
+                btn.innerText = "✅ 完成編輯儲存";
+                addBtn.style.display = 'block';
+            } else {
+                table.classList.remove('edit-mode');
+                btn.classList.remove('active');
+                btn.innerText = "✏️ 進入編輯模式";
+                addBtn.style.display = 'none';
+            }
+            renderTable();
+        }
+
+        // 渲染表格
+        function renderTable() {
+            const tbody = document.getElementById('memo-body');
             tbody.innerHTML = '';
+            
             tasks.forEach((task, index) => {
-                let savedDeadline = localStorage.getItem(`deadline-${index}`);
-                if (savedDeadline === null) savedDeadline = task.defaultDeadline;
-                const savedCompletion = localStorage.getItem(`completion-${index}`) || '';
-                
-                let savedDoc = localStorage.getItem(`doc-${index}`);
-                if (savedDoc === null) savedDoc = task.defaultDoc;
-
-                let savedRemark = localStorage.getItem(`remark-${index}`);
-                if (savedRemark === null) savedRemark = task.defaultRemark;
-                
-                const isComplete = savedCompletion !== '';
+                const isComplete = task.completion !== '';
                 const rowClass = isComplete ? 'status-complete' : 'status-incomplete';
                 const badgeClass = isComplete ? 'badge-green' : 'badge-red';
                 const badgeText = isComplete ? '✔️ 已完成' : '❌ 未完成';
-
                 let linksHtml = task.fixedLinks ? `<div class="fixed-links">${task.fixedLinks}</div>` : '';
 
                 const tr = document.createElement('tr');
                 tr.id = `row-${index}`;
                 tr.className = rowClass;
                 
+                // 拖曳相關設定
+                tr.draggable = isEditMode;
+                tr.addEventListener('dragstart', (e) => handleDragStart(e, index));
+                tr.addEventListener('dragover', handleDragOver);
+                tr.addEventListener('drop', (e) => handleDrop(e, index));
+                tr.addEventListener('dragenter', handleDragEnter);
+                tr.addEventListener('dragleave', handleDragLeave);
+
+                // 名稱欄位 (編輯模式下可直接點擊修改)
+                let nameAttr = isEditMode ? `contenteditable="true" onblur="updateField(${index}, 'name', this.innerText)"` : "";
+
                 tr.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td class="col-name">
-                        <span style="font-weight: bold; font-size: 1.1em;">${task.name}</span>
-                        ${linksHtml}
-                        <input type="text" class="remark-input" value="${savedRemark}" onchange="saveData('remark', ${index}, this.value)" placeholder="自訂備註...">
+                    <td class="col-drag">
+                        <span class="drag-handle" title="按住拖曳">☰</span>
+                        <span class="action-icon" title="往上移" onclick="moveRow(${index}, -1)">⬆️</span>
+                        <span class="action-icon" title="往下移" onclick="moveRow(${index}, 1)">⬇️</span>
+                        <span class="action-icon delete-icon" title="刪除" onclick="deleteTask(${index})">🗑️</span>
                     </td>
-                    <td><input type="text" class="doc-input" value="${savedDoc}" onchange="saveData('doc', ${index}, this.value)" placeholder="填寫文號"></td>
-                    <td><input type="text" class="date-input" id="deadline-${index}" value="${savedDeadline}" placeholder="如 1150329" onchange="processDate(this, ${index}, 'deadline')"></td>
+                    <td class="col-idx">${index + 1}</td>
+                    <td class="col-name">
+                        <span class="editable-name" style="font-weight: bold; font-size: 1.1em;" ${nameAttr}>${task.name}</span>
+                        ${linksHtml}
+                        <input type="text" class="remark-input" value="${task.remark}" onchange="updateField(${index}, 'remark', this.value)" placeholder="自訂備註...">
+                    </td>
+                    <td><input type="text" class="doc-input" value="${task.doc}" onchange="updateField(${index}, 'doc', this.value)" placeholder="填寫文號"></td>
+                    <td><input type="text" class="date-input" value="${task.deadline}" placeholder="如 1150329" onchange="processDate(this, ${index}, 'deadline')"></td>
                     <td id="countdown-${index}"></td>
-                    <td><input type="text" class="date-input" id="completion-${index}" value="${savedCompletion}" placeholder="如 1150329" onchange="processDate(this, ${index}, 'completion')"></td>
-                    <td><span id="badge-${index}" class="badge ${badgeClass}">${badgeText}</span></td>
+                    <td><input type="text" class="date-input" value="${task.completion}" placeholder="如 1150329" onchange="processDate(this, ${index}, 'completion')"></td>
+                    <td><span class="badge ${badgeClass}">${badgeText}</span></td>
                 `;
                 tbody.appendChild(tr);
                 
-                updateCountdown(index, savedDeadline);
+                updateCountdown(index, task.deadline);
             });
-
-            // 初始化時計算總數量與狀態統計
             updateTotalCount();
         }
 
-        // 計算頂部的總數量與細部統計
-        function updateTotalCount() {
-            let incompleteCount = 0;
-            let safeCount = 0;
-            let urgentCount = 0;
-            let overdueCount = 0;
-            
-            for (let i = 0; i < tasks.length; i++) {
-                const savedCompletion = localStorage.getItem(`completion-${i}`) || '';
-                let savedDeadline = localStorage.getItem(`deadline-${i}`);
-                if (savedDeadline === null) savedDeadline = tasks[i].defaultDeadline;
-                
-                // 只統計「未完成」的項目
-                if (savedCompletion === '') {
-                    incompleteCount++;
-                    
-                    if (!savedDeadline) {
-                        safeCount++; // 沒寫期限視為安全
-                        continue;
-                    }
+        // --- 拖曳與排序功能 ---
+        function handleDragStart(e, index) { dragStartIndex = index; e.dataTransfer.effectAllowed = 'move'; setTimeout(() => e.target.classList.add('dragging'), 0); }
+        function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+        function handleDragEnter(e) { e.preventDefault(); if(e.target.closest('tr')) e.target.closest('tr').style.borderTop = "3px solid #3498db"; }
+        function handleDragLeave(e) { if(e.target.closest('tr')) e.target.closest('tr').style.borderTop = ""; }
+        function handleDrop(e, targetIndex) {
+            e.preventDefault();
+            if(e.target.closest('tr')) e.target.closest('tr').style.borderTop = "";
+            if (dragStartIndex === null || dragStartIndex === targetIndex) return;
+            const item = tasks.splice(dragStartIndex, 1)[0];
+            tasks.splice(targetIndex, 0, item);
+            saveAll();
+            renderTable();
+        }
+        function moveRow(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= tasks.length) return;
+            const item = tasks.splice(index, 1)[0];
+            tasks.splice(newIndex, 0, item);
+            saveAll();
+            renderTable();
+        }
 
-                    const digits = savedDeadline.replace(/\D/g, '');
-                    if (digits.length >= 7) {
-                        const y = parseInt(digits.substring(0, 3)) + 1911;
-                        const m = parseInt(digits.substring(3, 5)) - 1; 
-                        const d = parseInt(digits.substring(5, 7));
-                        const targetDate = new Date(y, m, d);
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        const diffTime = targetDate - today;
-                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                        
-                        if (diffDays > 10) {
-                            safeCount++;
-                        } else if (diffDays >= 0) {
-                            urgentCount++;
-                        } else {
-                            overdueCount++;
-                        }
-                    } else {
-                        safeCount++;
-                    }
-                }
+        // --- 新增與刪除功能 ---
+        function addNewTask() {
+            tasks.push({ id: "id_" + Date.now(), name: "📝 新增項目 (點我修改名稱)", deadline: "", doc: "", remark: "", completion: "" });
+            saveAll();
+            renderTable();
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+        function deleteTask(index) {
+            if (confirm(`確定要刪除「${tasks[index].name.replace(/<[^>]+>/g, '')}」嗎？\n刪除後無法復原喔！`)) {
+                tasks.splice(index, 1);
+                saveAll();
+                renderTable();
             }
+        }
 
-            // 更新標題旁邊的總計數
-            const counterElement = document.getElementById('top-counter');
-            if (incompleteCount > 0) {
-                counterElement.className = 'count-badge-incomplete';
-                counterElement.innerText = `尚有 ${incompleteCount} 項未完成`;
-            } else {
-                counterElement.className = 'count-badge-complete';
-                counterElement.innerText = '🎉 全數完成';
-            }
-
-            // 更新標題下方的統計列
-            const statsContainer = document.getElementById('stats-container');
-            if (incompleteCount > 0) {
-                statsContainer.innerHTML = `
-                    <span class="stat-badge stat-safe">🟢 時間充裕：${safeCount} 項</span>
-                    <span class="stat-badge stat-urgent">🔴 緊急：${urgentCount} 項</span>
-                    <span class="stat-badge stat-overdue">⚫ 逾期：${overdueCount} 項</span>
-                `;
-                statsContainer.style.display = 'flex';
-            } else {
-                statsContainer.style.display = 'none'; // 全數完成就隱藏統計列
-            }
+        // --- 資料更新邏輯 ---
+        function updateField(index, field, value) {
+            tasks[index][field] = value;
+            saveAll();
         }
 
         function processDate(inputElement, index, type) {
             let val = inputElement.value.trim();
-            
             if (val === '') {
-                saveData(type, index, '');
-                if (type === 'completion') updateStatus(index, '');
-                if (type === 'deadline') updateCountdown(index, '');
-                updateTotalCount(); // 日期清空也要重算
+                updateField(index, type, '');
+                renderTable();
                 return;
             }
-
             let digits = val.replace(/\D/g, '');
             if (digits.length >= 7) { 
-                let y = parseInt(digits.substring(0, 3));
-                let m = parseInt(digits.substring(3, 5));
-                let d = parseInt(digits.substring(5, 7));
-                
+                let y = parseInt(digits.substring(0, 3)), m = parseInt(digits.substring(3, 5)), d = parseInt(digits.substring(5, 7));
                 let dateObj = new Date(y + 1911, m - 1, d);
                 let days = ['日', '一', '二', '三', '四', '五', '六'];
-                let dayStr = days[dateObj.getDay()];
-                
-                val = `${y}/${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')} (${dayStr})`;
-                inputElement.value = val;
+                val = `${y}/${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')} (${days[dateObj.getDay()]})`;
             }
-
-            saveData(type, index, val);
-            if (type === 'completion') updateStatus(index, val);
-            if (type === 'deadline') updateCountdown(index, val); 
-            
-            // 只要修改了任何日期，就重新計算頂部的統計
-            updateTotalCount();
+            inputElement.value = val;
+            updateField(index, type, val);
+            renderTable(); 
         }
 
         function updateCountdown(index, dateStr) {
             const cdCell = document.getElementById(`countdown-${index}`);
-            if (!dateStr) {
-                cdCell.innerHTML = '<span style="color: #999;">-</span>';
-                return;
-            }
+            if (!dateStr) { cdCell.innerHTML = '<span style="color: #999;">-</span>'; return; }
             const digits = dateStr.replace(/\D/g, '');
             if (digits.length >= 7) {
-                const y = parseInt(digits.substring(0, 3)) + 1911;
-                const m = parseInt(digits.substring(3, 5)) - 1; 
-                const d = parseInt(digits.substring(5, 7));
-                const targetDate = new Date(y, m, d);
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const diffTime = targetDate - today;
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const targetDate = new Date(parseInt(digits.substring(0, 3)) + 1911, parseInt(digits.substring(3, 5)) - 1, parseInt(digits.substring(5, 7)));
+                const today = new Date(); today.setHours(0, 0, 0, 0);
+                const diffDays = Math.ceil((targetDate - today) / 86400000);
                 
-                if (diffDays > 10) {
-                    cdCell.innerHTML = `<span style="color: #27ae60; font-weight: bold;">剩餘 ${diffDays} 天</span>`;
-                } else if (diffDays > 5) {
-                    cdCell.innerHTML = `<span style="color: #e74c3c; font-weight: bold;">剩餘 ${diffDays} 天</span>`;
-                } else if (diffDays > 0) {
-                    cdCell.innerHTML = `<span class="blink-urgent">剩餘 ${diffDays} 天</span>`;
-                } else if (diffDays === 0) {
-                    cdCell.innerHTML = `<span class="blink-urgent" style="background-color: #fdebd0; padding: 4px 8px; border-radius: 4px;">今天截止</span>`;
-                } else {
-                    cdCell.innerHTML = `<span style="color: #7f8c8d; font-weight: bold;">逾期 ${Math.abs(diffDays)} 天</span>`;
+                if (diffDays > 10) cdCell.innerHTML = `<span style="color: #27ae60; font-weight: bold;">剩餘 ${diffDays} 天</span>`;
+                else if (diffDays > 5) cdCell.innerHTML = `<span style="color: #e74c3c; font-weight: bold;">剩餘 ${diffDays} 天</span>`;
+                else if (diffDays > 0) cdCell.innerHTML = `<span class="blink-urgent">剩餘 ${diffDays} 天</span>`;
+                else if (diffDays === 0) cdCell.innerHTML = `<span class="blink-urgent" style="background-color: #fdebd0; padding: 4px 8px; border-radius: 4px;">今天截止</span>`;
+                else cdCell.innerHTML = `<span style="color: #7f8c8d; font-weight: bold;">逾期 ${Math.abs(diffDays)} 天</span>`;
+            } else { cdCell.innerHTML = '<span style="color: #999;">錯誤</span>'; }
+        }
+
+        function updateTotalCount() {
+            let incompleteCount = 0, safeCount = 0, urgentCount = 0, overdueCount = 0;
+            tasks.forEach(task => {
+                if (task.completion === '') {
+                    incompleteCount++;
+                    const digits = task.deadline.replace(/\D/g, '');
+                    if (digits.length >= 7) {
+                        const targetDate = new Date(parseInt(digits.substring(0, 3)) + 1911, parseInt(digits.substring(3, 5)) - 1, parseInt(digits.substring(5, 7)));
+                        const today = new Date(); today.setHours(0, 0, 0, 0);
+                        const diffDays = Math.ceil((targetDate - today) / 86400000);
+                        if (diffDays > 10) safeCount++; else if (diffDays >= 0) urgentCount++; else overdueCount++;
+                    } else { safeCount++; }
                 }
-            } else {
-                cdCell.innerHTML = '<span style="color: #999;">格式錯誤</span>';
-            }
-        }
-
-        function updateStatus(index, value) {
-            const row = document.getElementById(`row-${index}`);
-            const badge = document.getElementById(`badge-${index}`);
-            if (value !== '') {
-                row.className = 'status-complete';
-                badge.className = 'badge badge-green';
-                badge.innerHTML = '✔️ 已完成';
-            } else {
-                row.className = 'status-incomplete';
-                badge.className = 'badge badge-red';
-                badge.innerHTML = '❌ 未完成';
-            }
-        }
-
-        function saveData(type, index, value) {
-            localStorage.setItem(`${type}-${index}`, value);
+            });
+            const counterElement = document.getElementById('top-counter');
+            if (incompleteCount > 0) { counterElement.className = 'count-badge-incomplete'; counterElement.innerText = `尚有 ${incompleteCount} 項未完成`; } 
+            else { counterElement.className = 'count-badge-complete'; counterElement.innerText = '🎉 全數完成'; }
+            const statsContainer = document.getElementById('stats-container');
+            if (incompleteCount > 0) {
+                statsContainer.innerHTML = `<span class="stat-badge stat-safe">🟢 時間充裕：${safeCount} 項</span> <span class="stat-badge stat-urgent">🔴 緊急：${urgentCount} 項</span> <span class="stat-badge stat-overdue">⚫ 逾期：${overdueCount} 項</span>`;
+                statsContainer.style.display = 'flex';
+            } else { statsContainer.style.display = 'none'; }
         }
 
         function clearAllData() {
-            if (confirm("確定要清除所有的紀錄嗎？這會讓日期、備註與公文文號都回到初始狀態。")) {
-                localStorage.clear();
-                initTable();
+            if (confirm("確定要清除所有記錄並還原成預設的項目嗎？\n(這會刪除你新增的自訂項目，並清空所有日期)")) {
+                localStorage.removeItem('memo_tasks_v2');
+                localStorage.clear(); // 清除舊版
+                loadData();
+                isEditMode = false;
+                document.getElementById('edit-btn').classList.remove('active');
+                document.getElementById('edit-btn').innerText = "✏️ 進入編輯模式";
+                document.getElementById('main-table').classList.remove('edit-mode');
+                document.getElementById('add-btn').style.display = 'none';
+                renderTable();
             }
         }
 
-        window.onload = initTable;
+        window.onload = () => { loadData(); renderTable(); };
     </script>
 </body>
 </html>
