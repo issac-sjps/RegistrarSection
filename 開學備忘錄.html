@@ -9,7 +9,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, 'Microsoft JhengHei';
             background-color: #f4f7f6;
             color: #333;
-            max-width: 950px;
+            max-width: 1000px;
             margin: 40px auto;
             padding: 20px;
         }
@@ -26,7 +26,7 @@
             overflow: hidden;
         }
         th, td {
-            padding: 15px;
+            padding: 15px 10px;
             text-align: center;
             border-bottom: 1px solid #eee;
             vertical-align: middle;
@@ -35,14 +35,21 @@
             background-color: #34495e;
             color: white;
             font-weight: bold;
+            white-space: nowrap;
         }
-        /* 改為文字輸入框的樣式 */
+        /* 欄位寬度設定 */
+        .col-idx { width: 5%; }
+        .col-name { width: 35%; text-align: left; }
+        .col-date { width: 15%; }
+        .col-countdown { width: 15%; }
+        .col-status { width: 15%; }
+
         input[type="text"].date-input {
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
             font-family: inherit;
-            width: 130px;
+            width: 120px;
             text-align: center;
             font-size: 0.95em;
         }
@@ -51,7 +58,6 @@
             border-color: #3498db;
             box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
         }
-        /* 自訂備註的輸入框樣式 */
         input[type="text"].remark-input {
             width: 90%;
             padding: 4px;
@@ -67,22 +73,12 @@
             background-color: #fff;
             outline: none;
         }
-        a {
-            color: #2980b9;
-            text-decoration: none;
-        }
-        a:hover {
-            text-decoration: underline;
-            color: #1a5276;
-        }
-        .status-incomplete {
-            background-color: #ffebee; 
-            transition: background-color 0.3s ease;
-        }
-        .status-complete {
-            background-color: #e8f5e9;
-            transition: background-color 0.3s ease;
-        }
+        a { color: #2980b9; text-decoration: none; }
+        a:hover { text-decoration: underline; color: #1a5276; }
+        
+        .status-incomplete { background-color: #ffebee; transition: 0.3s; }
+        .status-complete { background-color: #e8f5e9; transition: 0.3s; }
+        
         .badge {
             padding: 5px 10px;
             border-radius: 12px;
@@ -93,6 +89,7 @@
         }
         .badge-red { background-color: #ffcdd2; color: #c62828; }
         .badge-green { background-color: #c8e6c9; color: #2e7d32; }
+        
         .clear-btn {
             display: block;
             margin: 20px auto;
@@ -105,12 +102,7 @@
             font-size: 16px;
         }
         .clear-btn:hover { background-color: #c0392b; }
-        .remark-text {
-            font-size: 0.85em;
-            color: #666;
-            margin-top: 5px;
-            line-height: 1.4;
-        }
+        .remark-text { font-size: 0.85em; color: #666; margin-top: 5px; line-height: 1.4; }
     </style>
 </head>
 <body>
@@ -120,11 +112,12 @@
     <table>
         <thead>
             <tr>
-                <th>項次</th>
-                <th style="text-align: left;">申請項目</th>
-                <th>截止日期</th>
-                <th>完成日期</th>
-                <th>狀態</th>
+                <th class="col-idx">項次</th>
+                <th class="col-name">申請項目</th>
+                <th class="col-date">截止日期</th>
+                <th class="col-countdown">倒數天數</th>
+                <th class="col-date">完成日期</th>
+                <th class="col-status">狀態</th>
             </tr>
         </thead>
         <tbody id="memo-body">
@@ -134,7 +127,7 @@
     <button class="clear-btn" onclick="clearAllData()">⚠️ 清除所有紀錄 (重新開始)</button>
 
     <script>
-        // 待辦事項清單 (包含預設日期與備註)
+        // 更新：加上第7項的專屬備註與 Email 連結
         const tasks = [
             { name: "學產基金(低收申請)", defaultDeadline: "115/03/23 (一)" },
             { name: "書籍費申請(高雄市)", defaultDeadline: "115/03/16 (一)" },
@@ -147,7 +140,11 @@
             },
             { name: "代收代辦費-差額(高雄市)", defaultDeadline: "" },
             { name: "<a href='https://scholarship.coia.gov.tw' target='_blank'>原住民獎學金(高雄市) 🔗</a>", defaultDeadline: "115/03/20 (五)" },
-            { name: "原住民獎學金(國教署)", defaultDeadline: "115/03/02 (一)" },
+            { 
+                name: "原住民獎學金(國教署)", 
+                defaultDeadline: "115/03/02 (一)",
+                fixedRemark: "寄送至鼓山高中圖書館email信箱：<br><a href='mailto:brary@kusjh.kh.edu.tw'>brary@kusjh.kh.edu.tw 📧</a>"
+            },
             { 
                 name: "原住民清寒助學金", 
                 defaultDeadline: "115/03/29 (日)",
@@ -160,28 +157,22 @@
         function initTable() {
             tbody.innerHTML = '';
             tasks.forEach((task, index) => {
-                const rowId = `row-${index}`;
-                
-                // 讀取日期資料 (如果 localStorage 沒資料且不是空字串，才用預設日期)
                 let savedDeadline = localStorage.getItem(`deadline-${index}`);
                 if (savedDeadline === null) savedDeadline = task.defaultDeadline;
                 
                 const savedCompletion = localStorage.getItem(`completion-${index}`) || '';
                 
-                // 讀取備註資料 (針對可編輯的備註)
                 let savedRemark = '';
                 if (task.editableRemark) {
                     savedRemark = localStorage.getItem(`remark-${index}`);
                     if (savedRemark === null) savedRemark = task.defaultRemark;
                 }
                 
-                // 判斷狀態
                 const isComplete = savedCompletion !== '';
                 const rowClass = isComplete ? 'status-complete' : 'status-incomplete';
                 const badgeClass = isComplete ? 'badge-green' : 'badge-red';
                 const badgeText = isComplete ? '✔️ 已完成' : '❌ 未完成';
 
-                // 處理備註欄位的 HTML
                 let remarkHtml = '';
                 if (task.editableRemark) {
                     remarkHtml = `<div class="remark-text">備註：<input type="text" class="remark-input" value="${savedRemark}" onchange="saveData('remark', ${index}, this.value)" placeholder="可在此自訂備註..."></div>`;
@@ -190,18 +181,20 @@
                 }
 
                 const tr = document.createElement('tr');
-                tr.id = rowId;
+                tr.id = rowId = `row-${index}`;
                 tr.className = rowClass;
                 
                 tr.innerHTML = `
                     <td>${index + 1}</td>
-                    <td style="text-align: left;">
+                    <td class="col-name">
                         <span style="font-weight: bold; font-size: 1.1em;">${task.name}</span>
                         ${remarkHtml}
                     </td>
                     <td>
                         <input type="text" class="date-input" id="deadline-${index}" value="${savedDeadline}" placeholder="如 1150329" onchange="processDate(this, ${index}, 'deadline')">
                     </td>
+                    <td id="countdown-${index}">
+                        </td>
                     <td>
                         <input type="text" class="date-input" id="completion-${index}" value="${savedCompletion}" placeholder="如 1150329" onchange="processDate(this, ${index}, 'completion')">
                     </td>
@@ -210,45 +203,76 @@
                     </td>
                 `;
                 tbody.appendChild(tr);
+                
+                // 網頁載入時計算倒數天數
+                updateCountdown(index, savedDeadline);
             });
         }
 
-        // 處理日期輸入並自動轉換格式 (如 1150329 -> 115/03/29 (日))
+        // 處理日期輸入
         function processDate(inputElement, index, type) {
             let val = inputElement.value.trim();
             
-            // 如果輸入框被清空
             if (val === '') {
                 saveData(type, index, '');
                 if (type === 'completion') updateStatus(index, '');
+                if (type === 'deadline') updateCountdown(index, '');
                 return;
             }
 
-            // 只抓取數字部分
             let digits = val.replace(/\D/g, '');
-            
-            // 如果剛好是 7 碼數字 (例如 1150329)
-            if (digits.length === 7) {
-                let y = parseInt(digits.substring(0, 3)); // 115
-                let m = parseInt(digits.substring(3, 5)); // 03
-                let d = parseInt(digits.substring(5, 7)); // 29
+            if (digits.length >= 7) { 
+                let y = parseInt(digits.substring(0, 3));
+                let m = parseInt(digits.substring(3, 5));
+                let d = parseInt(digits.substring(5, 7));
                 
-                // 轉換為西元年取得星期幾 (民國年 + 1911)
                 let dateObj = new Date(y + 1911, m - 1, d);
                 let days = ['日', '一', '二', '三', '四', '五', '六'];
                 let dayStr = days[dateObj.getDay()];
                 
-                // 組合回漂亮的格式
                 val = `${y}/${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')} (${dayStr})`;
                 inputElement.value = val;
             }
 
-            // 存檔並更新狀態
             saveData(type, index, val);
             if (type === 'completion') updateStatus(index, val);
+            if (type === 'deadline') updateCountdown(index, val); 
         }
 
-        // 單純更新紅綠燈視覺狀態
+        // 計算並更新倒數天數
+        function updateCountdown(index, dateStr) {
+            const cdCell = document.getElementById(`countdown-${index}`);
+            if (!dateStr) {
+                cdCell.innerHTML = '<span style="color: #999;">-</span>';
+                return;
+            }
+            
+            const digits = dateStr.replace(/\D/g, '');
+            if (digits.length >= 7) {
+                const y = parseInt(digits.substring(0, 3)) + 1911;
+                const m = parseInt(digits.substring(3, 5)) - 1; 
+                const d = parseInt(digits.substring(5, 7));
+                
+                const targetDate = new Date(y, m, d);
+                
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                const diffTime = targetDate - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (diffDays > 0) {
+                    cdCell.innerHTML = `<span style="color: #d35400; font-weight: bold;">剩餘 ${diffDays} 天</span>`;
+                } else if (diffDays === 0) {
+                    cdCell.innerHTML = `<span style="color: #e74c3c; font-weight: bold; background-color: #fdebd0; padding: 2px 5px; border-radius: 4px;">今天截止！</span>`;
+                } else {
+                    cdCell.innerHTML = `<span style="color: #7f8c8d; font-weight: bold;">逾期 ${Math.abs(diffDays)} 天</span>`;
+                }
+            } else {
+                cdCell.innerHTML = '<span style="color: #999;">格式錯誤</span>';
+            }
+        }
+
         function updateStatus(index, value) {
             const row = document.getElementById(`row-${index}`);
             const badge = document.getElementById(`badge-${index}`);
@@ -264,12 +288,10 @@
             }
         }
 
-        // 儲存資料到 LocalStorage
         function saveData(type, index, value) {
             localStorage.setItem(`${type}-${index}`, value);
         }
 
-        // 清除所有紀錄 (包含自訂備註與完成狀態)
         function clearAllData() {
             if (confirm("確定要清除所有的日期與自訂備註紀錄嗎？這會讓所有項目回到初始狀態。")) {
                 localStorage.clear();
