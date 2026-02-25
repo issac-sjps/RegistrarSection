@@ -65,22 +65,59 @@
         th, td { padding: 12px 8px; text-align: center; border-bottom: 1px solid #eee; vertical-align: middle; }
         th { background-color: #34495e; color: white; font-weight: bold; white-space: nowrap; }
         
-        .col-drag { width: 8%; display: none; } /* 預設隱藏操作欄 */
+        /* 調整欄位寬度，多給操作列一點空間 */
+        .col-drag { width: 12%; display: none; } /* 預設隱藏操作欄 */
         .col-idx { width: 4%; }
-        .col-name { width: 26%; text-align: left; }
+        .col-name { width: 22%; text-align: left; }
         .col-doc { width: 14%; }
         .col-date { width: 13%; }
         .col-countdown { width: 12%; }
         .col-status { width: 13%; }
 
-        /* 編輯模式下的拖曳列與按鈕 */
+        /* ======== 編輯模式下的拖曳列與按鈕 (重新美化排版) ======== */
         .edit-mode .col-drag { display: table-cell; }
         .edit-mode .col-idx { display: none; } /* 編輯時隱藏序號 */
-        .drag-handle { cursor: grab; font-size: 1.2em; color: #7f8c8d; margin-right: 5px; }
-        .drag-handle:active { cursor: grabbing; }
-        .action-icon { cursor: pointer; margin: 0 3px; font-size: 1.1em; color: #555; background: #f0f0f0; padding: 4px; border-radius: 4px; }
-        .action-icon:hover { background: #e0e0e0; }
-        .delete-icon:hover { background: #ffcdd2; color: #c62828; }
+        
+        .action-group {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px; /* 按鈕之間的固定間距 */
+        }
+
+        .drag-handle { 
+            cursor: grab; 
+            font-size: 1.4em; 
+            color: #95a5a6; 
+            margin-right: 2px;
+            padding: 0 4px;
+        }
+        .drag-handle:active { cursor: grabbing; color: #34495e; }
+        
+        .action-icon { 
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px; 
+            height: 30px;
+            cursor: pointer; 
+            font-size: 1.1em; 
+            background: #f0f4f8; 
+            border-radius: 6px; 
+            transition: 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            user-select: none;
+        }
+        .action-icon:hover { 
+            background: #dcdde1; 
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .delete-icon:hover { 
+            background: #ffcdd2; 
+            color: #c62828; 
+        }
+        /* ======================================================== */
         
         /* 拖曳時的視覺回饋 */
         tr.dragging { opacity: 0.5; background-color: #f1c40f !important; }
@@ -132,7 +169,7 @@
     <table id="main-table">
         <thead>
             <tr>
-                <th class="col-drag">操作 (拖曳或點擊)</th>
+                <th class="col-drag">操作列</th>
                 <th class="col-idx">項次</th>
                 <th class="col-name">申請項目與備註</th>
                 <th class="col-doc">公文文號</th>
@@ -166,13 +203,11 @@
         let isEditMode = false;
         let dragStartIndex = null;
 
-        // 讀取與升級資料庫 (支援將舊版獨立欄位轉移至新版 JSON)
         function loadData() {
             let storedJson = localStorage.getItem('memo_tasks_v2');
             if (storedJson) {
                 tasks = JSON.parse(storedJson);
             } else {
-                // 如果有舊版資料，進行無痛升級
                 let hasOldData = localStorage.getItem('deadline-0') !== null;
                 tasks = JSON.parse(JSON.stringify(defaultTasks));
                 if (hasOldData) {
@@ -182,7 +217,7 @@
                         t.doc = localStorage.getItem(`doc-${i}`) ?? t.doc;
                         t.remark = localStorage.getItem(`remark-${i}`) ?? t.remark;
                     });
-                    saveAll(); // 存成新版
+                    saveAll(); 
                 }
             }
         }
@@ -191,7 +226,6 @@
             localStorage.setItem('memo_tasks_v2', JSON.stringify(tasks));
         }
 
-        // 切換編輯模式
         function toggleEditMode() {
             isEditMode = !isEditMode;
             const table = document.getElementById('main-table');
@@ -212,7 +246,6 @@
             renderTable();
         }
 
-        // 渲染表格
         function renderTable() {
             const tbody = document.getElementById('memo-body');
             tbody.innerHTML = '';
@@ -228,7 +261,6 @@
                 tr.id = `row-${index}`;
                 tr.className = rowClass;
                 
-                // 拖曳相關設定
                 tr.draggable = isEditMode;
                 tr.addEventListener('dragstart', (e) => handleDragStart(e, index));
                 tr.addEventListener('dragover', handleDragOver);
@@ -236,15 +268,16 @@
                 tr.addEventListener('dragenter', handleDragEnter);
                 tr.addEventListener('dragleave', handleDragLeave);
 
-                // 名稱欄位 (編輯模式下可直接點擊修改)
                 let nameAttr = isEditMode ? `contenteditable="true" onblur="updateField(${index}, 'name', this.innerText)"` : "";
 
                 tr.innerHTML = `
                     <td class="col-drag">
-                        <span class="drag-handle" title="按住拖曳">☰</span>
-                        <span class="action-icon" title="往上移" onclick="moveRow(${index}, -1)">⬆️</span>
-                        <span class="action-icon" title="往下移" onclick="moveRow(${index}, 1)">⬇️</span>
-                        <span class="action-icon delete-icon" title="刪除" onclick="deleteTask(${index})">🗑️</span>
+                        <div class="action-group">
+                            <span class="drag-handle" title="按住拖曳">☰</span>
+                            <div class="action-icon" title="往上移" onclick="moveRow(${index}, -1)">⬆️</div>
+                            <div class="action-icon" title="往下移" onclick="moveRow(${index}, 1)">⬇️</div>
+                            <div class="action-icon delete-icon" title="刪除" onclick="deleteTask(${index})">🗑️</div>
+                        </div>
                     </td>
                     <td class="col-idx">${index + 1}</td>
                     <td class="col-name">
@@ -265,7 +298,6 @@
             updateTotalCount();
         }
 
-        // --- 拖曳與排序功能 ---
         function handleDragStart(e, index) { dragStartIndex = index; e.dataTransfer.effectAllowed = 'move'; setTimeout(() => e.target.classList.add('dragging'), 0); }
         function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
         function handleDragEnter(e) { e.preventDefault(); if(e.target.closest('tr')) e.target.closest('tr').style.borderTop = "3px solid #3498db"; }
@@ -288,7 +320,6 @@
             renderTable();
         }
 
-        // --- 新增與刪除功能 ---
         function addNewTask() {
             tasks.push({ id: "id_" + Date.now(), name: "📝 新增項目 (點我修改名稱)", deadline: "", doc: "", remark: "", completion: "" });
             saveAll();
@@ -303,7 +334,6 @@
             }
         }
 
-        // --- 資料更新邏輯 ---
         function updateField(index, field, value) {
             tasks[index][field] = value;
             saveAll();
@@ -372,7 +402,7 @@
         function clearAllData() {
             if (confirm("確定要清除所有記錄並還原成預設的項目嗎？\n(這會刪除你新增的自訂項目，並清空所有日期)")) {
                 localStorage.removeItem('memo_tasks_v2');
-                localStorage.clear(); // 清除舊版
+                localStorage.clear(); 
                 loadData();
                 isEditMode = false;
                 document.getElementById('edit-btn').classList.remove('active');
