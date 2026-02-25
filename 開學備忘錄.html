@@ -9,13 +9,14 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, 'Microsoft JhengHei';
             background-color: #f4f7f6;
             color: #333;
-            max-width: 1000px;
-            margin: 40px auto;
+            max-width: 1200px; /* 加寬以容納新欄位 */
+            margin: 30px auto;
             padding: 20px;
         }
         h1 {
             text-align: center;
             color: #2c3e50;
+            margin-bottom: 30px;
         }
         table {
             width: 100%;
@@ -26,7 +27,7 @@
             overflow: hidden;
         }
         th, td {
-            padding: 15px 10px;
+            padding: 12px 8px;
             text-align: center;
             border-bottom: 1px solid #eee;
             vertical-align: middle;
@@ -37,51 +38,60 @@
             font-weight: bold;
             white-space: nowrap;
         }
-        /* 欄位寬度設定 */
-        .col-idx { width: 5%; }
-        .col-name { width: 35%; text-align: left; }
-        .col-date { width: 15%; }
-        .col-countdown { width: 15%; }
-        .col-status { width: 15%; }
+        /* 調整各欄位比例 */
+        .col-idx { width: 4%; }
+        .col-name { width: 30%; text-align: left; }
+        .col-doc { width: 14%; }
+        .col-date { width: 13%; }
+        .col-countdown { width: 12%; }
+        .col-status { width: 14%; }
 
-        input[type="text"].date-input {
+        /* 公文與日期輸入框樣式 */
+        input[type="text"].date-input,
+        input[type="text"].doc-input {
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
             font-family: inherit;
-            width: 120px;
+            width: 90%;
+            max-width: 130px;
             text-align: center;
             font-size: 0.95em;
         }
-        input[type="text"].date-input:focus {
+        input[type="text"].date-input:focus,
+        input[type="text"].doc-input:focus {
             outline: none;
             border-color: #3498db;
             box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
         }
+        
+        /* 備註輸入框樣式 */
         input[type="text"].remark-input {
-            width: 90%;
-            padding: 4px;
+            width: 95%;
+            padding: 6px;
             border: 1px dashed #aaa;
-            border-radius: 3px;
+            border-radius: 4px;
             background-color: #fafafa;
-            color: #555;
+            color: #444;
             font-size: 0.9em;
-            margin-top: 5px;
+            margin-top: 8px;
+            box-sizing: border-box;
         }
         input[type="text"].remark-input:focus {
             border-color: #e67e22;
             background-color: #fff;
             outline: none;
         }
-        a { color: #2980b9; text-decoration: none; }
+        
+        a { color: #2980b9; text-decoration: none; font-weight: bold; }
         a:hover { text-decoration: underline; color: #1a5276; }
         
         .status-incomplete { background-color: #ffebee; transition: 0.3s; }
         .status-complete { background-color: #e8f5e9; transition: 0.3s; }
         
         .badge {
-            padding: 5px 10px;
-            border-radius: 12px;
+            padding: 6px 12px;
+            border-radius: 15px;
             font-weight: bold;
             font-size: 0.9em;
             display: inline-block;
@@ -100,9 +110,20 @@
             border-radius: 5px;
             cursor: pointer;
             font-size: 16px;
+            transition: 0.2s;
         }
         .clear-btn:hover { background-color: #c0392b; }
-        .remark-text { font-size: 0.85em; color: #666; margin-top: 5px; line-height: 1.4; }
+        
+        .fixed-links {
+            font-size: 0.85em;
+            background-color: #f0f4f8;
+            padding: 6px;
+            border-radius: 4px;
+            margin-top: 6px;
+            line-height: 1.5;
+            color: #555;
+            border-left: 3px solid #3498db;
+        }
     </style>
 </head>
 <body>
@@ -113,7 +134,8 @@
         <thead>
             <tr>
                 <th class="col-idx">項次</th>
-                <th class="col-name">申請項目</th>
+                <th class="col-name">申請項目與備註</th>
+                <th class="col-doc">公文文號</th>
                 <th class="col-date">截止日期</th>
                 <th class="col-countdown">倒數天數</th>
                 <th class="col-date">完成日期</th>
@@ -127,28 +149,57 @@
     <button class="clear-btn" onclick="clearAllData()">⚠️ 清除所有紀錄 (重新開始)</button>
 
     <script>
-        // 更新：加上第7項的專屬備註與 Email 連結
+        // 資料設定：包含預設截止日、預設公文號、預設備註與固定捷徑連結
         const tasks = [
-            { name: "學產基金(低收申請)", defaultDeadline: "115/03/23 (一)" },
-            { name: "書籍費申請(高雄市)", defaultDeadline: "115/03/16 (一)" },
-            { name: "簿本費申請(高雄市)", defaultDeadline: "115/03/16 (一)" },
+            { 
+                name: "學產基金(低收申請)", 
+                defaultDeadline: "115/03/23 (一)", 
+                defaultDoc: "11530873100",
+                defaultRemark: "" 
+            },
+            { 
+                name: "書籍費申請(高雄市)", 
+                defaultDeadline: "115/03/16 (一)", 
+                defaultDoc: "11530473300",
+                defaultRemark: "" 
+            },
+            { 
+                name: "簿本費申請(高雄市)", 
+                defaultDeadline: "115/03/16 (一)", 
+                defaultDoc: "11530473600",
+                defaultRemark: "" 
+            },
             { 
                 name: "代收代辦費(學前教育署)", 
                 defaultDeadline: "115/02/26 (四)", 
-                editableRemark: true,
-                defaultRemark: "國中表單：16211；國小表單：16210"
+                defaultDoc: "11530765200",
+                defaultRemark: "國中表單：16211；國小表單：16210" 
             },
-            { name: "代收代辦費-差額(高雄市)", defaultDeadline: "" },
-            { name: "<a href='https://scholarship.coia.gov.tw' target='_blank'>原住民獎學金(高雄市) 🔗</a>", defaultDeadline: "115/03/20 (五)" },
+            { 
+                name: "代收代辦費-差額(高雄市)", 
+                defaultDeadline: "", 
+                defaultDoc: "",
+                defaultRemark: "" 
+            },
+            { 
+                name: "<a href='https://scholarship.coia.gov.tw' target='_blank'>原住民獎學金(高雄市) 🔗</a>", 
+                defaultDeadline: "115/03/20 (五)", 
+                defaultDoc: "11530279800",
+                defaultRemark: "" 
+            },
             { 
                 name: "原住民獎學金(國教署)", 
-                defaultDeadline: "115/03/02 (一)",
-                fixedRemark: "寄送至鼓山高中圖書館email信箱：<br><a href='mailto:brary@kusjh.kh.edu.tw'>brary@kusjh.kh.edu.tw 📧</a>"
+                defaultDeadline: "115/03/02 (一)", 
+                defaultDoc: "11530838600",
+                defaultRemark: "",
+                fixedLinks: "寄送至鼓山高中圖書館：<a href='mailto:brary@kusjh.kh.edu.tw'>brary@kusjh.kh.edu.tw 📧</a>"
             },
             { 
                 name: "原住民清寒助學金", 
-                defaultDeadline: "115/03/29 (日)",
-                fixedRemark: "轉學填寫於此<a href='https://forms.gle/UNCY1Q1nMZ8erGdy8' target='_blank'>Google表單🔗</a>，<br>放棄請領填寫於此<a href='https://forms.gle/ZSRYBggBzWYGbngx8' target='_blank'>Google表單🔗</a>"
+                defaultDeadline: "115/03/29 (日)", 
+                defaultDoc: "11530982800",
+                defaultRemark: "",
+                fixedLinks: "轉學填寫：<a href='https://forms.gle/UNCY1Q1nMZ8erGdy8' target='_blank'>Google表單🔗</a><br>放棄請領：<a href='https://forms.gle/ZSRYBggBzWYGbngx8' target='_blank'>Google表單🔗</a>"
             }
         ];
 
@@ -157,28 +208,27 @@
         function initTable() {
             tbody.innerHTML = '';
             tasks.forEach((task, index) => {
+                // 讀取日期資料
                 let savedDeadline = localStorage.getItem(`deadline-${index}`);
                 if (savedDeadline === null) savedDeadline = task.defaultDeadline;
-                
                 const savedCompletion = localStorage.getItem(`completion-${index}`) || '';
                 
-                let savedRemark = '';
-                if (task.editableRemark) {
-                    savedRemark = localStorage.getItem(`remark-${index}`);
-                    if (savedRemark === null) savedRemark = task.defaultRemark;
-                }
+                // 讀取公文資料
+                let savedDoc = localStorage.getItem(`doc-${index}`);
+                if (savedDoc === null) savedDoc = task.defaultDoc;
+
+                // 讀取備註資料
+                let savedRemark = localStorage.getItem(`remark-${index}`);
+                if (savedRemark === null) savedRemark = task.defaultRemark;
                 
+                // 判斷狀態
                 const isComplete = savedCompletion !== '';
                 const rowClass = isComplete ? 'status-complete' : 'status-incomplete';
                 const badgeClass = isComplete ? 'badge-green' : 'badge-red';
                 const badgeText = isComplete ? '✔️ 已完成' : '❌ 未完成';
 
-                let remarkHtml = '';
-                if (task.editableRemark) {
-                    remarkHtml = `<div class="remark-text">備註：<input type="text" class="remark-input" value="${savedRemark}" onchange="saveData('remark', ${index}, this.value)" placeholder="可在此自訂備註..."></div>`;
-                } else if (task.fixedRemark) {
-                    remarkHtml = `<div class="remark-text">備註：${task.fixedRemark}</div>`;
-                }
+                // 固定連結區塊 (如果有設定的話)
+                let linksHtml = task.fixedLinks ? `<div class="fixed-links">${task.fixedLinks}</div>` : '';
 
                 const tr = document.createElement('tr');
                 tr.id = rowId = `row-${index}`;
@@ -188,7 +238,11 @@
                     <td>${index + 1}</td>
                     <td class="col-name">
                         <span style="font-weight: bold; font-size: 1.1em;">${task.name}</span>
-                        ${remarkHtml}
+                        ${linksHtml}
+                        <input type="text" class="remark-input" value="${savedRemark}" onchange="saveData('remark', ${index}, this.value)" placeholder="自訂備註...">
+                    </td>
+                    <td>
+                        <input type="text" class="doc-input" value="${savedDoc}" onchange="saveData('doc', ${index}, this.value)" placeholder="填寫文號">
                     </td>
                     <td>
                         <input type="text" class="date-input" id="deadline-${index}" value="${savedDeadline}" placeholder="如 1150329" onchange="processDate(this, ${index}, 'deadline')">
@@ -254,7 +308,6 @@
                 const d = parseInt(digits.substring(5, 7));
                 
                 const targetDate = new Date(y, m, d);
-                
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 
@@ -264,7 +317,7 @@
                 if (diffDays > 0) {
                     cdCell.innerHTML = `<span style="color: #d35400; font-weight: bold;">剩餘 ${diffDays} 天</span>`;
                 } else if (diffDays === 0) {
-                    cdCell.innerHTML = `<span style="color: #e74c3c; font-weight: bold; background-color: #fdebd0; padding: 2px 5px; border-radius: 4px;">今天截止！</span>`;
+                    cdCell.innerHTML = `<span style="color: #e74c3c; font-weight: bold; background-color: #fdebd0; padding: 4px 8px; border-radius: 4px;">今天截止</span>`;
                 } else {
                     cdCell.innerHTML = `<span style="color: #7f8c8d; font-weight: bold;">逾期 ${Math.abs(diffDays)} 天</span>`;
                 }
@@ -293,7 +346,7 @@
         }
 
         function clearAllData() {
-            if (confirm("確定要清除所有的日期與自訂備註紀錄嗎？這會讓所有項目回到初始狀態。")) {
+            if (confirm("確定要清除所有的紀錄嗎？這會讓日期、備註與公文文號都回到初始狀態。")) {
                 localStorage.clear();
                 initTable();
             }
