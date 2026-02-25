@@ -17,7 +17,33 @@
             text-align: center;
             color: #2c3e50;
             margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px; /* 標題與計數標籤的間距 */
         }
+        /* 標題旁邊的計數標籤樣式 */
+        .count-badge-incomplete {
+            font-size: 0.5em;
+            background-color: #fdebd0;
+            color: #e74c3c;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            vertical-align: middle;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .count-badge-complete {
+            font-size: 0.5em;
+            background-color: #e8f5e9;
+            color: #27ae60;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            vertical-align: middle;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -74,13 +100,13 @@
             max-width: 130px;
             text-align: center;
             font-size: 0.95em;
-            background-color: #fafafa; /* 灰底色 */
+            background-color: #fafafa;
             color: #444;
         }
         input[type="text"].doc-input:focus {
             outline: none;
-            border-color: #e67e22; /* 點擊時外框變橘色，跟備註一樣 */
-            background-color: #fff; /* 點擊時變回白底方便閱讀 */
+            border-color: #e67e22;
+            background-color: #fff;
         }
         
         /* 備註輸入框樣式 (灰底) */
@@ -143,7 +169,6 @@
             border-left: 3px solid #3498db;
         }
 
-        /* 緊急閃爍動畫設定 */
         @keyframes blink-animation {
             0% { opacity: 1; }
             50% { opacity: 0.1; }
@@ -158,7 +183,10 @@
 </head>
 <body>
 
-    <h1>📝 學校補助與獎學金申請備忘錄</h1>
+    <h1>
+        📝 學校補助與獎學金申請備忘錄 
+        <span id="top-counter"></span>
+    </h1>
 
     <table>
         <thead>
@@ -284,6 +312,30 @@
                 
                 updateCountdown(index, savedDeadline);
             });
+
+            // 初始化時計算一次總數量
+            updateTotalCount();
+        }
+
+        // 計算頂部的未完成項目數量
+        function updateTotalCount() {
+            let incompleteCount = 0;
+            
+            for (let i = 0; i < tasks.length; i++) {
+                const savedCompletion = localStorage.getItem(`completion-${i}`) || '';
+                if (savedCompletion === '') {
+                    incompleteCount++;
+                }
+            }
+
+            const counterElement = document.getElementById('top-counter');
+            if (incompleteCount > 0) {
+                counterElement.className = 'count-badge-incomplete';
+                counterElement.innerText = `尚有 ${incompleteCount} 項未完成`;
+            } else {
+                counterElement.className = 'count-badge-complete';
+                counterElement.innerText = '🎉 全數完成';
+            }
         }
 
         function processDate(inputElement, index, type) {
@@ -364,6 +416,9 @@
                 badge.className = 'badge badge-red';
                 badge.innerHTML = '❌ 未完成';
             }
+
+            // 更新完成狀態時，同步更新頂部計數器
+            updateTotalCount();
         }
 
         function saveData(type, index, value) {
