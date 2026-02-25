@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>學生補助身分名單整理工具 (多選進階版)</title>
+    <title>學生補助身分名單整理工具 (合併填報版)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body {
@@ -78,7 +78,6 @@
         }
         .filter-btn:hover { background-color: #ecf0f1; color: #2c3e50; }
         
-        /* 年級(單選)和類別(多選)的 Active 顏色區分 */
         .grade-btn.active { background-color: #16a085; color: white; border-color: #1abc9c; }
         .category-btn.active { background-color: #3498db; color: white; border-color: #2980b9; }
 
@@ -99,7 +98,7 @@
             justify-content: space-between;
         }
         
-        .table-responsive { width: 100%; overflow-x: auto; }
+        .table-responsive { width: 100%; overflow-x: auto; height: 600px; /* 增加固定高度讓長表格更好捲動 */ }
         table {
             width: max-content;
             min-width: 100%;
@@ -119,7 +118,10 @@
             color: #2c3e50; 
             background-color: #fcfdfe;
         }
-        th { background-color: #f9fbfb; font-weight: 600; position: sticky; top: 0; z-index: 10; }
+        /* 讓最優補助身分欄位特別明顯，方便合併表格時辨識 */
+        td:nth-child(7) { font-weight: bold; color: #2980b9; background-color: #f4f9fc; }
+        
+        th { background-color: #f9fbfb; font-weight: 600; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }
         tr:hover { background-color: #fdfefe; }
         
         .multi-row { background-color: #fff3ef !important; }
@@ -140,11 +142,11 @@
 <body>
 
     <div class="header">
-        <h1>📊 學生補助身分名單整理工具 (支援多選版)</h1>
+        <h1>📊 學生補助身分名單整理工具 (合併填報版)</h1>
         <p class="instructions">
             1. 上傳 Excel 檔案。<br>
-            2. 📚 <strong>年級</strong>為「單選」交叉比對。<br>
-            3. 🏷️ <span class="highlight-text">類別現在支援「多選」了！</span>你可以同時點擊「低收(社)」、「中低收(社)」等按鈕，畫面會同時顯示你所選的所有類別名單。
+            2. 點選你需要填報的「年級」與「類別」（可多選）。<br>
+            3. <span class="highlight-text">篩選出的名單將會合併成一張大表，並統一依照「班級 ➔ 座號」排序，方便您連續填報資料。</span>
         </p>
         <input type="file" id="excel-file" accept=".xlsx, .xls">
         <div id="loading">讀取與整理中，請稍候...</div>
@@ -180,7 +182,7 @@
 
         let globalStudents = [];
         let currentGrade = 'all'; 
-        let selectedCategories = new Set(); // 使用 Set 來記錄被多選的類別
+        let selectedCategories = new Set(); 
 
         document.getElementById('excel-file').addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -237,21 +239,19 @@
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('filter-section').style.display = 'block';
                 
-                renderTables();
+                renderTable();
             };
 
             reader.readAsArrayBuffer(file);
         });
 
         function initFilters(grades, categories) {
-            // 建立年級按鈕 (單選)
             let gradeHtml = `<button class="filter-btn grade-btn active" onclick="setGradeFilter('all', this)">全部年級</button>`;
             grades.forEach(g => {
                 gradeHtml += `<button class="filter-btn grade-btn" onclick="setGradeFilter('${g}', this)">${g}</button>`;
             });
             document.getElementById('grade-buttons').innerHTML = gradeHtml;
 
-            // 建立類別按鈕 (多選)
             let catHtml = `<button class="filter-btn category-btn active" id="cat-btn-all" onclick="toggleCategoryFilter('all', this)">全部類別</button>`;
             categories.forEach(c => {
                 catHtml += `<button class="filter-btn category-btn" onclick="toggleCategoryFilter('${c}', this)">${c}</button>`;
@@ -259,56 +259,49 @@
             document.getElementById('category-buttons').innerHTML = catHtml;
             
             currentGrade = 'all';
-            selectedCategories.clear(); // 清空多選紀錄，預設為全部
+            selectedCategories.clear(); 
         }
 
-        // 處理年級單選
         function setGradeFilter(value, btnElement) {
             currentGrade = value;
             document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('active'));
             btnElement.classList.add('active');
-            renderTables();
+            renderTable();
         }
 
-        // 處理類別多選
         function toggleCategoryFilter(value, btnElement) {
             const btnAll = document.getElementById('cat-btn-all');
 
             if (value === 'all') {
-                // 如果點擊「全部類別」，清空所有多選狀態
                 selectedCategories.clear();
                 document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
                 btnAll.classList.add('active');
             } else {
-                // 如果該類別已經在選擇清單中，就移除它(取消選取)
                 if (selectedCategories.has(value)) {
                     selectedCategories.delete(value);
                     btnElement.classList.remove('active');
                 } else {
-                    // 如果不在清單中，就加入它(新增選取)
                     selectedCategories.add(value);
                     btnElement.classList.add('active');
                 }
 
-                // 檢查是否所有特定類別都被取消了
                 if (selectedCategories.size === 0) {
-                    btnAll.classList.add('active'); // 沒選半個時，自動亮起「全部類別」
+                    btnAll.classList.add('active'); 
                 } else {
-                    btnAll.classList.remove('active'); // 有選特定類別時，熄滅「全部類別」
+                    btnAll.classList.remove('active'); 
                 }
             }
-            renderTables();
+            renderTable();
         }
 
-        function renderTables() {
+        function renderTable() {
             const outputDiv = document.getElementById('output');
             const noDataMsg = document.getElementById('no-data');
             outputDiv.innerHTML = '';
 
-            // 根據年級(單選)與類別(多選)過濾資料
+            // 過濾資料
             let filteredStudents = globalStudents.filter(std => {
                 let matchGrade = (currentGrade === 'all' || std.grade === currentGrade);
-                // 多選判斷：如果 Set 是空的代表選了「全部」，否則只要包含在 Set 裡面就算符合
                 let matchCat = (selectedCategories.size === 0 || selectedCategories.has(std.optimalType));
                 return matchGrade && matchCat;
             });
@@ -320,59 +313,57 @@
                 noDataMsg.style.display = 'none';
             }
 
-            const groupedData = {};
-            filteredStudents.forEach(std => {
-                if (!groupedData[std.optimalType]) groupedData[std.optimalType] = [];
-                groupedData[std.optimalType].push(std);
+            // 【重點修改】不再分群，直接對所有符合條件的學生進行大排序 (班級 -> 座號)
+            filteredStudents.sort((a, b) => {
+                let classA = String(a.originalData['班級'] || '');
+                let classB = String(b.originalData['班級'] || '');
+                if (classA !== classB) return classA.localeCompare(classB);
+                return Number(a.originalData['座號'] || 0) - Number(b.originalData['座號'] || 0);
             });
 
-            const categoriesToRender = Object.keys(groupedData).sort();
-
+            // 產生表頭
             let thHtml = `<th>序號</th>`;
             allColumns.forEach(col => { thHtml += `<th>${col}</th>`; });
             thHtml += `<th>系統多重標記</th>`;
 
-            categoriesToRender.forEach(category => {
-                const students = groupedData[category];
-                students.sort((a, b) => {
-                    let classA = String(a.originalData['班級'] || '');
-                    let classB = String(b.originalData['班級'] || '');
-                    if (classA !== classB) return classA.localeCompare(classB);
-                    return Number(a.originalData['座號'] || 0) - Number(b.originalData['座號'] || 0);
+            // 產生表格內容
+            let trHtml = '';
+            let index = 1; 
+            filteredStudents.forEach(std => {
+                let rowClass = std.isMulti ? 'multi-row' : '';
+                let tagHtml = std.isMulti ? `<span class="multi-tag">★ 多重 (${std.multiCount}項)</span>` : '';
+                
+                trHtml += `<tr class="${rowClass}">`;
+                trHtml += `<td>${index++}</td>`;
+
+                allColumns.forEach(col => {
+                    let cellData = std.originalData[col] !== undefined ? std.originalData[col] : '';
+                    trHtml += `<td>${cellData}</td>`;
                 });
-
-                let trHtml = '';
-                let index = 1; 
-                students.forEach(std => {
-                    let rowClass = std.isMulti ? 'multi-row' : '';
-                    let tagHtml = std.isMulti ? `<span class="multi-tag">★ 多重 (${std.multiCount}項)</span>` : '';
-                    
-                    trHtml += `<tr class="${rowClass}">`;
-                    trHtml += `<td>${index++}</td>`;
-
-                    allColumns.forEach(col => {
-                        let cellData = std.originalData[col] !== undefined ? std.originalData[col] : '';
-                        trHtml += `<td>${cellData}</td>`;
-                    });
-                    trHtml += `<td>${tagHtml}</td></tr>`;
-                });
-
-                let html = `
-                    <div class="category-card">
-                        <h2 class="category-title">
-                            <span>${category}</span>
-                            <span>共 ${students.length} 人</span>
-                        </h2>
-                        <div class="table-responsive">
-                            <table>
-                                <thead><tr>${thHtml}</tr></thead>
-                                <tbody>${trHtml}</tbody>
-                            </table>
-                        </div>
-                    </div>
-                `;
-                outputDiv.innerHTML += html;
+                trHtml += `<td>${tagHtml}</td></tr>`;
             });
+
+            // 決定標題文字
+            let titleText = selectedCategories.size === 0 
+                ? "綜合名單 (全部類別)" 
+                : `合併篩選名單：${Array.from(selectedCategories).join('、')}`;
+
+            // 繪製單一表格
+            let html = `
+                <div class="category-card">
+                    <h2 class="category-title">
+                        <span>${titleText}</span>
+                        <span>共 ${filteredStudents.length} 人</span>
+                    </h2>
+                    <div class="table-responsive">
+                        <table>
+                            <thead><tr>${thHtml}</tr></thead>
+                            <tbody>${trHtml}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            outputDiv.innerHTML = html;
         }
     </script>
 </body>
