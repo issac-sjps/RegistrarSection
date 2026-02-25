@@ -9,7 +9,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, 'Microsoft JhengHei';
             background-color: #f4f7f6;
             color: #333;
-            max-width: 1200px; /* 加寬以容納新欄位 */
+            max-width: 1200px;
             margin: 30px auto;
             padding: 20px;
         }
@@ -124,6 +124,18 @@
             color: #555;
             border-left: 3px solid #3498db;
         }
+
+        /* 緊急閃爍動畫設定 */
+        @keyframes blink-animation {
+            0% { opacity: 1; }
+            50% { opacity: 0.1; }
+            100% { opacity: 1; }
+        }
+        .blink-urgent {
+            color: #e74c3c;
+            font-weight: bold;
+            animation: blink-animation 1s infinite;
+        }
     </style>
 </head>
 <body>
@@ -149,7 +161,6 @@
     <button class="clear-btn" onclick="clearAllData()">⚠️ 清除所有紀錄 (重新開始)</button>
 
     <script>
-        // 資料設定：包含預設截止日、預設公文號、預設備註與固定捷徑連結
         const tasks = [
             { 
                 name: "學產基金(低收申請)", 
@@ -208,26 +219,21 @@
         function initTable() {
             tbody.innerHTML = '';
             tasks.forEach((task, index) => {
-                // 讀取日期資料
                 let savedDeadline = localStorage.getItem(`deadline-${index}`);
                 if (savedDeadline === null) savedDeadline = task.defaultDeadline;
                 const savedCompletion = localStorage.getItem(`completion-${index}`) || '';
                 
-                // 讀取公文資料
                 let savedDoc = localStorage.getItem(`doc-${index}`);
                 if (savedDoc === null) savedDoc = task.defaultDoc;
 
-                // 讀取備註資料
                 let savedRemark = localStorage.getItem(`remark-${index}`);
                 if (savedRemark === null) savedRemark = task.defaultRemark;
                 
-                // 判斷狀態
                 const isComplete = savedCompletion !== '';
                 const rowClass = isComplete ? 'status-complete' : 'status-incomplete';
                 const badgeClass = isComplete ? 'badge-green' : 'badge-red';
                 const badgeText = isComplete ? '✔️ 已完成' : '❌ 未完成';
 
-                // 固定連結區塊 (如果有設定的話)
                 let linksHtml = task.fixedLinks ? `<div class="fixed-links">${task.fixedLinks}</div>` : '';
 
                 const tr = document.createElement('tr');
@@ -258,12 +264,10 @@
                 `;
                 tbody.appendChild(tr);
                 
-                // 網頁載入時計算倒數天數
                 updateCountdown(index, savedDeadline);
             });
         }
 
-        // 處理日期輸入
         function processDate(inputElement, index, type) {
             let val = inputElement.value.trim();
             
@@ -293,7 +297,7 @@
             if (type === 'deadline') updateCountdown(index, val); 
         }
 
-        // 計算並更新倒數天數
+        // 全新的倒數天數分級判斷邏輯
         function updateCountdown(index, dateStr) {
             const cdCell = document.getElementById(`countdown-${index}`);
             if (!dateStr) {
@@ -314,10 +318,15 @@
                 const diffTime = targetDate - today;
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                 
-                if (diffDays > 0) {
-                    cdCell.innerHTML = `<span style="color: #d35400; font-weight: bold;">剩餘 ${diffDays} 天</span>`;
+                // 判斷邏輯：>10天(綠)、6~10天(紅)、1~5天(紅閃爍)、0天(底色紅閃爍)、逾期(灰)
+                if (diffDays > 10) {
+                    cdCell.innerHTML = `<span style="color: #27ae60; font-weight: bold;">剩餘 ${diffDays} 天</span>`;
+                } else if (diffDays > 5) {
+                    cdCell.innerHTML = `<span style="color: #e74c3c; font-weight: bold;">剩餘 ${diffDays} 天</span>`;
+                } else if (diffDays > 0) {
+                    cdCell.innerHTML = `<span class="blink-urgent">剩餘 ${diffDays} 天</span>`;
                 } else if (diffDays === 0) {
-                    cdCell.innerHTML = `<span style="color: #e74c3c; font-weight: bold; background-color: #fdebd0; padding: 4px 8px; border-radius: 4px;">今天截止</span>`;
+                    cdCell.innerHTML = `<span class="blink-urgent" style="background-color: #fdebd0; padding: 4px 8px; border-radius: 4px;">今天截止</span>`;
                 } else {
                     cdCell.innerHTML = `<span style="color: #7f8c8d; font-weight: bold;">逾期 ${Math.abs(diffDays)} 天</span>`;
                 }
