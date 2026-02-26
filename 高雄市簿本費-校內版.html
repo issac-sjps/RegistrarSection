@@ -2,122 +2,182 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>114學年度第2學期簿本費統計</title>
+    <title>簿本費印領清冊產生器</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: "Microsoft JhengHei", sans-serif; padding: 20px; }
-        h2 { text-align: center; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-        th, td { border: 1px solid black; padding: 8px; text-align: center; }
-        th { background-color: #f2f2f2; }
-        .checkbox-cell { text-align: left; font-size: 0.9em; }
-        .summary-table { width: 60%; margin: 0 auto; }
-        .page-break { page-break-after: always; }
+        .controls { margin-bottom: 20px; padding: 15px; background: #f0f0f0; border-radius: 8px; }
+        h2 { text-align: center; font-size: 18px; margin-top: 40px;}
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px; }
+        th, td { border: 1px solid #000; padding: 6px; text-align: center; }
+        .checkbox-cell { text-align: left; }
+        .summary-table { width: 80%; margin: 0 auto; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-<h2>高雄市新莊國民小學 114學年度第2學期 請領簿本費學生印領清冊 (一年級)</h2>
-<table>
-    <thead>
-        <tr>
-            <th>編號</th>
-            <th>學生姓名</th>
-            <th>年級班級</th>
-            <th>性別</th>
-            <th>家庭情形</th>
-            <th>請領金額</th>
-            <th>簽章</th>
-            <th>備註</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td>1</td>
-            <td>簡詹又</td>
-            <td>101</td>
-            <td>男</td>
-            <td class="checkbox-cell">□低收入戶 ■中低收入戶 □家庭突遭變故</td>
-            <td>200</td>
-            <td></td>
-            <td></td>
-        </tr>
-        <tr>
-            <td>2</td>
-            <td>陳芊綺</td>
-            <td>104</td>
-            <td>女</td>
-            <td class="checkbox-cell">□低收入戶 ■中低收入戶 □家庭突遭變故</td>
-            <td>200</td>
-            <td></td>
-            <td></td>
-        </tr>
-        <tr>
-            <td>3</td>
-            <td>葉蕎綾</td>
-            <td>106</td>
-            <td>女</td>
-            <td class="checkbox-cell">□低收入戶 ■中低收入戶 □家庭突遭變故</td>
-            <td>200</td>
-            <td></td>
-            <td></td>
-        </tr>
-        <tr>
-            <td>4</td>
-            <td>李星霈</td>
-            <td>106</td>
-            <td>女</td>
-            <td class="checkbox-cell">□低收入戶 ■中低收入戶 □家庭突遭變故</td>
-            <td>200</td>
-            <td></td>
-            <td></td>
-        </tr>
-        </tbody>
-</table>
+    <div class="controls">
+        <h3>📂 請上傳統整好的 Excel 檔案</h3>
+        <p style="font-size: 0.9em; color: #555;">(需包含：班級、姓名、性別、減免身分 等欄位。支援 xlsx 格式)</p>
+        <input type="file" id="upload-excel" accept=".xlsx, .xls">
+    </div>
 
-<div class="page-break"></div>
+    <div id="output-container"></div>
 
-<h2>經費明細表 (統計總表)</h2>
-<table class="summary-table">
-    <thead>
-        <tr>
-            <th>年段</th>
-            <th>家庭情形</th>
-            <th>申請學生人數</th>
-            <th>單價</th>
-            <th>小計</th>
-            <th>合計</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td rowspan="3">一年級</td>
-            <td>□低收入戶</td>
-            <td>0</td>
-            <td>200</td>
-            <td>0</td>
-            <td rowspan="3">800</td>
-        </tr>
-        <tr>
-            <td>■中低收入戶</td>
-            <td>4</td>
-            <td>200</td>
-            <td>800</td>
-        </tr>
-        <tr>
-            <td>□家庭突遭變故</td>
-            <td>0</td>
-            <td>200</td>
-            <td>0</td>
-        </tr>
-        <tr>
-            <td colspan="2"><strong>合計總金額</strong></td>
-            <td colspan="3"></td>
-            <td><strong>800 元</strong></td>
-        </tr>
-    </tbody>
-</table>
+    <script>
+        document.getElementById('upload-excel').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
 
-<p style="color: gray; font-size: 0.8em;">* 註：低收入戶因另有補助，本表不列計金額。此 HTML 格式方便直接選取複製貼上至 Excel。</p>
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                processWorkbook(workbook);
+            };
+            reader.readAsArrayBuffer(file);
+        });
 
+        function processWorkbook(workbook) {
+            const outputContainer = document.getElementById('output-container');
+            outputContainer.innerHTML = ''; // 清空先前的結果
+
+            const grades = ['一年級', '二年級', '三年級', '四年級', '五年級', '六年級'];
+            const stats = {};
+            let htmlOutput = '';
+
+            // 初始化統計資料
+            grades.forEach(g => {
+                stats[g] = { '低收': 0, '中低收': 0, '變故': 0 };
+            });
+
+            // 1. 產生各年級印領清冊
+            grades.forEach(gradeName => {
+                const sheetName = workbook.SheetNames.find(s => s.includes(gradeName));
+                if (!sheetName) return; // 如果找不到該年級工作表則跳過
+
+                const sheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(sheet);
+                
+                if (jsonData.length === 0) return;
+
+                htmlOutput += `<h2>高雄市新莊國民小學114學年度第2學期請領簿本費學生印領清冊 (${gradeName})</h2>`;
+                htmlOutput += `<table>
+                                <thead>
+                                    <tr>
+                                        <th width="5%">編號</th>
+                                        <th width="15%">學生姓名</th>
+                                        <th width="10%">年級<br>班級</th>
+                                        <th width="5%">性別</th>
+                                        <th width="35%">家庭情形</th>
+                                        <th width="10%">請領金額</th>
+                                        <th width="10%">簽章</th>
+                                        <th width="10%">備註</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+
+                let count = 1;
+                jsonData.forEach(row => {
+                    const name = row['姓名'] || '';
+                    const cls = row['班級'] || '';
+                    const gender = row['性別'] || '';
+                    const status = row['減免身分'] || '';
+                    
+                    let statusStr = '';
+                    let amount = ''; // 預設空白
+
+                    // 判斷身分與計算
+                    if (status.includes('中低')) {
+                        statusStr = '□低收入戶■中低收入戶□家庭突遭變故';
+                        amount = '200';
+                        stats[gradeName]['中低收']++;
+                    } else if (status.includes('低收')) {
+                        statusStr = '■低收入戶□中低收入戶□家庭突遭變故';
+                        amount = ''; // 低收入戶金額空白
+                        stats[gradeName]['低收']++;
+                    } else if (status.includes('變故')) {
+                        statusStr = '□低收入戶□中低收入戶■家庭突遭變故';
+                        amount = '200';
+                        stats[gradeName]['變故']++;
+                    }
+
+                    htmlOutput += `<tr>
+                                    <td>${count++}</td>
+                                    <td>${name}</td>
+                                    <td>${cls}</td>
+                                    <td>${gender}</td>
+                                    <td class="checkbox-cell">${statusStr}</td>
+                                    <td>${amount}</td>
+                                    <td></td>
+                                    <td></td>
+                                   </tr>`;
+                });
+
+                htmlOutput += `</tbody></table>`;
+            });
+
+            // 2. 產生經費明細表 (統計總表)
+            htmlOutput += `<h2>經費明細表</h2>`;
+            htmlOutput += `<table class="summary-table">
+                            <thead>
+                                <tr>
+                                    <th>年段</th>
+                                    <th>家庭情形</th>
+                                    <th>申請學生人數</th>
+                                    <th>單價</th>
+                                    <th>小計</th>
+                                    <th>合計</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
+            let grandTotal = 0;
+
+            grades.forEach(gradeName => {
+                const s = stats[gradeName];
+                // 若該年級完全沒人申請，可以直接在下方判斷跳過或顯示 0，這邊依照範例顯示
+                const subTotalMid = s['中低收'] * 200;
+                const subTotalAcc = s['變故'] * 200;
+                const gradeTotal = subTotalMid + subTotalAcc;
+                grandTotal += gradeTotal;
+
+                htmlOutput += `
+                    <tr>
+                        <td rowspan="3">${gradeName}</td>
+                        <td class="checkbox-cell">□低收入戶</td>
+                        <td>${s['低收'] === 0 ? '0' : s['低收']}</td>
+                        <td></td>
+                        <td>0</td>
+                        <td rowspan="3">${gradeTotal === 0 ? '0' : gradeTotal}</td>
+                    </tr>
+                    <tr>
+                        <td class="checkbox-cell">■中低收入戶</td>
+                        <td>${s['中低收'] === 0 ? '0' : s['中低收']}</td>
+                        <td>200</td>
+                        <td>${subTotalMid === 0 ? '0' : subTotalMid}</td>
+                    </tr>
+                    <tr>
+                        <td class="checkbox-cell">■家庭突遭變故</td>
+                        <td>${s['變故'] === 0 ? '0' : s['變故']}</td>
+                        <td>200</td>
+                        <td>${subTotalAcc === 0 ? '0' : subTotalAcc}</td>
+                    </tr>
+                `;
+            });
+
+            // 總計列
+            htmlOutput += `
+                    <tr>
+                        <td colspan="2"><strong>合計</strong></td>
+                        <td colspan="3"></td>
+                        <td><strong>${grandTotal} 元</strong></td>
+                    </tr>
+                </tbody></table>`;
+
+            outputContainer.innerHTML = htmlOutput;
+        }
+    </script>
 </body>
 </html>
