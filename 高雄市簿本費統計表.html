@@ -21,7 +21,7 @@
             <h4 class="mb-0">上傳原始 Excel 資料</h4>
         </div>
         <div class="card-body">
-            <p class="text-muted">會自動排除「低收」名單，僅整理「中低收(2-11類)」與「家庭變故(12類)」，請領金額預設為 200 元。</p>
+            <p class="text-muted">會自動排除「低收」名單，僅抓取「2.中低收(社)」與「12.導師認定(家庭變故)」，請領金額預設為 200 元。</p>
             <input type="file" id="uploadExcel" class="form-control" accept=".xlsx, .xls">
         </div>
     </div>
@@ -42,10 +42,9 @@ document.getElementById('uploadExcel').addEventListener('change', function(e) {
         let htmlContent = "";
         let totalProcessed = 0;
 
-        // 動態抓取所有工作表 (不再寫死年級名稱)
+        // 動態抓取所有工作表
         workbook.SheetNames.forEach(sheetName => {
             const worksheet = workbook.Sheets[sheetName];
-            // 讀取成 JSON，defval 確保空欄位存在
             const jsonData = XLSX.utils.sheet_to_json(worksheet, {defval: ''});
             
             if (jsonData.length === 0) return;
@@ -55,14 +54,14 @@ document.getElementById('uploadExcel').addEventListener('change', function(e) {
             let count = 0;
 
             jsonData.forEach((row) => {
-                // 將所有 key 去除前後空白，避免 Excel 欄位名稱有隱藏空白導致抓不到
+                // 將所有 key 去除前後空白，避免欄位名稱有隱藏空白導致抓不到
                 const cleanRow = {};
                 for(let key in row) {
                     cleanRow[key.trim()] = row[key];
                 }
 
                 const familyStatus = judgeStatus(cleanRow);
-                if (familyStatus.type === "") return; // 低收或不符合資格者直接跳過
+                if (familyStatus.type === "") return; // 不符合資格者直接跳過
 
                 count++;
                 totalProcessed++;
@@ -117,8 +116,9 @@ document.getElementById('uploadExcel').addEventListener('change', function(e) {
         });
 
         if (totalProcessed === 0) {
-            htmlContent = `<div class="alert alert-warning mt-3">找不到符合條件的學生。請確認 Excel 首行是否有包含「姓名」、「班級」以及「1.低收(社)」等身分欄位標題。</div>`;
+            htmlContent = `<div class="alert alert-warning mt-3">找不到符合條件的學生。請確認 Excel 欄位名稱是否正確包含「1.低收(社)」、「2.中低收(社)」或「12.導師認定」。</div>`;
         } else {
+            // 產生統計表
             htmlContent += generateSummaryTable(summary);
         }
 
@@ -129,7 +129,7 @@ document.getElementById('uploadExcel').addEventListener('change', function(e) {
 
 // 判斷身分邏輯
 function judgeStatus(row) {
-    // 輔助函式：判斷欄位內是否有值 (過濾掉 0 或 false)
+    // 判斷欄位內是否有值 (過濾掉空白、0、false、否、n)
     const isChecked = (val) => {
         if (val === undefined || val === null || val === '') return false;
         const s = String(val).trim().toLowerCase();
@@ -142,22 +142,10 @@ function judgeStatus(row) {
         return { type: '' };
     }
 
-    // 2. 判斷中低收 (只要 2~11 類有任一項打勾就符合)
-    const midLowKeys = [
-        '2.中低收(社)', '3.單親(社)', '4.身障(學)(社)', '5.身障(家)(社)', 
-        '6.身障(學)', '7.身障(家)', '8.重身障(學)', '9.原民生', 
-        '10.原民清寒(原)', '11.功勳'
-    ];
-    
-    let isMidLow = false;
-    for (let key of midLowKeys) {
-        if (isChecked(row[key])) {
-            isMidLow = true;
-            break;
-        }
+    // 2. 判斷中低收 (只有 2.中低收(社) 打勾才算)
+    if (isChecked(row['2.中低收(社)'])) {
+        return { type: 'midLow' };
     }
-
-    if (isMidLow) return { type: 'midLow' };
 
     // 3. 判斷導師認定 (家庭變故)
     if (isChecked(row['12.導師認定'])) {
@@ -185,7 +173,7 @@ function generateSummaryTable(summary) {
                 <td rowspan="3" class="align-middle text-center">${sheetName}</td>
                 <td>□低收入戶</td>
                 <td class="text-center">0</td>
-                <td class="text-center">0</td>
+                <td class="text-center">200</td>
                 <td class="text-end">0</td>
                 <td rowspan="3" class="align-middle text-end fw-bold">${gradeTotal}</td>
             </tr>
