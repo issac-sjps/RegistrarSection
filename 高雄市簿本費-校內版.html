@@ -6,21 +6,36 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: "Microsoft JhengHei", sans-serif; padding: 20px; }
-        .controls { margin-bottom: 20px; padding: 15px; background: #f0f0f0; border-radius: 8px; }
+        .controls { margin-bottom: 20px; padding: 20px; background: #eef2f5; border-radius: 8px; border: 1px solid #ccc; text-align: center; }
+        .btn-download { 
+            display: none; /* 預設隱藏，資料產生後才會出現 */
+            margin-top: 15px; 
+            padding: 12px 24px; 
+            font-size: 16px; 
+            font-weight: bold;
+            background-color: #28a745; 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .btn-download:hover { background-color: #218838; }
         h2 { text-align: center; font-size: 18px; margin-top: 40px;}
         table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px; }
         th, td { border: 1px solid #000; padding: 6px; text-align: center; vertical-align: middle; }
         .checkbox-cell { text-align: left; line-height: 1.5; }
         .summary-table { width: 80%; margin: 0 auto; }
-        .hidden { display: none; }
     </style>
 </head>
 <body>
 
     <div class="controls">
-        <h3>📂 請上傳統整好的 Excel 檔案</h3>
-        <p style="font-size: 0.9em; color: #555;">(需包含：班級、姓名、性別、減免身分 等欄位。支援 xlsx 格式)</p>
+        <h3>📂 第 1 步：請上傳統整好的 Excel 檔案</h3>
+        <p style="font-size: 0.9em; color: #555;">(需包含：班級、姓名、性別、減免身分 等欄位)</p>
         <input type="file" id="upload-excel" accept=".xlsx, .xls">
+        <br>
+        <button id="download-btn" class="btn-download">📥 第 2 步：轉換完成！點此下載為 Excel 檔</button>
     </div>
 
     <div id="output-container"></div>
@@ -41,21 +56,21 @@
 
         function processWorkbook(workbook) {
             const outputContainer = document.getElementById('output-container');
-            outputContainer.innerHTML = ''; // 清空先前的結果
+            outputContainer.innerHTML = ''; 
 
             const grades = ['一年級', '二年級', '三年級', '四年級', '五年級', '六年級'];
             const stats = {};
             let htmlOutput = '';
 
-            // 1. 初始化統計資料
+            // 初始化統計資料
             grades.forEach(g => {
                 stats[g] = { '低收': 0, '中低收': 0, '變故': 0 };
             });
 
-            // 2. 產生各年級印領清冊
+            // 產生各年級清冊
             grades.forEach(gradeName => {
                 const sheetName = workbook.SheetNames.find(s => s.includes(gradeName));
-                if (!sheetName) return; // 如果找不到該年級工作表則跳過
+                if (!sheetName) return; 
 
                 const sheet = workbook.Sheets[sheetName];
                 const jsonData = XLSX.utils.sheet_to_json(sheet);
@@ -63,7 +78,8 @@
                 if (jsonData.length === 0) return;
 
                 htmlOutput += `<h2>高雄市新莊國民小學114學年度第2學期請領簿本費學生印領清冊 (${gradeName})</h2>`;
-                htmlOutput += `<table>
+                // 給表格加上 ID，方便等等轉出成 Excel
+                htmlOutput += `<table id="table-${gradeName}">
                                 <thead>
                                     <tr>
                                         <th width="5%">編號</th>
@@ -86,16 +102,16 @@
                     const status = row['減免身分'] || '';
                     
                     let statusStr = '';
-                    let amount = ''; // 預設空白
+                    let amount = ''; 
 
-                    // 判斷身分與計算 (改成多行排版)
+                    // 判斷身分
                     if (status.includes('中低')) {
                         statusStr = '□低收入戶<br>■中低收入戶<br>□家庭突遭變故';
                         amount = '200';
                         stats[gradeName]['中低收']++;
                     } else if (status.includes('低收')) {
                         statusStr = '■低收入戶<br>□中低收入戶<br>□家庭突遭變故';
-                        amount = ''; // 低收入戶金額空白
+                        amount = ''; 
                         stats[gradeName]['低收']++;
                     } else if (status.includes('變故') || status.includes('導師認定')) {
                         statusStr = '□低收入戶<br>□中低收入戶<br>■家庭突遭變故';
@@ -103,7 +119,6 @@
                         stats[gradeName]['變故']++;
                     }
 
-                    // 確保即使沒有匹配到身分，也會印出列，且狀態留空
                     htmlOutput += `<tr>
                                     <td>${count++}</td>
                                     <td>${name}</td>
@@ -119,9 +134,9 @@
                 htmlOutput += `</tbody></table>`;
             });
 
-            // 3. 產生經費明細表 (統計總表)
+            // 產生統計總表
             htmlOutput += `<h2>經費明細表</h2>`;
-            htmlOutput += `<table class="summary-table">
+            htmlOutput += `<table id="table-summary" class="summary-table">
                             <thead>
                                 <tr>
                                     <th>年段</th>
@@ -167,17 +182,44 @@
                 `;
             });
 
-            // 總計列
             htmlOutput += `
                     <tr>
-                        <td colspan="2"><strong>合計</strong></td>
+                        <td colspan="2"><strong>合計總額</strong></td>
                         <td colspan="3"></td>
-                        <td><strong>${grandTotal} 元</strong></td>
+                        <td><strong>${grandTotal}</strong></td>
                     </tr>
                 </tbody></table>`;
 
             outputContainer.innerHTML = htmlOutput;
+
+            // 處理完成後，顯示綠色下載按鈕
+            document.getElementById('download-btn').style.display = 'inline-block';
         }
+
+        // 綁定下載按鈕功能
+        document.getElementById('download-btn').addEventListener('click', function() {
+            const wb = XLSX.utils.book_new();
+            const grades = ['一年級', '二年級', '三年級', '四年級', '五年級', '六年級'];
+            
+            // 將各年級的表格轉成 Excel 分頁
+            grades.forEach(g => {
+                const tbl = document.getElementById(`table-${g}`);
+                if (tbl) {
+                    const ws = XLSX.utils.table_to_sheet(tbl);
+                    XLSX.utils.book_append_sheet(wb, ws, `${g}`);
+                }
+            });
+
+            // 將總表轉成 Excel 分頁
+            const summaryTbl = document.getElementById('table-summary');
+            if (summaryTbl) {
+                const ws = XLSX.utils.table_to_sheet(summaryTbl);
+                XLSX.utils.book_append_sheet(wb, ws, '經費明細表');
+            }
+
+            // 直接觸發下載 Excel 檔
+            XLSX.writeFile(wb, '114學年第2學期_簿本費印領清冊_產生結果.xlsx');
+        });
     </script>
 </body>
 </html>
