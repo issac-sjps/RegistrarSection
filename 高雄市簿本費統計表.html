@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高雄市新莊國小 - 學期領簿本費統計系統</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { background-color: #f8f9fa; padding: 20px; }
+        .card { box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .table-check { font-family: "MS Gothic", "SimSun", serif; }
+        @media print { .no-print { display: none; } }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="card no-print">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">上傳原始 Excel 資料</h4>
+        </div>
+        <div class="card-body">
+            <p class="text-muted">請選擇包含 1-6 年級分頁的 Excel 檔案。欄位需包含：班級、姓名、性別及 12 類身分欄位。</p>
+            <input type="file" id="uploadExcel" class="form-control" accept=".xlsx, .xls">
+        </div>
+    </div>
+
+    <div id="resultArea"></div>
+</div>
+
+<script>
+document.getElementById('uploadExcel').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+        
+        let allGradeData = [];
+        let summary = {}; // 紀錄各年級統計
+
+        const gradeNames = ["一年級", "二年級", "三年級", "四年級", "五年級", "六年級"];
+        
+        let htmlContent = "";
+
+        gradeNames.forEach(gradeName => {
+            const worksheet = workbook.Sheets[gradeName];
+            if (!worksheet) return;
+
+            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+            summary[gradeName] = { low: 0, midLow: 0, emergency: 0 };
+
+            let tableRows = "";
+            jsonData.forEach((row, index) => {
+                const familyStatus = judgeStatus(row);
+                if (familyStatus.type === "") return; // 無補助身分則跳過
+
+                // 統計
+                if (familyStatus.type === "low") summary[gradeName].low++;
+                if (familyStatus.type === "midLow") summary[gradeName].midLow++;
+                if (familyStatus.type === "emergency") summary[gradeName].emergency++;
+
+                tableRows += `
+                    <tr>
+                        <td class="text-center">${index + 1}</td>
+                        <td>${row['姓名'] || ''}</td>
+                        <td class="text-center">${row['班級'] || ''}</td>
+                        <td class="text-center">${row['性別'] || ''}</td>
+                        <td class="table-check">
+                            ${familyStatus.type === 'low' ? '■' : '□'}低收入戶
+                            ${familyStatus.type === 'midLow' ? '■' : '□'}中低收入戶
+                            ${familyStatus.type === 'emergency' ? '■' : '□'}家庭突遭變故
+                        </td>
+                        <td class="text-end">200</td>
+                        <td></td>
+                        <td></td>
+                    </tr>`;
+            });
+
+            htmlContent += `
+                <div class="card mt-4">
+                    <div class="card-header bg-secondary text-white"><h5>${gradeName} 領取清冊</h5></div>
+                    <div class="card-body">
+                        <table class="table table-bordered align-middle">
+                            <thead class="table-light text-center">
+                                <tr>
+                                    <th width="50">編號</th>
+                                    <th>學生姓名</th>
+                                    <th>年級班級</th>
+                                    <th>性別</th>
+                                    <th>家庭情形</th>
+                                    <th>請領金額</th>
+                                    <th width="100">簽章</th>
+                                    <th>備註</th>
+                                </tr>
+                            </thead>
+                            <tbody>${tableRows}</tbody>
+                        </table>
+                    </div>
+                </div>`;
+        });
+
+        // 產生最後的經費明細表
+        htmlContent += generateSummaryTable(summary);
+        document.getElementById('resultArea').innerHTML = htmlContent;
+    };
+    reader.readAsArrayBuffer(file);
+});
+
+function judgeStatus(row) {
+    // 邏輯判斷 (根據你提供的 12 類)
+    // 1. 低收
+    if (row['1.低收(社)'] == '1' || row['1.低收(社)'] == 'v') return { type: 'low' };
+    
+    // 2. 中低收 (包含中低、單親、身障、原民等一般認定的補助)
+    const midLowKeys = ['2.中低收(社)', '3.單親(社)', '4.身障(學)(社)', '5.身障(家)(社)', '6.身障(學)', '7.身障(家)', '8.重身障(學)', '9.原民生', '10.原民清寒(原)', '11.功勳'];
+    for (let key of midLowKeys) {
+        if (row[key] == '1' || row[key] == 'v') return { type: 'midLow' };
+    }
+
+    // 3. 導師認定
+    if (row['12.導師認定'] == '1' || row['12.導師認定'] == 'v') return { type: 'emergency' };
+
+    return { type: '' };
+}
+
+function generateSummaryTable(summary) {
+    let totalAll = 0;
+    let rows = "";
+    
+    for (let grade in summary) {
+        const s = summary[grade];
+        const gradeTotal = (s.low + s.midLow + s.emergency) * 200;
+        totalAll += gradeTotal;
+
+        rows += `
+            <tr><td rowspan="3" class="align-middle text-center">${grade}</td><td>□低收入戶</td><td class="text-center">${s.low}</td><td class="text-center">200</td><td class="text-end">${s.low*200}</td><td rowspan="3" class="align-middle text-end fw-bold">${gradeTotal}</td></tr>
+            <tr><td>■中低收入戶</td><td class="text-center">${s.midLow}</td><td class="text-center">200</td><td class="text-end">${s.midLow*200}</td></tr>
+            <tr><td>□家庭突遭變故</td><td class="text-center">${s.emergency}</td><td class="text-center">200</td><td class="text-end">${s.emergency*200}</td></tr>
+        `;
+    }
+
+    return `
+        <div class="card mt-5 border-danger">
+            <div class="card-header bg-danger text-white"><h5>經費明細匯總表 (填寫回原 Excel 用)</h5></div>
+            <div class="card-body">
+                <table class="table table-bordered">
+                    <thead class="table-dark text-center">
+                        <tr>
+                            <th>年段</th><th>家庭情形</th><th>申請學生人數</th><th>單價</th><th>小計</th><th>合計</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows}
+                        <tr class="table-warning fw-bold">
+                            <td colspan="5" class="text-center">總計金額</td>
+                            <td class="text-end">${totalAll} 元</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <button class="btn btn-success no-print" onclick="window.print()">列印報表</button>
+            </div>
+        </div>`;
+}
+</script>
+
+</body>
+</html>
