@@ -9,8 +9,8 @@
         .controls { margin-bottom: 20px; padding: 15px; background: #f0f0f0; border-radius: 8px; }
         h2 { text-align: center; font-size: 18px; margin-top: 40px;}
         table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px; }
-        th, td { border: 1px solid #000; padding: 6px; text-align: center; }
-        .checkbox-cell { text-align: left; }
+        th, td { border: 1px solid #000; padding: 6px; text-align: center; vertical-align: middle; }
+        .checkbox-cell { text-align: left; line-height: 1.5; }
         .summary-table { width: 80%; margin: 0 auto; }
         .hidden { display: none; }
     </style>
@@ -47,12 +47,12 @@
             const stats = {};
             let htmlOutput = '';
 
-            // 初始化統計資料
+            // 1. 初始化統計資料
             grades.forEach(g => {
                 stats[g] = { '低收': 0, '中低收': 0, '變故': 0 };
             });
 
-            // 1. 產生各年級印領清冊
+            // 2. 產生各年級印領清冊
             grades.forEach(gradeName => {
                 const sheetName = workbook.SheetNames.find(s => s.includes(gradeName));
                 if (!sheetName) return; // 如果找不到該年級工作表則跳過
@@ -88,21 +88,22 @@
                     let statusStr = '';
                     let amount = ''; // 預設空白
 
-                    // 判斷身分與計算
+                    // 判斷身分與計算 (改成多行排版)
                     if (status.includes('中低')) {
-                        statusStr = '□低收入戶■中低收入戶□家庭突遭變故';
+                        statusStr = '□低收入戶<br>■中低收入戶<br>□家庭突遭變故';
                         amount = '200';
                         stats[gradeName]['中低收']++;
                     } else if (status.includes('低收')) {
-                        statusStr = '■低收入戶□中低收入戶□家庭突遭變故';
+                        statusStr = '■低收入戶<br>□中低收入戶<br>□家庭突遭變故';
                         amount = ''; // 低收入戶金額空白
                         stats[gradeName]['低收']++;
-                    } else if (status.includes('變故')) {
-                        statusStr = '□低收入戶□中低收入戶■家庭突遭變故';
+                    } else if (status.includes('變故') || status.includes('導師認定')) {
+                        statusStr = '□低收入戶<br>□中低收入戶<br>■家庭突遭變故';
                         amount = '200';
                         stats[gradeName]['變故']++;
                     }
 
+                    // 確保即使沒有匹配到身分，也會印出列，且狀態留空
                     htmlOutput += `<tr>
                                     <td>${count++}</td>
                                     <td>${name}</td>
@@ -118,7 +119,7 @@
                 htmlOutput += `</tbody></table>`;
             });
 
-            // 2. 產生經費明細表 (統計總表)
+            // 3. 產生經費明細表 (統計總表)
             htmlOutput += `<h2>經費明細表</h2>`;
             htmlOutput += `<table class="summary-table">
                             <thead>
@@ -137,7 +138,6 @@
 
             grades.forEach(gradeName => {
                 const s = stats[gradeName];
-                // 若該年級完全沒人申請，可以直接在下方判斷跳過或顯示 0，這邊依照範例顯示
                 const subTotalMid = s['中低收'] * 200;
                 const subTotalAcc = s['變故'] * 200;
                 const gradeTotal = subTotalMid + subTotalAcc;
