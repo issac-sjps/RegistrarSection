@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>高雄市書籍費補助檢核系統 (含分頁總數)</title>
+    <title>高雄市書籍費補助檢核系統</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: "Microsoft JhengHei", sans-serif; background-color: #f4f7f6; padding: 20px; color: #333; }
@@ -100,7 +100,17 @@
 <script>
     let rawData = [];
     let gradeCounts = { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0 };
-    let gradePrices = { "1": 1009, "2": 952, "3": 1171, "4": 1184, "5": 1213, "6": 1109 };
+    
+    // 更新為您提供的新預設補助金額
+    let gradePrices = { 
+        "1": 1185, 
+        "2": 1220, 
+        "3": 1477, 
+        "4": 1486, 
+        "5": 1502, 
+        "6": 1241 
+    };
+
     const gradeMap = { "一年級": "1", "二年級": "2", "三年級": "3", "四年級": "4", "五年級": "5", "六年級": "6" };
 
     document.getElementById('uploadExcel').addEventListener('change', function(e) {
@@ -134,7 +144,7 @@
             }
             
             processData();
-            initTabs(); // 重新初始化按鈕以顯示人數
+            initTabs();
             renderTable("1");
             renderSummary();
             renderIdentitySummary();
@@ -157,9 +167,11 @@
         document.getElementById('listView').style.display = view === 'list' ? 'block' : 'none';
         document.getElementById('summaryView').style.display = view === 'summary' ? 'block' : 'none';
         document.getElementById('identityView').style.display = view === 'identity' ? 'block' : 'none';
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.classList.toggle('active', (view === 'list' && btn.innerText.includes('1')) || (view === 'summary' && btn.innerText.includes('2')) || (view === 'identity' && btn.innerText.includes('3')));
-        });
+        
+        if (view === 'identity' || view === 'summary') {
+            renderSummary(); 
+            renderIdentitySummary();
+        }
     }
 
     function initTabs() {
@@ -167,8 +179,7 @@
         tabsContainer.innerHTML = '';
         for (let i = 1; i <= 6; i++) {
             const btn = document.createElement('button');
-            const count = gradeCounts[i.toString()];
-            btn.innerText = i + ' 年級名單 (' + count + '人)';
+            btn.innerText = i + ' 年級名單 (' + gradeCounts[i] + '人)';
             btn.onclick = () => renderTable(i.toString());
             btn.id = 'btn-grade-' + i;
             tabsContainer.appendChild(btn);
@@ -178,11 +189,7 @@
     function renderTable(grade) {
         document.querySelectorAll('.grade-tabs button').forEach(b => b.classList.remove('active'));
         if(document.getElementById('btn-grade-' + grade)) document.getElementById('btn-grade-' + grade).classList.add('active');
-        
-        // 顯示該年級人數資訊
-        const infoDisplay = document.getElementById('gradeInfoDisplay');
-        infoDisplay.innerText = `該年級符合補助總人數：${gradeCounts[grade]} 人`;
-
+        document.getElementById('gradeInfoDisplay').innerText = `該年級符合補助總人數：${gradeCounts[grade]} 人`;
         const container = document.getElementById('tableContainer');
         const filtered = rawData.filter(row => row._detectedGrade === grade && checkStatus(row).hasAny);
         let html = `<table><thead><tr><th>班級</th><th>座號</th><th>姓名</th><th>符合項目</th></tr></thead><tbody>`;
@@ -228,6 +235,7 @@
             { id: 'lowIncome', label: '低收入戶學生' },
             { id: 'midLowSingle', label: '中低收入單親家庭學生' }
         ];
+
         let stats = { disability: { count: 0, total: 0 }, merit: { count: 0, total: 0 }, indigenous: { count: 0, total: 0 }, lowIncome: { count: 0, total: 0 }, midLowSingle: { count: 0, total: 0 } };
 
         rawData.forEach(row => {
@@ -235,6 +243,7 @@
             if (!status.hasAny) return;
             const grade = row._detectedGrade;
             const price = gradePrices[grade] || 0;
+            
             let cat = '';
             if (row['4.身障(學)(社)'] || row['6.身障(學)'] || row['8.重身障(學)'] || row['5.身障(家)(社)'] || row['7.身障(家)']) cat = 'disability';
             else if (row['11.功勳']) cat = 'merit';
@@ -244,19 +253,28 @@
             if (cat) { stats[cat].count++; stats[cat].total += price; }
         });
 
+        const subTotalOther = stats.merit.total + stats.indigenous.total + stats.lowIncome.total + stats.midLowSingle.total;
         const body = document.getElementById('identityBody');
         body.innerHTML = '';
-        let totalStudents = 0, grandTotal = 0, subTotalOther = 0;
+        let totalStudents = 0, grandTotal = 0;
+
         categories.forEach((c, idx) => {
             totalStudents += stats[c.id].count;
             grandTotal += stats[c.id].total;
-            if (idx > 0) subTotalOther += stats[c.id].total;
             const row = document.createElement('tr');
-            let totalCell = (idx === 0) ? `<td>${stats[c.id].total.toLocaleString()}</td>` : (idx === 1 ? `<td rowspan="4">${subTotalOther.toLocaleString()}</td>` : '');
-            if (idx > 1) { row.innerHTML = `<td>${c.label}</td><td>${stats[c.id].count}</td><td>${stats[c.id].total.toLocaleString()}</td>`; }
-            else { row.innerHTML = `<td>${c.label}</td><td>${stats[c.id].count}</td><td>${stats[c.id].total.toLocaleString()}</td>${totalCell}`; }
+            
+            let cells = `<td>${c.label}</td><td>${stats[c.id].count}</td><td>${stats[c.id].total.toLocaleString()}</td>`;
+            
+            if (idx === 0) {
+                cells += `<td>${stats[c.id].total.toLocaleString()}</td>`;
+            } else if (idx === 1) {
+                cells += `<td rowspan="4">${subTotalOther.toLocaleString()}</td>`;
+            }
+            // idx > 1 的行不需要最後一格，因為被 rowspan 合併了
+            row.innerHTML = cells;
             body.appendChild(row);
         });
+
         document.getElementById('totalStudents_I').innerText = totalStudents;
         document.getElementById('grandTotalAmount_I').innerText = grandTotal.toLocaleString();
         document.getElementById('grandTotalAmount_I2').innerText = grandTotal.toLocaleString();
