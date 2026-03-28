@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>新生報到管理系統</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Sora:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --surface2: #1e2334;
+    --border: #2a3050;
+    --accent: #4f8ef7;
+    --accent2: #38e8c0;
+    --accent3: #f7794f;
+    --text: #e8eaf0;
+    --text2: #8b93b0;
+    --green: #38c97a;
+    --orange: #f5a623;
+    --red: #f05c5c;
+    --purple: #a78bfa;
+    --radius: 12px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* Header */
+  header {
+    background: linear-gradient(135deg, #1a2040 0%, #0f1628 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header .logo {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  header h1 {
+    font-family: 'Sora', sans-serif;
+    font-size: 20px; font-weight: 600;
+    color: var(--text);
+    letter-spacing: 0.02em;
+  }
+  header .subtitle {
+    font-size: 12px; color: var(--text2);
+    margin-top: 2px;
+  }
+  header .file-info {
+    margin-left: auto;
+    font-size: 12px; color: var(--accent2);
+    background: rgba(56,232,192,0.08);
+    padding: 6px 14px; border-radius: 20px;
+    border: 1px solid rgba(56,232,192,0.2);
+    display: none;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    background: var(--surface);
+  }
+  .tab-btn {
+    padding: 14px 24px;
+    background: none;
+    border: none;
+    color: var(--text2);
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px; font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  .tab-badge {
+    background: var(--accent);
+    color: #fff;
+    border-radius: 10px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* Main content */
+  main { padding: 28px 32px; max-width: 1600px; margin: 0 auto; }
+
+  /* Upload area */
+  .upload-section {
+    background: var(--surface);
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 60px 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-bottom: 24px;
+  }
+  .upload-section:hover, .upload-section.drag-over {
+    border-color: var(--accent);
+    background: rgba(79,142,247,0.04);
+  }
+  .upload-section .upload-icon { font-size: 48px; margin-bottom: 16px; }
+  .upload-section h2 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+  .upload-section p { color: var(--text2); font-size: 14px; margin-bottom: 20px; }
+  .upload-btn {
+    background: linear-gradient(135deg, var(--accent), #3a6fd8);
+    color: #fff;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 8px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px; font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .upload-btn:hover { opacity: 0.85; }
+  #fileInput { display: none; }
+
+  /* Filter bar */
+  .filter-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    display: none;
+  }
+  .filter-bar.visible { display: block; }
+  .filter-bar h3 {
+    font-size: 13px; font-weight: 600;
+    color: var(--text2); text-transform: uppercase;
+    letter-spacing: 0.08em; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
+  }
+  .filter-group label {
+    display: block;
+    font-size: 12px; color: var(--text2);
+    margin-bottom: 6px; font-weight: 500;
+  }
+  .filter-group select, .filter-group input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+  }
+  .filter-group select:hover, .filter-group input:hover { border-color: var(--accent); }
+  .filter-group select:focus, .filter-group input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(79,142,247,0.15); }
+  .filter-actions { display: flex; gap: 10px; margin-top: 16px; align-items: center; }
+  .btn-reset {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text2); padding: 8px 18px; border-radius: 8px;
+    font-family: 'Noto Sans TC', sans-serif; font-size: 13px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-reset:hover { border-color: var(--accent); color: var(--text); }
+  .result-count { font-size: 13px; color: var(--text2); margin-left: auto; }
+  .result-count span { color: var(--accent); font-weight: 600; }
+
+  /* Table area */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    display: none;
+  }
+  .table-wrap.visible { display: block; }
+  .table-scroll { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead { background: var(--surface2); position: sticky; top: 0; z-index: 10; }
+  th {
+    padding: 12px 14px;
+    text-align: left;
+    color: var(--text2);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 11px 14px;
+    border-bottom: 1px solid rgba(42,48,80,0.5);
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(79,142,247,0.04); }
+
+  /* Status badge */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 12px; font-weight: 500;
+  }
+  .badge.online { background: rgba(56,201,122,0.12); color: var(--green); border: 1px solid rgba(56,201,122,0.25); }
+  .badge.not-yet { background: rgba(245,166,35,0.1); color: var(--orange); border: 1px solid rgba(245,166,35,0.25); }
+  .badge.other { background: rgba(139,147,176,0.1); color: var(--text2); border: 1px solid var(--border); }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  /* Language badge */
+  .lang-badge {
+    display: inline-block;
+    padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 500;
+    background: rgba(167,139,250,0.12);
+    color: var(--purple); border: 1px solid rgba(167,139,250,0.25);
+  }
+  .lang-badge.minnan { background: rgba(79,142,247,0.1); color: var(--accent); border-color: rgba(79,142,247,0.2); }
+
+  /* Pagination */
+  .pagination {
+    display: flex; align-items: center; gap: 6px;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    justify-content: flex-end;
+  }
+  .page-btn {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text2); padding: 6px 12px; border-radius: 6px;
+    font-size: 13px; cursor: pointer; transition: all 0.2s;
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+  .page-btn:hover, .page-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(79,142,247,0.08); }
+  .page-btn:disabled { opacity: 0.3; cursor: default; }
+
+  /* Statistics tab */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    transition: border-color 0.2s;
+  }
+  .stat-card:hover { border-color: var(--accent); }
+  .stat-card .label { font-size: 12px; color: var(--text2); font-weight: 500; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .stat-card .value { font-size: 36px; font-weight: 700; font-family: 'Sora', sans-serif; line-height: 1; }
+  .stat-card .sub { font-size: 12px; color: var(--text2); margin-top: 6px; }
+  .stat-card.green .value { color: var(--green); }
+  .stat-card.orange .value { color: var(--orange); }
+  .stat-card.blue .value { color: var(--accent); }
+  .stat-card.purple .value { color: var(--purple); }
+
+  .section-title {
+    font-size: 15px; font-weight: 600; color: var(--text);
+    margin-bottom: 16px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::before {
+    content: ''; display: block;
+    width: 4px; height: 16px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  .chart-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  /* Bar chart */
+  .bar-item {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 10px;
+  }
+  .bar-label { min-width: 120px; font-size: 13px; color: var(--text); text-align: right; }
+  .bar-track { flex: 1; height: 28px; background: var(--surface2); border-radius: 6px; overflow: hidden; position: relative; }
+  .bar-fill { height: 100%; border-radius: 6px; transition: width 0.8s ease; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; }
+  .bar-count { font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; }
+
+  /* Donut chart for registration status */
+  .donut-wrap { display: flex; gap: 40px; align-items: center; }
+  .donut-svg { flex-shrink: 0; }
+  .donut-legend { display: flex; flex-direction: column; gap: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 10px; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .legend-label { font-size: 13px; }
+  .legend-val { font-weight: 600; font-size: 14px; margin-left: 6px; }
+  .legend-pct { font-size: 12px; color: var(--text2); }
+
+  /* Empty / no data */
+  .empty-state {
+    text-align: center; padding: 60px;
+    color: var(--text2); font-size: 14px;
+    display: none;
+  }
+  .empty-state .emoji { font-size: 40px; margin-bottom: 12px; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    main { padding: 16px; }
+    header { padding: 14px 16px; }
+    .tabs { padding: 0 16px; }
+    .filter-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🎓</div>
+  <div>
+    <h1>新生報到管理系統</h1>
+    <div class="subtitle">Student Registration Management</div>
+  </div>
+  <div class="file-info" id="fileInfo">📄 <span id="fileName"></span></div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('list')">
+    📋 學生清單 <span class="tab-badge" id="totalBadge">0</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('stats')">
+    📊 統計資訊
+  </button>
+</div>
+
+<main>
+  <!-- List Tab -->
+  <div id="listTab">
+    <div class="upload-section" id="uploadArea">
+      <div class="upload-icon">📂</div>
+      <h2>上傳 Excel 學生資料</h2>
+      <p>支援 .xlsx、.xls 格式，拖曳或點擊選擇檔案</p>
+      <button class="upload-btn" onclick="document.getElementById('fileInput').click()">選擇檔案</button>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(event)">
+    </div>
+
+    <div class="filter-bar" id="filterBar">
+      <h3>🔍 篩選條件</h3>
+      <div class="filter-grid">
+        <div class="filter-group">
+          <label>報到狀態</label>
+          <select id="filterStatus" onchange="applyFilters()">
+            <option value="">全部</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>選修本土語</label>
+          <select id="filterLang" onchange="applyFilters()">
+            <option value="">全部</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>本土語言名稱</label>
+          <select id="filterLangName" onchange="applyFilters()">
+            <option value="">全部</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>低收/中低收</label>
+          <select id="filterLowIncome" onchange="applyFilters()">
+            <option value="">全部</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>學生身心障礙</label>
+          <select id="filterDisability" onchange="applyFilters()">
+            <option value="">全部</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>原住民族別</label>
+          <select id="filterIndigenous" onchange="applyFilters()">
+            <option value="">全部</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>搜尋（姓名/學號）</label>
+          <input type="text" id="filterSearch" placeholder="輸入關鍵字..." oninput="applyFilters()">
+        </div>
+        <div class="filter-group">
+          <label>營養午餐類型</label>
+          <select id="filterLunch" onchange="applyFilters()">
+            <option value="">全部</option>
+          </select>
+        </div>
+      </div>
+      <div class="filter-actions">
+        <button class="btn-reset" onclick="resetFilters()">↺ 重設篩選</button>
+        <div class="result-count">顯示 <span id="showCount">0</span> / <span id="totalCount">0</span> 筆</div>
+      </div>
+    </div>
+
+    <div class="table-wrap" id="tableWrap">
+      <div class="table-scroll">
+        <table id="dataTable">
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="emptyState">
+        <div class="emoji">🔍</div>
+        無符合條件的資料
+      </div>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </div>
+
+  <!-- Stats Tab -->
+  <div id="statsTab" style="display:none">
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card blue">
+        <div class="label">總學生人數</div>
+        <div class="value" id="sTotal">0</div>
+        <div class="sub">已上傳資料</div>
+      </div>
+      <div class="stat-card green">
+        <div class="label">線上報到</div>
+        <div class="value" id="sOnline">0</div>
+        <div class="sub" id="sOnlinePct">占 0%</div>
+      </div>
+      <div class="stat-card orange">
+        <div class="label">未報到</div>
+        <div class="value" id="sNotYet">0</div>
+        <div class="sub" id="sNotYetPct">占 0%</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="label">選修閩南語</div>
+        <div class="value" id="sMinnan">0</div>
+        <div class="sub">本土語選修</div>
+      </div>
+    </div>
+
+    <div class="chart-section">
+      <div class="section-title">報到狀態分佈</div>
+      <div class="donut-wrap" id="statusDonut">
+        <div style="color:var(--text2);font-size:13px;">請先上傳 Excel 資料</div>
+      </div>
+    </div>
+
+    <div class="chart-section">
+      <div class="section-title">本土語言選修分佈</div>
+      <div id="langChart"><div style="color:var(--text2);font-size:13px;">請先上傳 Excel 資料</div></div>
+    </div>
+
+    <div class="chart-section">
+      <div class="section-title">本土語言名稱細項</div>
+      <div id="langNameChart"><div style="color:var(--text2);font-size:13px;">請先上傳 Excel 資料</div></div>
+    </div>
+  </div>
+</main>
+
+<script>
+let allData = [];
+let filteredData = [];
+let currentPage = 1;
+const PAGE_SIZE = 20;
+
+// Column key mappings (matches the exact header names)
+const COL = {
+  status: '報到狀態',
+  id: '學生編號',
+  idNum: '身份證號',
+  name: '姓名',
+  birth: '出生日期',
+  address: '聯絡地址',
+  phone: '聯絡電話',
+  guardian: '監護人',
+  guardianName: '監護人姓名',
+  guardianPhone: '監護人\n電話',
+  dadPhone: '父親\n手機號碼',
+  momPhone: '母親\n手機號碼',
+  emergencyName: '緊急聯絡人姓名',
+  emergencyRel: '緊急聯絡人\n與新生關係',
+  emergencyPhone: '緊急聯絡人\n電話',
+  lowIncome: '低收/中低收',
+  sibling: '兄弟姐妹\n同時入學',
+  siblingName: '兄弟姐妹\n姓名',
+  disability: '學生是否\n身心障礙',
+  disabilityType: '學生\n身心障礙類別',
+  parentDisability: '父母是否\n身心障礙',
+  parentDisabilityType: '父母\n身心障礙類別',
+  disease: '關注疾病',
+  indigenous: '原住民學生\n族別',
+  foreignParent: '外配子女\n父母國籍',
+  langChoice: '選修本土語',
+  langName: '本土語言名稱',
+  lunch: '營養午餐\n類型',
+};
+
+// Display columns (key, label, width hint)
+const DISPLAY_COLS = [
+  { key: COL.status, label: '報到狀態', render: 'status' },
+  { key: COL.id, label: '學號' },
+  { key: COL.name, label: '姓名' },
+  { key: COL.birth, label: '出生日期' },
+  { key: COL.phone, label: '聯絡電話' },
+  { key: COL.lowIncome, label: '低收/中低收' },
+  { key: COL.disability, label: '身心障礙' },
+  { key: COL.indigenous, label: '族別' },
+  { key: COL.langChoice, label: '選修本土語' },
+  { key: COL.langName, label: '語言名稱', render: 'lang' },
+  { key: COL.lunch, label: '午餐類型' },
+];
+
+function handleFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  loadExcel(file);
+}
+
+function loadExcel(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+    allData = json;
+    filteredData = [...allData];
+
+    document.getElementById('fileInfo').style.display = 'flex';
+    document.getElementById('fileName').textContent = file.name + ' (' + allData.length + ' 筆)';
+    document.getElementById('uploadArea').style.display = 'none';
+    document.getElementById('totalBadge').textContent = allData.length;
+
+    populateFilters();
+    applyFilters();
+    updateStats();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function getUniqueValues(key) {
+  const vals = [...new Set(allData.map(r => r[key] || ''))].filter(v => v !== '');
+  return vals.sort();
+}
+
+function populateFilters() {
+  const fill = (id, key) => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">全部</option>';
+    getUniqueValues(key).forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v; opt.textContent = v;
+      sel.appendChild(opt);
+    });
+  };
+
+  // Try both exact and approximate key matching
+  const findKey = (target) => {
+    if (allData.length === 0) return target;
+    const keys = Object.keys(allData[0]);
+    return keys.find(k => k.replace(/\s+/g,'').replace(/\n/g,'') === target.replace(/\s+/g,'').replace(/\n/g,'')) || target;
+  };
+
+  fill('filterStatus', findKey(COL.status));
+  fill('filterLang', findKey(COL.langChoice));
+  fill('filterLangName', findKey(COL.langName));
+  fill('filterLowIncome', findKey(COL.lowIncome));
+  fill('filterDisability', findKey(COL.disability));
+  fill('filterIndigenous', findKey(COL.indigenous));
+  fill('filterLunch', findKey(COL.lunch));
+
+  document.getElementById('filterBar').classList.add('visible');
+  document.getElementById('tableWrap').classList.add('visible');
+}
+
+function getKey(row, target) {
+  const keys = Object.keys(row);
+  const normalized = target.replace(/[\s\n]/g, '');
+  const found = keys.find(k => k.replace(/[\s\n]/g,'') === normalized);
+  return found ? row[found] : '';
+}
+
+function applyFilters() {
+  const status = document.getElementById('filterStatus').value;
+  const lang = document.getElementById('filterLang').value;
+  const langName = document.getElementById('filterLangName').value;
+  const lowIncome = document.getElementById('filterLowIncome').value;
+  const disability = document.getElementById('filterDisability').value;
+  const indigenous = document.getElementById('filterIndigenous').value;
+  const lunch = document.getElementById('filterLunch').value;
+  const search = document.getElementById('filterSearch').value.toLowerCase();
+
+  filteredData = allData.filter(row => {
+    if (status && getKey(row, COL.status) !== status) return false;
+    if (lang && getKey(row, COL.langChoice) !== lang) return false;
+    if (langName && getKey(row, COL.langName) !== langName) return false;
+    if (lowIncome && getKey(row, COL.lowIncome) !== lowIncome) return false;
+    if (disability && getKey(row, COL.disability) !== disability) return false;
+    if (indigenous && getKey(row, COL.indigenous) !== indigenous) return false;
+    if (lunch && getKey(row, COL.lunch) !== lunch) return false;
+    if (search) {
+      const name = (getKey(row, COL.name) || '').toLowerCase();
+      const id = (getKey(row, COL.id) || '').toString().toLowerCase();
+      if (!name.includes(search) && !id.includes(search)) return false;
+    }
+    return true;
+  });
+
+  currentPage = 1;
+  document.getElementById('showCount').textContent = filteredData.length;
+  document.getElementById('totalCount').textContent = allData.length;
+  renderTable();
+  renderPagination();
+}
+
+function resetFilters() {
+  ['filterStatus','filterLang','filterLangName','filterLowIncome','filterDisability','filterIndigenous','filterLunch'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('filterSearch').value = '';
+  applyFilters();
+}
+
+function renderStatusBadge(val) {
+  if (!val) return `<span class="badge other"><span class="dot"></span>—</span>`;
+  const v = val.toString().trim();
+  if (v.includes('線上') || v.includes('online') || v === '1' || v === 'Y') {
+    return `<span class="badge online"><span class="dot"></span>${v}</span>`;
+  }
+  if (v.includes('未') || v === '0' || v === 'N') {
+    return `<span class="badge not-yet"><span class="dot"></span>${v}</span>`;
+  }
+  return `<span class="badge other"><span class="dot"></span>${v}</span>`;
+}
+
+function renderLangBadge(val) {
+  if (!val) return '—';
+  const isMinnan = val.includes('閩南') || val.includes('台語') || val.includes('台灣閩南');
+  return `<span class="lang-badge ${isMinnan ? 'minnan' : ''}">${val}</span>`;
+}
+
+function renderTable() {
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const pageData = filteredData.slice(start, start + PAGE_SIZE);
+
+  // Head
+  const thead = document.getElementById('tableHead');
+  thead.innerHTML = '<tr>' + DISPLAY_COLS.map(c => `<th>${c.label}</th>`).join('') + '</tr>';
+
+  // Body
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('emptyState');
+
+  if (pageData.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = pageData.map(row => {
+    return '<tr>' + DISPLAY_COLS.map(col => {
+      const val = getKey(row, col.key);
+      let cell = val || '—';
+      if (col.render === 'status') cell = renderStatusBadge(val);
+      else if (col.render === 'lang') cell = renderLangBadge(val);
+      return `<td>${cell}</td>`;
+    }).join('') + '</tr>';
+  }).join('');
+}
+
+function renderPagination() {
+  const total = Math.ceil(filteredData.length / PAGE_SIZE);
+  const pg = document.getElementById('pagination');
+  if (total <= 1) { pg.innerHTML = ''; return; }
+
+  let html = `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>`;
+  for (let i = 1; i <= total; i++) {
+    if (i === 1 || i === total || Math.abs(i - currentPage) <= 2) {
+      html += `<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+    } else if (Math.abs(i - currentPage) === 3) {
+      html += `<span style="color:var(--text2);padding:0 4px">…</span>`;
+    }
+  }
+  html += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===total?'disabled':''}>›</button>`;
+  pg.innerHTML = html;
+}
+
+function goPage(p) {
+  const total = Math.ceil(filteredData.length / PAGE_SIZE);
+  if (p < 1 || p > total) return;
+  currentPage = p;
+  renderTable();
+  renderPagination();
+  document.getElementById('tableWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function updateStats() {
+  const total = allData.length;
+
+  // Status
+  const statusMap = {};
+  allData.forEach(r => {
+    const v = (getKey(r, COL.status) || '未知').toString().trim() || '未知';
+    statusMap[v] = (statusMap[v] || 0) + 1;
+  });
+
+  const onlineKey = Object.keys(statusMap).find(k => k.includes('線上') || k.includes('online'));
+  const notYetKey = Object.keys(statusMap).find(k => k.includes('未') || k === '0' || k === 'N');
+  const onlineCount = onlineKey ? statusMap[onlineKey] : 0;
+  const notYetCount = notYetKey ? statusMap[notYetKey] : 0;
+
+  document.getElementById('sTotal').textContent = total;
+  document.getElementById('sOnline').textContent = onlineCount;
+  document.getElementById('sNotYet').textContent = notYetCount;
+  document.getElementById('sOnlinePct').textContent = `占 ${total ? Math.round(onlineCount/total*100) : 0}%`;
+  document.getElementById('sNotYetPct').textContent = `占 ${total ? Math.round(notYetCount/total*100) : 0}%`;
+
+  // Language
+  const langMap = {};
+  allData.forEach(r => {
+    const v = (getKey(r, COL.langChoice) || '未選修').toString().trim() || '未選修';
+    langMap[v] = (langMap[v] || 0) + 1;
+  });
+  const minnanKey = Object.keys(langMap).find(k => k.includes('閩南') || k.includes('台語'));
+  document.getElementById('sMinnan').textContent = minnanKey ? langMap[minnanKey] : 0;
+
+  // Donut chart
+  renderDonut(statusMap, total);
+
+  // Lang charts
+  renderBarChart('langChart', langMap, total, ['#4f8ef7','#38e8c0','#f7794f','#a78bfa','#f5a623','#f05c5c']);
+  
+  const langNameMap = {};
+  allData.forEach(r => {
+    const v = (getKey(r, COL.langName) || '').toString().trim();
+    if (v) langNameMap[v] = (langNameMap[v] || 0) + 1;
+  });
+  renderBarChart('langNameChart', langNameMap, total, ['#38e8c0','#a78bfa','#f5a623','#4f8ef7','#f7794f','#38c97a']);
+}
+
+function renderDonut(statusMap, total) {
+  const colors = ['#38c97a','#f5a623','#4f8ef7','#f05c5c','#a78bfa','#38e8c0'];
+  const entries = Object.entries(statusMap);
+  const cx = 80, cy = 80, r = 60, stroke = 28;
+  const circumference = 2 * Math.PI * r;
+
+  let offset = 0;
+  let paths = '';
+  let legend = '';
+  entries.forEach(([k, v], i) => {
+    const pct = v / total;
+    const len = pct * circumference;
+    const color = colors[i % colors.length];
+    paths += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-dasharray="${len} ${circumference - len}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${cx} ${cy})" opacity="0.9"/>`;
+    offset += len;
+    legend += `<div class="legend-item">
+      <div class="legend-dot" style="background:${color}"></div>
+      <span class="legend-label">${k}</span>
+      <span class="legend-val" style="color:${color}">${v}</span>
+      <span class="legend-pct">(${Math.round(pct*100)}%)</span>
+    </div>`;
+  });
+
+  const svg = `<svg class="donut-svg" width="160" height="160" viewBox="0 0 160 160">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#1e2334" stroke-width="${stroke}"/>
+    ${paths}
+    <text x="${cx}" y="${cy}" text-anchor="middle" dy="0.35em" fill="#e8eaf0" font-size="22" font-weight="700" font-family="Sora,sans-serif">${total}</text>
+  </svg>`;
+
+  document.getElementById('statusDonut').innerHTML = svg + `<div class="donut-legend">${legend}</div>`;
+}
+
+function renderBarChart(containerId, map, total, colors) {
+  const entries = Object.entries(map).sort((a,b) => b[1]-a[1]);
+  if (entries.length === 0) {
+    document.getElementById(containerId).innerHTML = '<div style="color:var(--text2);font-size:13px;">無資料</div>';
+    return;
+  }
+  const max = Math.max(...entries.map(e => e[1]));
+  const html = entries.map(([k, v], i) => {
+    const pct = max ? Math.round(v/max*100) : 0;
+    const color = colors[i % colors.length];
+    return `<div class="bar-item">
+      <div class="bar-label">${k}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${pct}%;background:linear-gradient(90deg,${color}bb,${color})">
+          <span class="bar-count">${v} 人 (${Math.round(v/total*100)}%)</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById(containerId).innerHTML = html;
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    b.classList.toggle('active', (i===0 && tab==='list') || (i===1 && tab==='stats'));
+  });
+  document.getElementById('listTab').style.display = tab === 'list' ? '' : 'none';
+  document.getElementById('statsTab').style.display = tab === 'stats' ? '' : 'none';
+}
+
+// Drag and drop
+const uploadArea = document.getElementById('uploadArea');
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
+uploadArea.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadArea.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) loadExcel(file);
+});
+uploadArea.addEventListener('click', (e) => {
+  if (e.target !== document.querySelector('.upload-btn')) {
+    document.getElementById('fileInput').click();
+  }
+});
+</script>
+</body>
+</html>
