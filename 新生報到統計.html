@@ -352,9 +352,9 @@
     margin-bottom: 10px;
   }
   .bar-label { min-width: 120px; font-size: 13px; color: var(--text); text-align: right; flex-shrink: 0; }
-  .bar-track { flex: 1; height: 28px; background: var(--surface2); border-radius: 6px; position: relative; display: flex; align-items: center; }
-  .bar-fill { height: 100%; border-radius: 6px; transition: width 0.8s ease; min-width: 4px; flex-shrink: 0; }
-  .bar-count { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; padding-left: 8px; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 28px; background: var(--surface2); border-radius: 6px; position: relative; display: flex; align-items: center; min-width: 0; overflow: visible; }
+  .bar-fill { height: 100%; border-radius: 6px; transition: width 0.8s ease; min-width: 4px; flex-shrink: 0; max-width: 78%; }
+  .bar-count { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; padding-left: 10px; flex-shrink: 0; }
 
   /* Donut chart for registration status */
   .donut-wrap { display: flex; gap: 40px; align-items: center; }
@@ -845,28 +845,33 @@ function toggleFilters() {
 // Known countries (used to detect "abroad")
 const COUNTRY_KEYWORDS = [
   '美國','日本','加拿大','澳洲','英國','德國','法國','韓國','新加坡','紐西蘭',
-  '馬來西亞','泰國','越南','印尼','菲律賓','印度','中國','香港','澳門','台灣',
+  '馬來西亞','泰國','越南','印尼','菲律賓','印度','中國','香港','澳門',
   'USA','US','Japan','Canada','Australia','UK','Germany','France','Korea',
   'Singapore','New Zealand','Malaysia','Thailand','Vietnam','Indonesia',
-  'Philippines','India','China','Hong Kong','Macau','Taiwan','abroad','overseas'
+  'Philippines','India','China','Hong Kong','Macau','abroad','overseas'
 ];
-// Known "not yet" keywords
-const NOT_YET_KEYWORDS = ['未報到','未','no','N','0','尚未'];
-// Known "online" keywords
-const ONLINE_KEYWORDS = ['線上','online','已報到','報到','1','Y','是'];
+// School keywords — must explicitly contain these to count as "other school"
+const SCHOOL_KEYWORDS = ['國小','國中','小學','幼兒園','附幼','高中','高職','實小','實驗'];
 
 function classifyStatus(val) {
-  if (!val) return 'unknown';
+  if (!val) return 'notyet';
   const v = val.toString().trim();
-  if (!v) return 'unknown';
-  if (ONLINE_KEYWORDS.some(k => v.includes(k))) return 'online';
-  if (NOT_YET_KEYWORDS.some(k => v === k || v.startsWith(k))) return 'notyet';
-  // Check country
+  if (!v) return 'notyet';
+
+  // Online: contains 線上 or 已報到, or is exactly 1/Y/是
+  if (/線上|已報到|online/i.test(v) || v === '1' || v === 'Y' || v === '是') return 'online';
+
+  // Not yet: contains 未報到, or is exactly 未/0/N/否/空
+  if (/^未報到$|^未$|^0$|^N$|^否$/.test(v)) return 'notyet';
+
+  // Abroad: contains any country name
   if (COUNTRY_KEYWORDS.some(k => v.toLowerCase().includes(k.toLowerCase()))) return 'abroad';
-  // Check school (contains 國小, 國中, 小學, 學校, 幼兒園, 附幼 etc.)
-  if (/國小|國中|小學|學校|幼兒|附幼|高中|高職|實小|實驗|雙語|育才|育英|大同|中山|中正|民族|文化|光復|光明|建國|明德|仁愛/.test(v)) return 'otherschool';
-  // If it looks like a place/name (not a known keyword), treat as other school
-  return 'otherschool';
+
+  // Other school: contains school keyword
+  if (SCHOOL_KEYWORDS.some(k => v.includes(k))) return 'otherschool';
+
+  // Anything else that doesn't match → treat as "not yet / unknown"
+  return 'notyet';
 }
 
 function renderStatusBadge(val) {
@@ -1052,7 +1057,7 @@ function renderBarChart(containerId, map, total, colors) {
   }
   const max = Math.max(...entries.map(e => e[1]));
   const html = entries.map(([k, v], i) => {
-    const pct = max ? Math.round(v/max*100) : 0;
+    const pct = max ? Math.round(v/max*75) : 0;
     const color = colors[i % colors.length];
     return `<div class="bar-item">
       <div class="bar-label">${k}</div>
