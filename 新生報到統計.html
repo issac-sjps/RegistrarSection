@@ -319,10 +319,10 @@
     display: flex; align-items: center; gap: 14px;
     margin-bottom: 10px;
   }
-  .bar-label { min-width: 120px; font-size: 13px; color: var(--text); text-align: right; }
-  .bar-track { flex: 1; height: 28px; background: var(--surface2); border-radius: 6px; overflow: hidden; position: relative; }
-  .bar-fill { height: 100%; border-radius: 6px; transition: width 0.8s ease; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; }
-  .bar-count { font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; }
+  .bar-label { min-width: 120px; font-size: 13px; color: var(--text); text-align: right; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 28px; background: var(--surface2); border-radius: 6px; position: relative; display: flex; align-items: center; }
+  .bar-fill { height: 100%; border-radius: 6px; transition: width 0.8s ease; min-width: 4px; flex-shrink: 0; }
+  .bar-count { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; padding-left: 8px; flex-shrink: 0; }
 
   /* Donut chart for registration status */
   .donut-wrap { display: flex; gap: 40px; align-items: center; }
@@ -825,9 +825,8 @@ function renderBarChart(containerId, map, total, colors) {
     return `<div class="bar-item">
       <div class="bar-label">${k}</div>
       <div class="bar-track">
-        <div class="bar-fill" style="width:${pct}%;background:linear-gradient(90deg,${color}bb,${color})">
-          <span class="bar-count">${v} 人 (${Math.round(v/total*100)}%)</span>
-        </div>
+        <div class="bar-fill" style="width:${pct}%;background:linear-gradient(90deg,${color}bb,${color})"></div>
+        <span class="bar-count" style="color:${color}">${v} 人 (${Math.round(v/total*100)}%)</span>
       </div>
     </div>`;
   }).join('');
