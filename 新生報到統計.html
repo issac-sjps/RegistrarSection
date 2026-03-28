@@ -347,14 +347,43 @@
   }
 
   /* Bar chart */
+  .bar-item-wrap { margin-bottom: 14px; }
   .bar-item {
     display: flex; align-items: center; gap: 14px;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
   }
   .bar-label { min-width: 120px; font-size: 13px; color: var(--text); text-align: right; flex-shrink: 0; }
   .bar-track { flex: 1; height: 28px; background: var(--surface2); border-radius: 6px; position: relative; display: flex; align-items: center; min-width: 0; overflow: visible; }
   .bar-fill { height: 100%; border-radius: 6px; transition: width 0.8s ease; min-width: 4px; flex-shrink: 0; max-width: 78%; }
   .bar-count { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; padding-left: 10px; flex-shrink: 0; }
+
+  /* Name list under bar */
+  .name-list {
+    padding-left: calc(120px + 14px); /* align with bar-track */
+    line-height: 1.8;
+  }
+  .names-preview { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+  .name-chip {
+    display: inline-block;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    font-size: 11px;
+    padding: 2px 9px;
+    border-radius: 12px;
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+  .name-chip:hover { background: rgba(255,255,255,0.09); color: var(--text); }
+  .names-hidden { display: none; }
+  .names-more-btn {
+    background: none; border: 1px dashed var(--border);
+    color: var(--text2); font-size: 11px;
+    padding: 2px 10px; border-radius: 12px;
+    cursor: pointer; font-family: 'Noto Sans TC', sans-serif;
+    transition: all 0.2s; white-space: nowrap;
+  }
+  .names-more-btn:hover { border-color: var(--accent); color: var(--accent); }
 
   /* Donut chart for registration status */
   .donut-wrap { display: flex; gap: 40px; align-items: center; }
@@ -950,18 +979,30 @@ function goPage(p) {
 function updateStats() {
   const total = allData.length;
 
-  // Classify each row's status
+  // Classify each row's status — also collect names
   let onlineCount = 0, notYetCount = 0, abroadCount = 0, otherSchoolCount = 0;
   const otherSchoolMap = {}, abroadMap = {};
+  const otherSchoolNames = {}, abroadNames = {};
 
   allData.forEach(r => {
     const v = (getKey(r, COL.status) || '').toString().trim();
+    const name = (getKey(r, COL.name) || '').toString().trim();
     const cls = classifyStatus(v || '未報到');
     if (cls === 'online')      { onlineCount++; }
     else if (cls === 'notyet') { notYetCount++; }
-    else if (cls === 'abroad') { abroadCount++; abroadMap[v] = (abroadMap[v]||0)+1; }
-    else if (cls === 'otherschool') { otherSchoolCount++; otherSchoolMap[v] = (otherSchoolMap[v]||0)+1; }
-    else                       { notYetCount++; }
+    else if (cls === 'abroad') {
+      abroadCount++;
+      abroadMap[v] = (abroadMap[v]||0)+1;
+      if (!abroadNames[v]) abroadNames[v] = [];
+      if (name) abroadNames[v].push(name);
+    }
+    else if (cls === 'otherschool') {
+      otherSchoolCount++;
+      otherSchoolMap[v] = (otherSchoolMap[v]||0)+1;
+      if (!otherSchoolNames[v]) otherSchoolNames[v] = [];
+      if (name) otherSchoolNames[v].push(name);
+    }
+    else { notYetCount++; }
   });
 
   const pct = n => total ? Math.round(n/total*100) : 0;
@@ -976,16 +1017,31 @@ function updateStats() {
   document.getElementById('sOtherSchoolPct').textContent = `占 ${pct(otherSchoolCount)}%`;
   document.getElementById('sAbroadPct').textContent = `占 ${pct(abroadCount)}%`;
 
-  // Language
-  const langMap = {};
+  // Language — collect names per language
+  const langMap = {}, langNames = {};
   allData.forEach(r => {
     const v = (getKey(r, COL.langChoice) || '未選修').toString().trim() || '未選修';
+    const name = (getKey(r, COL.name) || '').toString().trim();
     langMap[v] = (langMap[v] || 0) + 1;
+    if (!langNames[v]) langNames[v] = [];
+    if (name) langNames[v].push(name);
   });
   const minnanKey = Object.keys(langMap).find(k => k.includes('閩南') || k.includes('台語'));
   document.getElementById('sMinnan').textContent = minnanKey ? langMap[minnanKey] : 0;
 
-  // Status donut — use classified buckets
+  // Language name — collect names
+  const langNameMap = {}, langNameNames = {};
+  allData.forEach(r => {
+    const v = (getKey(r, COL.langName) || '').toString().trim();
+    const name = (getKey(r, COL.name) || '').toString().trim();
+    if (v) {
+      langNameMap[v] = (langNameMap[v] || 0) + 1;
+      if (!langNameNames[v]) langNameNames[v] = [];
+      if (name) langNameNames[v].push(name);
+    }
+  });
+
+  // Status donut
   const statusMapDisplay = {};
   if (onlineCount)      statusMapDisplay['線上報到'] = onlineCount;
   if (notYetCount)      statusMapDisplay['未報到（待確認）'] = notYetCount;
@@ -996,25 +1052,19 @@ function updateStats() {
 
   // Other school & abroad detail charts
   if (Object.keys(otherSchoolMap).length > 0) {
-    renderBarChart('otherSchoolChart', otherSchoolMap, total, ['#a78bfa','#c4b5fd','#7c3aed','#8b5cf6','#6d28d9']);
+    renderBarChart('otherSchoolChart', otherSchoolMap, otherSchoolNames, total, ['#a78bfa','#c4b5fd','#7c3aed','#8b5cf6','#6d28d9']);
   } else {
     document.getElementById('otherSchoolChart').innerHTML = '<div style="color:var(--text2);font-size:13px;">無前往他校資料（請將未報到欄位改為國小名稱）</div>';
   }
   if (Object.keys(abroadMap).length > 0) {
-    renderBarChart('abroadChart', abroadMap, total, ['#38e8c0','#2dd4bf','#0d9488','#14b8a6','#5eead4']);
+    renderBarChart('abroadChart', abroadMap, abroadNames, total, ['#38e8c0','#2dd4bf','#0d9488','#14b8a6','#5eead4']);
   } else {
     document.getElementById('abroadChart').innerHTML = '<div style="color:var(--text2);font-size:13px;">無出國就讀資料（請將未報到欄位改為國家名稱）</div>';
   }
 
   // Lang charts
-  renderBarChart('langChart', langMap, total, ['#4f8ef7','#38e8c0','#f7794f','#a78bfa','#f5a623','#f05c5c']);
-
-  const langNameMap = {};
-  allData.forEach(r => {
-    const v = (getKey(r, COL.langName) || '').toString().trim();
-    if (v) langNameMap[v] = (langNameMap[v] || 0) + 1;
-  });
-  renderBarChart('langNameChart', langNameMap, total, ['#38e8c0','#a78bfa','#f5a623','#4f8ef7','#f7794f','#38c97a']);
+  renderBarChart('langChart', langMap, langNames, total, ['#4f8ef7','#38e8c0','#f7794f','#a78bfa','#f5a623','#f05c5c']);
+  renderBarChart('langNameChart', langNameMap, langNameNames, total, ['#38e8c0','#a78bfa','#f5a623','#4f8ef7','#f7794f','#38c97a']);
 }
 
 function renderDonut(statusMap, total, colorMap) {
@@ -1049,25 +1099,70 @@ function renderDonut(statusMap, total, colorMap) {
   document.getElementById('statusDonut').innerHTML = svg + `<div class="donut-legend">${legend}</div>`;
 }
 
-function renderBarChart(containerId, map, total, colors) {
+let _barNameData = {}; // store names globally for toggle
+
+function renderBarChart(containerId, map, namesMap, total, colors) {
   const entries = Object.entries(map).sort((a,b) => b[1]-a[1]);
   if (entries.length === 0) {
     document.getElementById(containerId).innerHTML = '<div style="color:var(--text2);font-size:13px;">無資料</div>';
     return;
   }
   const max = Math.max(...entries.map(e => e[1]));
+  const PREVIEW = 10; // names shown before "show more"
+
   const html = entries.map(([k, v], i) => {
     const pct = max ? Math.round(v/max*75) : 0;
     const color = colors[i % colors.length];
-    return `<div class="bar-item">
-      <div class="bar-label">${k}</div>
-      <div class="bar-track">
-        <div class="bar-fill" style="width:${pct}%;background:linear-gradient(90deg,${color}bb,${color})"></div>
-        <span class="bar-count" style="color:${color}">${v} 人 (${Math.round(v/total*100)}%)</span>
+    const names = (namesMap && namesMap[k]) ? namesMap[k] : [];
+    const uid = `${containerId}_${i}`;
+
+    // Store for toggle
+    _barNameData[uid] = names;
+
+    // Build name chips
+    const preview = names.slice(0, PREVIEW);
+    const rest = names.slice(PREVIEW);
+    const hasMore = rest.length > 0;
+
+    const chipHtml = (arr) => arr.map(n =>
+      `<span class="name-chip">${n}</span>`
+    ).join('');
+
+    const namesHtml = names.length === 0 ? '' : `
+      <div class="name-list" id="names_${uid}">
+        <div class="names-preview">${chipHtml(preview)}${hasMore ? `
+          <span class="names-hidden" id="hidden_${uid}" style="display:none">${chipHtml(rest)}</span>
+          <button class="names-more-btn" id="btn_${uid}" onclick="toggleNames('${uid}')">＋ 還有 ${rest.length} 人，點此展開</button>
+        ` : ''}</div>
+      </div>`;
+
+    return `<div class="bar-item-wrap">
+      <div class="bar-item">
+        <div class="bar-label">${k}</div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${pct}%;background:linear-gradient(90deg,${color}bb,${color})"></div>
+          <span class="bar-count" style="color:${color}">${v} 人 (${Math.round(v/total*100)}%)</span>
+        </div>
       </div>
+      ${namesHtml}
     </div>`;
   }).join('');
+
   document.getElementById(containerId).innerHTML = html;
+}
+
+function toggleNames(uid) {
+  const hidden = document.getElementById(`hidden_${uid}`);
+  const btn = document.getElementById(`btn_${uid}`);
+  const names = _barNameData[uid] || [];
+  const rest = names.slice(10);
+  if (hidden.style.display === 'none') {
+    hidden.style.display = 'inline';
+    btn.textContent = '▲ 收合';
+  } else {
+    hidden.style.display = 'none';
+    btn.textContent = `＋ 還有 ${rest.length} 人，點此展開`;
+  }
 }
 
 function switchTab(tab) {
