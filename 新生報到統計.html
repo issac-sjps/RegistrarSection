@@ -271,6 +271,8 @@
   }
   .badge.online { background: rgba(56,201,122,0.12); color: var(--green); border: 1px solid rgba(56,201,122,0.25); }
   .badge.not-yet { background: rgba(245,166,35,0.1); color: var(--orange); border: 1px solid rgba(245,166,35,0.25); }
+  .badge.other-school { background: rgba(167,139,250,0.12); color: var(--purple); border: 1px solid rgba(167,139,250,0.3); }
+  .badge.abroad { background: rgba(56,232,192,0.1); color: var(--accent2); border: 1px solid rgba(56,232,192,0.3); }
   .badge.other { background: rgba(139,147,176,0.1); color: var(--text2); border: 1px solid var(--border); }
   .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
@@ -379,6 +381,39 @@
     .tabs { padding: 0 16px; }
     .filter-grid { grid-template-columns: 1fr 1fr; }
   }
+
+  /* Upload tip */
+  .upload-tip {
+    margin-top: 28px;
+    background: rgba(79,142,247,0.06);
+    border: 1px solid rgba(79,142,247,0.2);
+    border-radius: 10px;
+    padding: 16px 20px;
+    text-align: left;
+    max-width: 680px;
+    margin-left: auto; margin-right: auto;
+  }
+  .upload-tip-title {
+    font-size: 13px; font-weight: 600; color: var(--accent);
+    margin-bottom: 14px;
+  }
+  .upload-tip-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .tip-item {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px; color: var(--text2); line-height: 1.4;
+  }
+  .tip-item strong { color: var(--text); }
+  .tip-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 600; white-space: nowrap; flex-shrink: 0;
+  }
+  .tip-online  { background: rgba(56,201,122,0.15); color: var(--green); border: 1px solid rgba(56,201,122,0.3); }
+  .tip-other-school { background: rgba(167,139,250,0.12); color: var(--purple); border: 1px solid rgba(167,139,250,0.3); }
+  .tip-abroad  { background: rgba(56,232,192,0.1); color: var(--accent2); border: 1px solid rgba(56,232,192,0.3); }
+  .tip-noshow  { background: rgba(245,166,35,0.1); color: var(--orange); border: 1px solid rgba(245,166,35,0.25); }
 </style>
 </head>
 <body>
@@ -410,6 +445,15 @@
       <p>支援 .xlsx、.xls 格式，拖曳或點擊選擇檔案</p>
       <button class="upload-btn" onclick="document.getElementById('fileInput').click()">選擇檔案</button>
       <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(event)">
+      <div class="upload-tip">
+        <div class="upload-tip-title">💡 如何讓統計更精確？可在上傳前手動修改 Excel 的「報到狀態」欄位</div>
+        <div class="upload-tip-grid">
+          <div class="tip-item"><span class="tip-badge tip-online">線上報到</span><span>原始報到資料，系統自動識別</span></div>
+          <div class="tip-item"><span class="tip-badge tip-other-school">新民國小 / 中正國小…</span><span>將「未報到」改為<strong>其他國小名稱</strong> → 自動歸類「前往他校」</span></div>
+          <div class="tip-item"><span class="tip-badge tip-abroad">美國 / 日本 / 加拿大…</span><span>將「未報到」改為<strong>國家名稱</strong> → 自動歸類「出國就讀」</span></div>
+          <div class="tip-item"><span class="tip-badge tip-noshow">未報到</span><span>尚未確認去向，保持原狀即可</span></div>
+        </div>
+      </div>
     </div>
 
     <div class="filter-bar" id="filterBar">
@@ -541,9 +585,19 @@
         <div class="sub" id="sOnlinePct">占 0%</div>
       </div>
       <div class="stat-card orange">
-        <div class="label">未報到</div>
+        <div class="label">未報到（待確認）</div>
         <div class="value" id="sNotYet">0</div>
         <div class="sub" id="sNotYetPct">占 0%</div>
+      </div>
+      <div class="stat-card" style="border-color:rgba(167,139,250,0.3)">
+        <div class="label">前往他校</div>
+        <div class="value" id="sOtherSchool" style="color:var(--purple)">0</div>
+        <div class="sub" id="sOtherSchoolPct">占 0%</div>
+      </div>
+      <div class="stat-card" style="border-color:rgba(56,232,192,0.3)">
+        <div class="label">出國就讀</div>
+        <div class="value" id="sAbroad" style="color:var(--accent2)">0</div>
+        <div class="sub" id="sAbroadPct">占 0%</div>
       </div>
       <div class="stat-card purple">
         <div class="label">選修閩南語</div>
@@ -557,6 +611,16 @@
       <div class="donut-wrap" id="statusDonut">
         <div style="color:var(--text2);font-size:13px;">請先上傳 Excel 資料</div>
       </div>
+    </div>
+
+    <div class="chart-section">
+      <div class="section-title">🏫 前往他校明細</div>
+      <div id="otherSchoolChart"><div style="color:var(--text2);font-size:13px;">請先上傳 Excel 資料</div></div>
+    </div>
+
+    <div class="chart-section">
+      <div class="section-title">✈️ 出國就讀明細</div>
+      <div id="abroadChart"><div style="color:var(--text2);font-size:13px;">請先上傳 Excel 資料</div></div>
     </div>
 
     <div class="chart-section">
@@ -778,15 +842,41 @@ function toggleFilters() {
   hint.textContent = collapsed ? '▲ 收合' : '▼ 展開';
 }
 
+// Known countries (used to detect "abroad")
+const COUNTRY_KEYWORDS = [
+  '美國','日本','加拿大','澳洲','英國','德國','法國','韓國','新加坡','紐西蘭',
+  '馬來西亞','泰國','越南','印尼','菲律賓','印度','中國','香港','澳門','台灣',
+  'USA','US','Japan','Canada','Australia','UK','Germany','France','Korea',
+  'Singapore','New Zealand','Malaysia','Thailand','Vietnam','Indonesia',
+  'Philippines','India','China','Hong Kong','Macau','Taiwan','abroad','overseas'
+];
+// Known "not yet" keywords
+const NOT_YET_KEYWORDS = ['未報到','未','no','N','0','尚未'];
+// Known "online" keywords
+const ONLINE_KEYWORDS = ['線上','online','已報到','報到','1','Y','是'];
+
+function classifyStatus(val) {
+  if (!val) return 'unknown';
+  const v = val.toString().trim();
+  if (!v) return 'unknown';
+  if (ONLINE_KEYWORDS.some(k => v.includes(k))) return 'online';
+  if (NOT_YET_KEYWORDS.some(k => v === k || v.startsWith(k))) return 'notyet';
+  // Check country
+  if (COUNTRY_KEYWORDS.some(k => v.toLowerCase().includes(k.toLowerCase()))) return 'abroad';
+  // Check school (contains 國小, 國中, 小學, 學校, 幼兒園, 附幼 etc.)
+  if (/國小|國中|小學|學校|幼兒|附幼|高中|高職|實小|實驗|雙語|育才|育英|大同|中山|中正|民族|文化|光復|光明|建國|明德|仁愛/.test(v)) return 'otherschool';
+  // If it looks like a place/name (not a known keyword), treat as other school
+  return 'otherschool';
+}
+
 function renderStatusBadge(val) {
   if (!val) return `<span class="badge other"><span class="dot"></span>—</span>`;
   const v = val.toString().trim();
-  if (v.includes('線上') || v.includes('online') || v === '1' || v === 'Y') {
-    return `<span class="badge online"><span class="dot"></span>${v}</span>`;
-  }
-  if (v.includes('未') || v === '0' || v === 'N') {
-    return `<span class="badge not-yet"><span class="dot"></span>${v}</span>`;
-  }
+  const cls = classifyStatus(v);
+  if (cls === 'online')      return `<span class="badge online"><span class="dot"></span>${v}</span>`;
+  if (cls === 'notyet')      return `<span class="badge not-yet"><span class="dot"></span>${v}</span>`;
+  if (cls === 'abroad')      return `<span class="badge abroad"><span class="dot"></span>✈ ${v}</span>`;
+  if (cls === 'otherschool') return `<span class="badge other-school"><span class="dot"></span>🏫 ${v}</span>`;
   return `<span class="badge other"><span class="dot"></span>${v}</span>`;
 }
 
@@ -855,23 +945,31 @@ function goPage(p) {
 function updateStats() {
   const total = allData.length;
 
-  // Status
-  const statusMap = {};
+  // Classify each row's status
+  let onlineCount = 0, notYetCount = 0, abroadCount = 0, otherSchoolCount = 0;
+  const otherSchoolMap = {}, abroadMap = {};
+
   allData.forEach(r => {
-    const v = (getKey(r, COL.status) || '未知').toString().trim() || '未知';
-    statusMap[v] = (statusMap[v] || 0) + 1;
+    const v = (getKey(r, COL.status) || '').toString().trim();
+    const cls = classifyStatus(v || '未報到');
+    if (cls === 'online')      { onlineCount++; }
+    else if (cls === 'notyet') { notYetCount++; }
+    else if (cls === 'abroad') { abroadCount++; abroadMap[v] = (abroadMap[v]||0)+1; }
+    else if (cls === 'otherschool') { otherSchoolCount++; otherSchoolMap[v] = (otherSchoolMap[v]||0)+1; }
+    else                       { notYetCount++; }
   });
 
-  const onlineKey = Object.keys(statusMap).find(k => k.includes('線上') || k.includes('online'));
-  const notYetKey = Object.keys(statusMap).find(k => k.includes('未') || k === '0' || k === 'N');
-  const onlineCount = onlineKey ? statusMap[onlineKey] : 0;
-  const notYetCount = notYetKey ? statusMap[notYetKey] : 0;
+  const pct = n => total ? Math.round(n/total*100) : 0;
 
   document.getElementById('sTotal').textContent = total;
   document.getElementById('sOnline').textContent = onlineCount;
   document.getElementById('sNotYet').textContent = notYetCount;
-  document.getElementById('sOnlinePct').textContent = `占 ${total ? Math.round(onlineCount/total*100) : 0}%`;
-  document.getElementById('sNotYetPct').textContent = `占 ${total ? Math.round(notYetCount/total*100) : 0}%`;
+  document.getElementById('sOtherSchool').textContent = otherSchoolCount;
+  document.getElementById('sAbroad').textContent = abroadCount;
+  document.getElementById('sOnlinePct').textContent = `占 ${pct(onlineCount)}%`;
+  document.getElementById('sNotYetPct').textContent = `占 ${pct(notYetCount)}%`;
+  document.getElementById('sOtherSchoolPct').textContent = `占 ${pct(otherSchoolCount)}%`;
+  document.getElementById('sAbroadPct').textContent = `占 ${pct(abroadCount)}%`;
 
   // Language
   const langMap = {};
@@ -882,12 +980,30 @@ function updateStats() {
   const minnanKey = Object.keys(langMap).find(k => k.includes('閩南') || k.includes('台語'));
   document.getElementById('sMinnan').textContent = minnanKey ? langMap[minnanKey] : 0;
 
-  // Donut chart
-  renderDonut(statusMap, total);
+  // Status donut — use classified buckets
+  const statusMapDisplay = {};
+  if (onlineCount)      statusMapDisplay['線上報到'] = onlineCount;
+  if (notYetCount)      statusMapDisplay['未報到（待確認）'] = notYetCount;
+  if (otherSchoolCount) statusMapDisplay['前往他校'] = otherSchoolCount;
+  if (abroadCount)      statusMapDisplay['出國就讀'] = abroadCount;
+  const donutColors = { '線上報到':'#38c97a', '未報到（待確認）':'#f5a623', '前往他校':'#a78bfa', '出國就讀':'#38e8c0' };
+  renderDonut(statusMapDisplay, total, donutColors);
+
+  // Other school & abroad detail charts
+  if (Object.keys(otherSchoolMap).length > 0) {
+    renderBarChart('otherSchoolChart', otherSchoolMap, total, ['#a78bfa','#c4b5fd','#7c3aed','#8b5cf6','#6d28d9']);
+  } else {
+    document.getElementById('otherSchoolChart').innerHTML = '<div style="color:var(--text2);font-size:13px;">無前往他校資料（請將未報到欄位改為國小名稱）</div>';
+  }
+  if (Object.keys(abroadMap).length > 0) {
+    renderBarChart('abroadChart', abroadMap, total, ['#38e8c0','#2dd4bf','#0d9488','#14b8a6','#5eead4']);
+  } else {
+    document.getElementById('abroadChart').innerHTML = '<div style="color:var(--text2);font-size:13px;">無出國就讀資料（請將未報到欄位改為國家名稱）</div>';
+  }
 
   // Lang charts
   renderBarChart('langChart', langMap, total, ['#4f8ef7','#38e8c0','#f7794f','#a78bfa','#f5a623','#f05c5c']);
-  
+
   const langNameMap = {};
   allData.forEach(r => {
     const v = (getKey(r, COL.langName) || '').toString().trim();
@@ -896,8 +1012,8 @@ function updateStats() {
   renderBarChart('langNameChart', langNameMap, total, ['#38e8c0','#a78bfa','#f5a623','#4f8ef7','#f7794f','#38c97a']);
 }
 
-function renderDonut(statusMap, total) {
-  const colors = ['#38c97a','#f5a623','#4f8ef7','#f05c5c','#a78bfa','#38e8c0'];
+function renderDonut(statusMap, total, colorMap) {
+  const defaultColors = ['#38c97a','#f5a623','#a78bfa','#38e8c0','#4f8ef7','#f05c5c'];
   const entries = Object.entries(statusMap);
   const cx = 80, cy = 80, r = 60, stroke = 28;
   const circumference = 2 * Math.PI * r;
@@ -908,7 +1024,7 @@ function renderDonut(statusMap, total) {
   entries.forEach(([k, v], i) => {
     const pct = v / total;
     const len = pct * circumference;
-    const color = colors[i % colors.length];
+    const color = (colorMap && colorMap[k]) ? colorMap[k] : defaultColors[i % defaultColors.length];
     paths += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-dasharray="${len} ${circumference - len}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${cx} ${cy})" opacity="0.9"/>`;
     offset += len;
     legend += `<div class="legend-item">
