@@ -143,39 +143,57 @@
   .upload-btn:hover { opacity: 0.85; }
   #fileInput { display: none; }
 
-  /* Filter bar */
   .filter-bar {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 20px 24px;
+    padding: 0;
     margin-bottom: 20px;
     display: none;
+    overflow: hidden;
   }
   .filter-bar.visible { display: block; }
-  .filter-bar h3 {
+  .filter-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 24px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    user-select: none;
+  }
+  .filter-header:hover { background: rgba(255,255,255,0.02); }
+  .filter-header h3 {
     font-size: 13px; font-weight: 600;
     color: var(--text2); text-transform: uppercase;
-    letter-spacing: 0.08em; margin-bottom: 16px;
+    letter-spacing: 0.08em; margin: 0;
     display: flex; align-items: center; gap: 8px;
   }
+  .filter-toggle-hint { font-size: 11px; color: var(--text2); }
+  #filterBody { padding: 16px 24px 4px; }
+  .filter-group-title {
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.1em;
+    margin: 16px 0 10px; padding-bottom: 6px;
+    border-bottom: 1px solid rgba(79,142,247,0.2);
+  }
+  #filterBody .filter-group-title:first-child { margin-top: 0; }
   .filter-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 12px;
+    margin-bottom: 4px;
   }
   .filter-group label {
     display: block;
-    font-size: 12px; color: var(--text2);
-    margin-bottom: 6px; font-weight: 500;
+    font-size: 11px; color: var(--text2);
+    margin-bottom: 5px; font-weight: 500;
   }
   .filter-group select, .filter-group input {
     width: 100%;
     background: var(--surface2);
     border: 1px solid var(--border);
     color: var(--text);
-    padding: 8px 12px;
-    border-radius: 8px;
+    padding: 7px 10px;
+    border-radius: 7px;
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 13px;
     outline: none;
@@ -186,15 +204,27 @@
   }
   .filter-group select:hover, .filter-group input:hover { border-color: var(--accent); }
   .filter-group select:focus, .filter-group input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(79,142,247,0.15); }
-  .filter-actions { display: flex; gap: 10px; margin-top: 16px; align-items: center; }
+  .filter-actions {
+    display: flex; gap: 10px; padding: 14px 24px;
+    align-items: center; border-top: 1px solid var(--border);
+    background: rgba(0,0,0,0.1); flex-wrap: wrap;
+  }
+  .active-filters { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+  .active-tag {
+    background: rgba(79,142,247,0.15); border: 1px solid rgba(79,142,247,0.3);
+    color: var(--accent); font-size: 11px; padding: 3px 8px;
+    border-radius: 12px; display: flex; align-items: center; gap: 5px;
+    cursor: pointer;
+  }
+  .active-tag:hover { background: rgba(79,142,247,0.25); }
   .btn-reset {
     background: var(--surface2); border: 1px solid var(--border);
-    color: var(--text2); padding: 8px 18px; border-radius: 8px;
+    color: var(--text2); padding: 7px 16px; border-radius: 7px;
     font-family: 'Noto Sans TC', sans-serif; font-size: 13px;
-    cursor: pointer; transition: all 0.2s;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
   }
   .btn-reset:hover { border-color: var(--accent); color: var(--text); }
-  .result-count { font-size: 13px; color: var(--text2); margin-left: auto; }
+  .result-count { font-size: 13px; color: var(--text2); margin-left: auto; white-space: nowrap; }
   .result-count span { color: var(--accent); font-weight: 600; }
 
   /* Table area */
@@ -383,57 +413,101 @@
     </div>
 
     <div class="filter-bar" id="filterBar">
-      <h3>🔍 篩選條件</h3>
-      <div class="filter-grid">
-        <div class="filter-group">
-          <label>報到狀態</label>
-          <select id="filterStatus" onchange="applyFilters()">
-            <option value="">全部</option>
-          </select>
+      <div class="filter-header" onclick="toggleFilters()">
+        <h3>🔍 篩選條件</h3>
+        <span class="filter-toggle-hint" id="filterToggleHint">▲ 收合</span>
+      </div>
+
+      <div id="filterBody">
+        <!-- Group 1: 基本資料 -->
+        <div class="filter-group-title">基本資料</div>
+        <div class="filter-grid">
+          <div class="filter-group">
+            <label>🔎 關鍵字搜尋（姓名/學號/身份證號）</label>
+            <input type="text" id="filterSearch" placeholder="輸入關鍵字..." oninput="applyFilters()">
+          </div>
+          <div class="filter-group">
+            <label>報到狀態</label>
+            <select id="filterStatus" onchange="applyFilters()"><option value="">全部</option></select>
+          </div>
+          <div class="filter-group">
+            <label>監護人</label>
+            <select id="filterGuardian" onchange="applyFilters()"><option value="">全部</option></select>
+          </div>
         </div>
-        <div class="filter-group">
-          <label>選修本土語</label>
-          <select id="filterLang" onchange="applyFilters()">
-            <option value="">全部</option>
-          </select>
+
+        <!-- Group 2: 家庭與經濟 -->
+        <div class="filter-group-title">家庭與經濟</div>
+        <div class="filter-grid">
+          <div class="filter-group">
+            <label>低收/中低收</label>
+            <select id="filterLowIncome" onchange="applyFilters()"><option value="">全部</option></select>
+          </div>
+          <div class="filter-group">
+            <label>兄弟姐妹同時入學</label>
+            <select id="filterSibling" onchange="applyFilters()"><option value="">全部</option></select>
+          </div>
+          <div class="filter-group">
+            <label>外配子女父母國籍</label>
+            <select id="filterForeignParent" onchange="applyFilters()"><option value="">全部</option></select>
+          </div>
         </div>
-        <div class="filter-group">
-          <label>本土語言名稱</label>
-          <select id="filterLangName" onchange="applyFilters()">
-            <option value="">全部</option>
-          </select>
+
+        <!-- Group 3: 身心障礙 -->
+        <div class="filter-group-title">身心障礙</div>
+        <div class="filter-grid">
+          <div class="filter-group">
+            <label>學生是否身心障礙</label>
+            <select id="filterDisability" onchange="applyFilters()"><option value="">全部</option></select>
+          </div>
+          <div class="filter-group">
+            <label>學生身心障礙類別</label>
+            <select id="filterDisabilityType" onchange="applyFilters()"><option value="">全部</option></select>
+          </div>
+          <div class="filter-group">
+            <label>父母是否身心障礙</label>
+            <select id="filterParentDisability" onchange="applyFilters()"><option value="">全部</option></select>
+          </div>
+          <div class="filter-group">
+            <label>父母身心障礙類別</label>
+            <select id="filterParentDisabilityType" onchange="applyFilters()"><option value="">全部</option></select>
+          </div>
         </div>
-        <div class="filter-group">
-          <label>低收/中低收</label>
-          <select id="filterLowIncome" onchange="applyFilters()">
-            <option value="">全部</option>
-          </select>
+
+        <!-- Group 4: 族群與語言 -->
+        <div class="filter-group-title">族群與語言</div>
+        <div class="filter-grid">
+          <div class="filter-group">
+            <label>原住民族別</label>
+            <select id="filterIndigenous" onchange="applyFilters()"><option value="">全部</option></select>
+          </div>
+          <div class="filter-group">
+            <label>選修本土語</label>
+            <select id="filterLang" onchange="applyFilters()"><option value="">全部</option></select>
+          </div>
+          <div class="filter-group">
+            <label>本土語言名稱</label>
+            <select id="filterLangName" onchange="applyFilters()"><option value="">全部</option></select>
+          </div>
         </div>
-        <div class="filter-group">
-          <label>學生身心障礙</label>
-          <select id="filterDisability" onchange="applyFilters()">
-            <option value="">全部</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label>原住民族別</label>
-          <select id="filterIndigenous" onchange="applyFilters()">
-            <option value="">全部</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label>搜尋（姓名/學號）</label>
-          <input type="text" id="filterSearch" placeholder="輸入關鍵字..." oninput="applyFilters()">
-        </div>
-        <div class="filter-group">
-          <label>營養午餐類型</label>
-          <select id="filterLunch" onchange="applyFilters()">
-            <option value="">全部</option>
-          </select>
+
+        <!-- Group 5: 健康與午餐 -->
+        <div class="filter-group-title">健康與午餐</div>
+        <div class="filter-grid">
+          <div class="filter-group">
+            <label>關注疾病</label>
+            <select id="filterDisease" onchange="applyFilters()"><option value="">全部</option></select>
+          </div>
+          <div class="filter-group">
+            <label>營養午餐類型</label>
+            <select id="filterLunch" onchange="applyFilters()"><option value="">全部</option></select>
+          </div>
         </div>
       </div>
+
       <div class="filter-actions">
-        <button class="btn-reset" onclick="resetFilters()">↺ 重設篩選</button>
+        <button class="btn-reset" onclick="resetFilters()">↺ 重設所有篩選</button>
+        <div class="active-filters" id="activeFilters"></div>
         <div class="result-count">顯示 <span id="showCount">0</span> / <span id="totalCount">0</span> 筆</div>
       </div>
     </div>
@@ -579,39 +653,9 @@ function loadExcel(file) {
   reader.readAsArrayBuffer(file);
 }
 
-function getUniqueValues(key) {
-  const vals = [...new Set(allData.map(r => r[key] || ''))].filter(v => v !== '');
+function getUniqueValues(colKey) {
+  const vals = [...new Set(allData.map(r => getKey(r, colKey) || ''))].filter(v => v !== '');
   return vals.sort();
-}
-
-function populateFilters() {
-  const fill = (id, key) => {
-    const sel = document.getElementById(id);
-    sel.innerHTML = '<option value="">全部</option>';
-    getUniqueValues(key).forEach(v => {
-      const opt = document.createElement('option');
-      opt.value = v; opt.textContent = v;
-      sel.appendChild(opt);
-    });
-  };
-
-  // Try both exact and approximate key matching
-  const findKey = (target) => {
-    if (allData.length === 0) return target;
-    const keys = Object.keys(allData[0]);
-    return keys.find(k => k.replace(/\s+/g,'').replace(/\n/g,'') === target.replace(/\s+/g,'').replace(/\n/g,'')) || target;
-  };
-
-  fill('filterStatus', findKey(COL.status));
-  fill('filterLang', findKey(COL.langChoice));
-  fill('filterLangName', findKey(COL.langName));
-  fill('filterLowIncome', findKey(COL.lowIncome));
-  fill('filterDisability', findKey(COL.disability));
-  fill('filterIndigenous', findKey(COL.indigenous));
-  fill('filterLunch', findKey(COL.lunch));
-
-  document.getElementById('filterBar').classList.add('visible');
-  document.getElementById('tableWrap').classList.add('visible');
 }
 
 function getKey(row, target) {
@@ -621,28 +665,70 @@ function getKey(row, target) {
   return found ? row[found] : '';
 }
 
+function populateFilters() {
+  const fill = (id, colKey) => {
+    const el = document.getElementById(id);
+    if (!el || el.tagName !== 'SELECT') return;
+    el.innerHTML = '<option value="">全部</option>';
+    getUniqueValues(colKey).forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v; opt.textContent = v;
+      el.appendChild(opt);
+    });
+  };
+
+  fill('filterStatus',             COL.status);
+  fill('filterGuardian',           COL.guardian);
+  fill('filterLowIncome',          COL.lowIncome);
+  fill('filterSibling',            COL.sibling);
+  fill('filterForeignParent',      COL.foreignParent);
+  fill('filterDisability',         COL.disability);
+  fill('filterDisabilityType',     COL.disabilityType);
+  fill('filterParentDisability',   COL.parentDisability);
+  fill('filterParentDisabilityType', COL.parentDisabilityType);
+  fill('filterIndigenous',         COL.indigenous);
+  fill('filterLang',               COL.langChoice);
+  fill('filterLangName',           COL.langName);
+  fill('filterDisease',            COL.disease);
+  fill('filterLunch',              COL.lunch);
+
+  document.getElementById('filterBar').classList.add('visible');
+  document.getElementById('tableWrap').classList.add('visible');
+}
+
+// All select filter definitions: [elementId, colKey, label]
+const SELECT_FILTERS = [
+  ['filterStatus',               COL.status,               '報到狀態'],
+  ['filterGuardian',             COL.guardian,             '監護人'],
+  ['filterLowIncome',            COL.lowIncome,            '低收/中低收'],
+  ['filterSibling',              COL.sibling,              '兄弟姐妹同時入學'],
+  ['filterForeignParent',        COL.foreignParent,        '外配子女父母國籍'],
+  ['filterDisability',           COL.disability,           '學生身心障礙'],
+  ['filterDisabilityType',       COL.disabilityType,       '身心障礙類別'],
+  ['filterParentDisability',     COL.parentDisability,     '父母身心障礙'],
+  ['filterParentDisabilityType', COL.parentDisabilityType, '父母障礙類別'],
+  ['filterIndigenous',           COL.indigenous,           '原住民族別'],
+  ['filterLang',                 COL.langChoice,           '選修本土語'],
+  ['filterLangName',             COL.langName,             '語言名稱'],
+  ['filterDisease',              COL.disease,              '關注疾病'],
+  ['filterLunch',                COL.lunch,                '午餐類型'],
+];
+
 function applyFilters() {
-  const status = document.getElementById('filterStatus').value;
-  const lang = document.getElementById('filterLang').value;
-  const langName = document.getElementById('filterLangName').value;
-  const lowIncome = document.getElementById('filterLowIncome').value;
-  const disability = document.getElementById('filterDisability').value;
-  const indigenous = document.getElementById('filterIndigenous').value;
-  const lunch = document.getElementById('filterLunch').value;
   const search = document.getElementById('filterSearch').value.toLowerCase();
 
   filteredData = allData.filter(row => {
-    if (status && getKey(row, COL.status) !== status) return false;
-    if (lang && getKey(row, COL.langChoice) !== lang) return false;
-    if (langName && getKey(row, COL.langName) !== langName) return false;
-    if (lowIncome && getKey(row, COL.lowIncome) !== lowIncome) return false;
-    if (disability && getKey(row, COL.disability) !== disability) return false;
-    if (indigenous && getKey(row, COL.indigenous) !== indigenous) return false;
-    if (lunch && getKey(row, COL.lunch) !== lunch) return false;
+    // Keyword search
     if (search) {
       const name = (getKey(row, COL.name) || '').toLowerCase();
-      const id = (getKey(row, COL.id) || '').toString().toLowerCase();
-      if (!name.includes(search) && !id.includes(search)) return false;
+      const id   = (getKey(row, COL.id) || '').toString().toLowerCase();
+      const idNum= (getKey(row, COL.idNum) || '').toLowerCase();
+      if (!name.includes(search) && !id.includes(search) && !idNum.includes(search)) return false;
+    }
+    // Select filters
+    for (const [elId, colKey] of SELECT_FILTERS) {
+      const val = document.getElementById(elId)?.value;
+      if (val && getKey(row, colKey) !== val) return false;
     }
     return true;
   });
@@ -650,16 +736,46 @@ function applyFilters() {
   currentPage = 1;
   document.getElementById('showCount').textContent = filteredData.length;
   document.getElementById('totalCount').textContent = allData.length;
+  updateActiveTags();
   renderTable();
   renderPagination();
 }
 
+function updateActiveTags() {
+  const container = document.getElementById('activeFilters');
+  const tags = [];
+  const search = document.getElementById('filterSearch').value;
+  if (search) tags.push({ label: `搜尋: ${search}`, clear: () => { document.getElementById('filterSearch').value = ''; applyFilters(); } });
+  for (const [elId, , label] of SELECT_FILTERS) {
+    const el = document.getElementById(elId);
+    if (el?.value) {
+      const v = el.value;
+      tags.push({ label: `${label}: ${v}`, clear: () => { el.value = ''; applyFilters(); } });
+    }
+  }
+  container.innerHTML = tags.map((t, i) =>
+    `<span class="active-tag" onclick="clearTag(${i})">✕ ${t.label}</span>`
+  ).join('');
+  window._activeTags = tags;
+}
+
+function clearTag(i) { window._activeTags[i].clear(); }
+
 function resetFilters() {
-  ['filterStatus','filterLang','filterLangName','filterLowIncome','filterDisability','filterIndigenous','filterLunch'].forEach(id => {
-    document.getElementById(id).value = '';
+  SELECT_FILTERS.forEach(([elId]) => {
+    const el = document.getElementById(elId);
+    if (el) el.value = '';
   });
   document.getElementById('filterSearch').value = '';
   applyFilters();
+}
+
+function toggleFilters() {
+  const body = document.getElementById('filterBody');
+  const hint = document.getElementById('filterToggleHint');
+  const collapsed = body.style.display === 'none';
+  body.style.display = collapsed ? '' : 'none';
+  hint.textContent = collapsed ? '▲ 收合' : '▼ 展開';
 }
 
 function renderStatusBadge(val) {
