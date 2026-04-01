@@ -411,6 +411,35 @@
     .filter-grid { grid-template-columns: 1fr 1fr; }
   }
 
+  /* Anomaly warning section */
+  .warning-section { border-color: rgba(245,166,35,0.35) !important; }
+  .warning-section .section-title::before { background: var(--orange); }
+  .anomaly-desc { font-size: 13px; color: var(--text2); margin-bottom: 16px; }
+  .anomaly-group { margin-bottom: 20px; }
+  .anomaly-group-title {
+    font-size: 12px; font-weight: 700; color: var(--orange);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+  }
+  .anomaly-count-badge {
+    background: rgba(245,166,35,0.15); border: 1px solid rgba(245,166,35,0.3);
+    color: var(--orange); font-size: 11px; padding: 1px 8px; border-radius: 10px;
+  }
+  .anomaly-student-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .anomaly-chip {
+    background: rgba(245,166,35,0.08);
+    border: 1px solid rgba(245,166,35,0.2);
+    border-radius: 8px; padding: 5px 12px;
+    font-size: 12px; color: var(--text);
+    display: flex; flex-direction: column; gap: 2px;
+    cursor: default;
+    transition: background 0.15s;
+  }
+  .anomaly-chip:hover { background: rgba(245,166,35,0.14); }
+  .anomaly-chip .a-name { font-weight: 600; color: var(--text); }
+  .anomaly-chip .a-detail { font-size: 11px; color: var(--text2); }
+  .anomaly-chip .a-hint { font-size: 11px; color: var(--accent2); }
+
   /* Upload tip */
   .upload-tip {
     margin-top: 28px;
@@ -660,6 +689,18 @@
     <div class="chart-section">
       <div class="section-title">本土語言名稱細項</div>
       <div id="langNameChart"><div style="color:var(--text2);font-size:13px;">請先上傳 Excel 資料</div></div>
+    </div>
+
+    <div class="chart-section">
+      <div class="section-title">🌏 外配子女父母國籍分佈</div>
+      <div id="foreignParentChart"><div style="color:var(--text2);font-size:13px;">請先上傳 Excel 資料</div></div>
+    </div>
+
+    <!-- Data anomaly warnings -->
+    <div class="chart-section warning-section" id="anomalySection" style="display:none">
+      <div class="section-title">⚠️ 資料缺漏警示</div>
+      <div class="anomaly-desc">以下學生的資料可能有欄位漏填，請確認後補齊。</div>
+      <div id="anomalyList"></div>
     </div>
   </div>
 </main>
@@ -1065,6 +1106,115 @@ function updateStats() {
   // Lang charts
   renderBarChart('langChart', langMap, langNames, total, ['#4f8ef7','#38e8c0','#f7794f','#a78bfa','#f5a623','#f05c5c']);
   renderBarChart('langNameChart', langNameMap, langNameNames, total, ['#38e8c0','#a78bfa','#f5a623','#4f8ef7','#f7794f','#38c97a']);
+
+  // Foreign parent nationality chart
+  const foreignMap = {}, foreignNames = {};
+  allData.forEach(r => {
+    const v = (getKey(r, COL.foreignParent) || '').toString().trim();
+    const name = (getKey(r, COL.name) || '').toString().trim();
+    if (v) {
+      foreignMap[v] = (foreignMap[v] || 0) + 1;
+      if (!foreignNames[v]) foreignNames[v] = [];
+      if (name) foreignNames[v].push(name);
+    }
+  });
+  if (Object.keys(foreignMap).length > 0) {
+    renderBarChart('foreignParentChart', foreignMap, foreignNames, total, ['#f7794f','#f5a623','#38e8c0','#4f8ef7','#a78bfa','#f05c5c']);
+  } else {
+    document.getElementById('foreignParentChart').innerHTML = '<div style="color:var(--text2);font-size:13px;">無外配子女資料</div>';
+  }
+
+  // Anomaly detection
+  renderAnomalies();
+}
+
+function renderAnomalies() {
+  const groups = [];
+
+  // Case 1: 選修本土語 有填 但 本土語言名稱 沒填
+  const langNoName = allData.filter(r => {
+    const lang = (getKey(r, COL.langChoice) || '').toString().trim();
+    const name = (getKey(r, COL.langName) || '').toString().trim();
+    const hasLang = lang && lang !== '未選修' && lang !== '否' && lang !== 'N' && lang !== '0';
+    return hasLang && !name;
+  });
+  if (langNoName.length > 0) {
+    groups.push({
+      title: '選修本土語，但語言名稱未填',
+      hint: '建議確認學生實際選修的語言名稱',
+      icon: '📝',
+      students: langNoName.map(r => ({
+        name: getKey(r, COL.name),
+        detail: `選修：${getKey(r, COL.langChoice) || '—'}`,
+        hint: getKey(r, COL.foreignParent) ? `父母國籍：${getKey(r, COL.foreignParent)}` : '',
+      }))
+    });
+  }
+
+  // Case 2: 有填外配子女父母國籍 但 本土語言名稱 沒填（可能應選新住民語）
+  const foreignNoLangName = allData.filter(r => {
+    const foreign = (getKey(r, COL.foreignParent) || '').toString().trim();
+    const langName = (getKey(r, COL.langName) || '').toString().trim();
+    return foreign && !langName;
+  });
+  if (foreignNoLangName.length > 0) {
+    groups.push({
+      title: '有填外配子女國籍，但語言名稱未填',
+      hint: '這些學生可能應選修新住民語，請確認',
+      icon: '🌏',
+      students: foreignNoLangName.map(r => ({
+        name: getKey(r, COL.name),
+        detail: `父母國籍：${getKey(r, COL.foreignParent) || '—'}`,
+        hint: getKey(r, COL.langChoice) ? `已選：${getKey(r, COL.langChoice)}` : '語言選修欄位也未填',
+      }))
+    });
+  }
+
+  // Case 3: 原住民族別有填 但 本土語言名稱 沒填
+  const indigenousNoLang = allData.filter(r => {
+    const indig = (getKey(r, COL.indigenous) || '').toString().trim();
+    const langName = (getKey(r, COL.langName) || '').toString().trim();
+    return indig && !langName;
+  });
+  if (indigenousNoLang.length > 0) {
+    groups.push({
+      title: '有填原住民族別，但語言名稱未填',
+      hint: '這些學生可能應選修原住民族語，請確認',
+      icon: '🪶',
+      students: indigenousNoLang.map(r => ({
+        name: getKey(r, COL.name),
+        detail: `族別：${getKey(r, COL.indigenous) || '—'}`,
+        hint: getKey(r, COL.langChoice) ? `已選：${getKey(r, COL.langChoice)}` : '語言選修欄位也未填',
+      }))
+    });
+  }
+
+  const section = document.getElementById('anomalySection');
+  const list = document.getElementById('anomalyList');
+
+  if (groups.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+  list.innerHTML = groups.map(g => {
+    const chips = g.students.map(s =>
+      `<div class="anomaly-chip">
+        <span class="a-name">${s.name || '（未知）'}</span>
+        <span class="a-detail">${s.detail}</span>
+        ${s.hint ? `<span class="a-hint">${s.hint}</span>` : ''}
+      </div>`
+    ).join('');
+    return `<div class="anomaly-group">
+      <div class="anomaly-group-title">
+        ${g.icon} ${g.title}
+        <span class="anomaly-count-badge">${g.students.length} 人</span>
+      </div>
+      <div style="font-size:12px;color:var(--accent2);margin-bottom:8px;">💡 ${g.hint}</div>
+      <div class="anomaly-student-list">${chips}</div>
+    </div>`;
+  }).join('<hr style="border:none;border-top:1px solid var(--border);margin:16px 0">');
 }
 
 function renderDonut(statusMap, total, colorMap) {
