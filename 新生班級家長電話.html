@@ -292,22 +292,22 @@ const COL = {
 
 // Selectable print fields (key -> [colKey, label]); dad/mom phone checked by default
 const SELECTABLE_FIELDS = [
-  ['dadPhone',        COL.dadPhone,        '父親手機號碼', true],
-  ['momPhone',         COL.momPhone,        '母親手機號碼', true],
-  ['guardianName',     COL.guardianName,    '監護人姓名', false],
-  ['guardianPhone',    COL.guardianPhone,   '監護人電話', false],
-  ['phone',            COL.phone,           '聯絡電話', false],
-  ['address',          COL.address,         '聯絡地址', false],
-  ['emergencyName',    COL.emergencyName,   '緊急聯絡人姓名', false],
-  ['emergencyRel',     COL.emergencyRel,    '緊急聯絡人關係', false],
-  ['emergencyPhone',   COL.emergencyPhone,  '緊急聯絡人電話', false],
-  ['lowIncome',        COL.lowIncome,       '低收/中低收', false],
-  ['disability',       COL.disability,      '學生身心障礙', false],
-  ['disease',          COL.disease,         '關注疾病', false],
-  ['lunch',            COL.lunch,           '午餐類型', false],
-  ['indigenous',       COL.indigenous,      '原住民族別', false],
-  ['langChoice',       COL.langChoice,      '選修本土語', false],
-  ['langName',         COL.langName,        '本土語言名稱', false],
+  ['status',            COL.status,           '報到狀態', true],
+  ['dadPhone',          COL.dadPhone,         '父親手機號碼', true],
+  ['momPhone',          COL.momPhone,         '母親手機號碼', true],
+  ['guardian',          COL.guardian,         '監護人', false],
+  ['phone',             COL.phone,            '聯絡電話', false],
+  ['address',           COL.address,          '聯絡地址', false],
+  ['emergencyName',     COL.emergencyName,    '緊急聯絡人姓名', false],
+  ['emergencyRel',      COL.emergencyRel,     '緊急聯絡人關係', false],
+  ['emergencyPhone',    COL.emergencyPhone,   '緊急聯絡人電話', false],
+  ['lowIncome',         COL.lowIncome,        '低收/中低收', false],
+  ['disability',        COL.disability,       '學生身心障礙', false],
+  ['disease',           COL.disease,          '關注疾病', false],
+  ['lunch',             COL.lunch,            '午餐類型', false],
+  ['indigenous',        COL.indigenous,       '原住民族別', false],
+  ['langChoice',        COL.langChoice,       '選修本土語', false],
+  ['langName',          COL.langName,         '本土語言名稱', false],
 ];
 
 function getKey(row, target) {
