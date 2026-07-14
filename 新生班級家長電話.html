@@ -17,6 +17,8 @@
     --warn-soft:#fbe9d8;
     --miss:#8a1f2b;
     --miss-soft:#f6dfe1;
+    --notyet:#1d5f9e;
+    --notyet-soft:#dceafb;
     --boy:#3d6b96;
     --girl:#b45a6b;
     --mono: "Noto Sans Mono CJK TC","Courier New",monospace;
@@ -137,6 +139,8 @@
   tbody tr.unmatched:hover{ background:#f2ccd0; }
   tbody tr.mismatch{ background:var(--warn-soft); }
   tbody tr.mismatch:hover{ background:#f5dcb9; }
+  tbody tr.notyet{ background:var(--notyet-soft); }
+  tbody tr.notyet:hover{ background:#c3ddf6; }
   .gender-tag{ display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align:middle; }
   .gender-tag.boy{ background:var(--boy); }
   .gender-tag.girl{ background:var(--girl); }
@@ -147,33 +151,40 @@
   }
   .tag-note.miss{ background:var(--miss); color:#fff; }
   .tag-note.warn{ background:var(--warn); color:#fff; }
+  .tag-note.notyet{ background:var(--notyet); color:#fff; }
 
   .legend{ display:flex; gap:18px; flex-wrap:wrap; font-size:12px; color:#5b6b64; margin-top:10px; }
   .legend span{ display:inline-flex; align-items:center; gap:6px; }
   .legend .box{ width:12px; height:12px; border-radius:3px; display:inline-block; }
   .box.miss{ background:var(--miss-soft); border:1px solid var(--miss); }
   .box.warn{ background:var(--warn-soft); border:1px solid var(--warn); }
+  .box.notyet{ background:var(--notyet-soft); border:1px solid var(--notyet); }
 
   footer{ text-align:center; font-size:12px; color:#a9ada6; padding:20px; }
 
   /* ---------- PRINT ---------- */
+  @page{ margin:0.5cm; }
   @media print{
     body{ background:#fff; }
     header, .upload-row, .privacy-note, .panel, .warning-panel, .summary-bar,
     .class-head .right .chevron, .status, footer{ display:none !important; }
     main{ padding:0; max-width:none; }
     .classes{ gap:0; }
-    .class-card{ border:none; border-radius:0; page-break-after:always; }
+    .class-card{ border:none; border-radius:0; page-break-after:always; page-break-inside:avoid; }
     .class-card:last-child{ page-break-after:auto; }
     .class-card.collapsed table{ display:table !important; }
-    .class-head{ background:#fff; border-bottom:2px solid #000; padding:10px 4px; }
+    .class-head{ background:#fff; border-bottom:2px solid #000; padding:4px 2px 6px; }
+    .class-head .title{ font-size:14px; }
+    .class-head .sub{ font-size:11px; }
     .class-head .right{ display:none; }
-    table{ font-size:12px; }
-    thead th{ border-bottom:1px solid #000; color:#000; }
-    tbody td{ border-bottom:1px solid #ccc; }
+    table{ font-size:10.5px; }
+    thead th{ border-bottom:1px solid #000; color:#000; padding:5px 8px; }
+    tbody td{ padding:4px 8px; border-bottom:1px solid #ccc; }
     tbody tr.unmatched{ background:#fff !important; }
     tbody tr.mismatch{ background:#fff !important; }
+    tbody tr.notyet{ background:#fff !important; }
     tbody tr.unmatched td, tbody tr.mismatch td{ box-shadow:inset 0 0 0 9999px rgba(0,0,0,0.06); }
+    tbody tr.notyet td{ box-shadow:inset 0 0 0 9999px rgba(29,95,158,0.08); }
     .print-class-btn{ display:none; }
     .class-card:not(.print-target){ display:none; }
   }
@@ -525,6 +536,12 @@ function renderWarnings(mismatches) {
 }
 
 // ================= RENDER =================
+function isNotYetButListed(s) {
+  if (s.matchStatus !== 'matched' || !s.excelRow) return false;
+  const statusVal = (getKey(s.excelRow, COL.status) || '').toString().trim();
+  return statusVal === '未報到';
+}
+
 function renderClasses() {
   classesContainer.innerHTML = '';
   if (!mergedClasses || !mergedClasses.length) return;
@@ -550,10 +567,15 @@ function renderClasses() {
       fieldLabels.map(f => `<th>${f[2]}</th>`).join('');
 
     const bodyRows = cls.students.map(s => {
-      const rowClass = s.matchStatus === 'unmatched' ? 'unmatched' : (s.matchStatus === 'mismatch' ? 'mismatch' : '');
+      const rowClass = s.matchStatus === 'unmatched' ? 'unmatched'
+        : s.matchStatus === 'mismatch' ? 'mismatch'
+        : isNotYetButListed(s) ? 'notyet'
+        : '';
       const noteTag = s.matchStatus === 'unmatched'
         ? '<span class="tag-note miss">Excel無資料</span>'
-        : (s.matchStatus === 'mismatch' ? '<span class="tag-note warn">後四碼待確認</span>' : '');
+        : s.matchStatus === 'mismatch'
+          ? '<span class="tag-note warn">後四碼待確認</span>'
+          : isNotYetButListed(s) ? '<span class="tag-note notyet">狀態顯示未報到</span>' : '';
 
       const fieldCells = fieldLabels.map(f => {
         const colKey = f[1];
@@ -610,6 +632,7 @@ function renderClasses() {
   legend.innerHTML = `
     <span><span class="box miss"></span>Excel 中完全找不到（現場報到，需手動填寫）</span>
     <span><span class="box warn"></span>姓名相符但身分證後四碼對不起來（需人工核對）</span>
+    <span><span class="box notyet"></span>Excel 中報到狀態顯示「未報到」，但仍在名冊中（請確認）</span>
   `;
   classesContainer.appendChild(legend);
 }
