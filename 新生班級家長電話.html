@@ -6,6 +6,7 @@
 <title>班級聯絡電話列印工具</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style id="pageOrientationStyle">@page{ size:A4 landscape; margin:0.5cm; }</style>
 <style>
   :root{
     --ink:#1c2b33;
@@ -98,7 +99,13 @@
   }
   .summary-bar h2{ font-size:15px; margin:0; font-weight:700; }
   .summary-bar .meta{ font-size:12.5px; color:#7a8680; }
-  .actions{ display:flex; gap:8px; flex-wrap:wrap; }
+  .actions{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .orientation-toggle{
+    display:flex; gap:12px; align-items:center; font-size:12.5px; color:#5b6b64;
+    border:1px solid var(--line); border-radius:4px; padding:6px 12px; background:#fff;
+  }
+  .orientation-toggle label{ display:flex; align-items:center; gap:5px; cursor:pointer; }
+  .orientation-toggle input{ accent-color:var(--accent); }
   .btn{
     border:1px solid var(--line); background:#fff; color:var(--ink); font-size:12.5px;
     padding:7px 14px; border-radius:4px; cursor:pointer;
@@ -167,7 +174,7 @@
   footer{ text-align:center; font-size:12px; color:#a9ada6; padding:20px; }
 
   /* ---------- PRINT ---------- */
-  @page{ margin:0.5cm; }
+  /* page orientation/margin now controlled by #pageOrientationStyle, injected dynamically */
   @media print{
     body{ background:#fff; }
     header, .upload-row, .privacy-note, .panel, .warning-panel, .summary-bar,
@@ -241,6 +248,10 @@
       <div class="meta" id="summaryMeta"></div>
     </div>
     <div class="actions">
+      <div class="orientation-toggle">
+        <label><input type="radio" name="orientation" value="portrait"> 直印</label>
+        <label><input type="radio" name="orientation" value="landscape" checked> 橫印</label>
+      </div>
       <button class="btn" id="expandAllBtn">全部展開</button>
       <button class="btn" id="collapseAllBtn">全部收合</button>
       <button class="btn primary" id="printAllBtn">列印全部班級</button>
@@ -650,6 +661,13 @@ function renderClasses() {
   `;
   classesContainer.appendChild(legend);
 }
+
+document.querySelectorAll('input[name="orientation"]').forEach(radio => {
+  radio.addEventListener('change', (e) => {
+    document.getElementById('pageOrientationStyle').textContent =
+      `@page{ size:A4 ${e.target.value}; margin:0.5cm; }`;
+  });
+});
 
 classesContainer.addEventListener('focusout', (e) => {
   const cell = e.target.closest('td[data-edit-key]');
