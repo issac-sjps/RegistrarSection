@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>編班名冊解析工具</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  :root{
+    --ink:#1c2b33;
+    --paper:#f6f4ee;
+    --line:#d8d2c2;
+    --accent:#2f6f5e;
+    --accent-soft:#e4efe9;
+    --boy:#3d6b96;
+    --girl:#b45a6b;
+    --mono: "Noto Sans Mono CJK TC","Courier New",monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+    line-height:1.6;
+  }
+  header{
+    padding:48px 24px 28px;
+    text-align:center;
+    border-bottom:1px solid var(--line);
+    background:
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(47,111,94,0.06) 39px, rgba(47,111,94,0.06) 40px);
+  }
+  header .eyebrow{
+    letter-spacing:0.35em;
+    font-size:12px;
+    color:var(--accent);
+    text-transform:uppercase;
+    margin-bottom:10px;
+  }
+  header h1{
+    margin:0;
+    font-size:32px;
+    font-weight:700;
+    letter-spacing:0.02em;
+  }
+  header p{
+    margin:10px auto 0;
+    max-width:520px;
+    color:#5b6b64;
+    font-size:14px;
+  }
+  main{
+    max-width:960px;
+    margin:0 auto;
+    padding:36px 24px 80px;
+  }
+  .dropzone{
+    border:2px dashed var(--line);
+    border-radius:6px;
+    padding:40px 20px;
+    text-align:center;
+    background:#fff;
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .dropzone.drag{
+    border-color:var(--accent);
+    background:var(--accent-soft);
+  }
+  .dropzone strong{ display:block; font-size:16px; margin-bottom:6px; }
+  .dropzone span{ font-size:13px; color:#7a8680; }
+  input[type=file]{ display:none; }
+
+  .status{
+    margin-top:16px;
+    font-size:13px;
+    color:#7a8680;
+    text-align:center;
+    min-height:18px;
+  }
+
+  .privacy-note{
+    margin-top:18px;
+    padding:12px 16px;
+    border-left:3px solid var(--accent);
+    background:var(--accent-soft);
+    font-size:12.5px;
+    color:#33473f;
+    border-radius:2px;
+  }
+
+  .summary-bar{
+    display:none;
+    margin-top:32px;
+    padding-bottom:14px;
+    border-bottom:1px solid var(--line);
+    justify-content:space-between;
+    align-items:baseline;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .summary-bar h2{ font-size:15px; margin:0; font-weight:600; }
+  .summary-bar .meta{ font-size:12.5px; color:#7a8680; }
+  .actions{ display:flex; gap:8px; }
+  .btn{
+    border:1px solid var(--line);
+    background:#fff;
+    color:var(--ink);
+    font-size:12.5px;
+    padding:7px 14px;
+    border-radius:4px;
+    cursor:pointer;
+  }
+  .btn:hover{ border-color:var(--accent); color:var(--accent); }
+  .btn.primary{ background:var(--accent); color:#fff; border-color:var(--accent); }
+  .btn.primary:hover{ opacity:.9; }
+
+  .classes{
+    margin-top:24px;
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+  }
+  .class-card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:6px;
+    overflow:hidden;
+  }
+  .class-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:14px 18px;
+    background:#fbfaf6;
+    border-bottom:1px solid var(--line);
+    cursor:pointer;
+  }
+  .class-head .title{
+    font-size:15px;
+    font-weight:700;
+  }
+  .class-head .title .num{
+    color:var(--accent);
+    margin-right:8px;
+    font-variant-numeric:tabular-nums;
+  }
+  .class-head .sub{
+    font-size:12.5px;
+    color:#7a8680;
+    margin-top:2px;
+  }
+  .class-head .count{
+    font-size:12px;
+    color:#7a8680;
+    font-variant-numeric:tabular-nums;
+  }
+  .class-head .chevron{
+    margin-left:12px;
+    transition:transform .15s ease;
+    color:#a9ada6;
+  }
+  .class-card.collapsed .chevron{ transform:rotate(-90deg); }
+  .class-card.collapsed table{ display:none; }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13.5px;
+  }
+  thead th{
+    text-align:left;
+    font-weight:600;
+    font-size:11.5px;
+    letter-spacing:0.04em;
+    color:#7a8680;
+    padding:8px 18px;
+    border-bottom:1px solid var(--line);
+    background:#fff;
+  }
+  tbody td{
+    padding:7px 18px;
+    border-bottom:1px solid #eee9dd;
+    font-variant-numeric:tabular-nums;
+  }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:hover{ background:#fbfaf6; }
+  .gender-tag{
+    display:inline-block;
+    width:8px; height:8px;
+    border-radius:50%;
+    margin-right:6px;
+    vertical-align:middle;
+  }
+  .gender-tag.boy{ background:var(--boy); }
+  .gender-tag.girl{ background:var(--girl); }
+  .idnum{ font-family:var(--mono); color:#5b6b64; }
+
+  .empty-hint{
+    text-align:center;
+    color:#a9ada6;
+    font-size:13px;
+    padding:24px;
+  }
+
+  footer{
+    text-align:center;
+    font-size:12px;
+    color:#a9ada6;
+    padding:20px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">編班名冊 · 解析工具</div>
+  <h1>上傳 PDF，自動整理各班名單</h1>
+  <p>拖曳或選擇「編班名冊」PDF，即可自動辨識每個班級、導師與學生資料。所有解析都在你的瀏覽器內完成，檔案不會上傳到任何伺服器。</p>
+</header>
+
+<main>
+
+  <div id="dropzone" class="dropzone">
+    <strong>點擊選擇 PDF 檔案，或拖放到這裡</strong>
+    <span>支援多班合併於同一份 PDF（每班一頁）</span>
+    <input type="file" id="fileInput" accept="application/pdf">
+  </div>
+
+  <div class="privacy-note">
+    此工具僅在你的瀏覽器本機端讀取與解析 PDF 內容，不會將檔案或資料上傳、傳送到任何伺服器，關閉分頁後資料即消失。請留意名冊內含學生個資，僅供校內合法用途使用。
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <div class="summary-bar" id="summaryBar">
+    <div>
+      <h2 id="summaryTitle">解析結果</h2>
+      <div class="meta" id="summaryMeta"></div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="expandAllBtn">全部展開</button>
+      <button class="btn" id="collapseAllBtn">全部收合</button>
+      <button class="btn primary" id="exportCsvBtn">匯出 CSV</button>
+    </div>
+  </div>
+
+  <div class="classes" id="classesContainer"></div>
+
+</main>
+
+<footer>僅供校內行政作業使用，請妥善保管含個資之檔案。</footer>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const statusEl = document.getElementById('status');
+const classesContainer = document.getElementById('classesContainer');
+const summaryBar = document.getElementById('summaryBar');
+const summaryTitle = document.getElementById('summaryTitle');
+const summaryMeta = document.getElementById('summaryMeta');
+
+let parsedClasses = [];
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('drag');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files.length) handleFile(e.target.files[0]);
+});
+
+async function handleFile(file) {
+  if (file.type !== 'application/pdf') {
+    statusEl.textContent = '請選擇 PDF 檔案。';
+    return;
+  }
+  statusEl.textContent = `正在讀取「${file.name}」...`;
+  classesContainer.innerHTML = '';
+  summaryBar.style.display = 'none';
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const allClasses = [];
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      statusEl.textContent = `正在解析第 ${pageNum} / ${pdf.numPages} 頁...`;
+      const page = await pdf.getPage(pageNum);
+      const content = await page.getTextContent();
+
+      // Group text items into rows by their y-position
+      const items = content.items.map(it => ({
+        text: it.str,
+        x: it.transform[4],
+        y: Math.round(it.transform[5])
+      })).filter(it => it.text.trim() !== '');
+
+      const rowsMap = new Map();
+      for (const it of items) {
+        // bucket y-positions that are close together into the same row
+        let key = null;
+        for (const existingY of rowsMap.keys()) {
+          if (Math.abs(existingY - it.y) <= 3) { key = existingY; break; }
+        }
+        if (key === null) key = it.y;
+        if (!rowsMap.has(key)) rowsMap.set(key, []);
+        rowsMap.get(key).push(it);
+      }
+
+      const sortedRows = [...rowsMap.entries()]
+        .sort((a, b) => b[0] - a[0])
+        .map(([, arr]) => arr.sort((a, b) => a.x - b.x).map(i => i.text).join(' '));
+
+      const pageText = sortedRows.join('\n');
+
+      const classInfo = parseClassPage(pageText);
+      if (classInfo) allClasses.push(classInfo);
+    }
+
+    parsedClasses = allClasses;
+    renderClasses(allClasses, file.name);
+    statusEl.textContent = allClasses.length
+      ? `完成，共辨識出 ${allClasses.length} 個班級。`
+      : '完成讀取，但未辨識出班級資料，請確認 PDF 格式是否相符。';
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = '讀取失敗：' + err.message;
+  }
+}
+
+function parseClassPage(text) {
+  // e.g. 115學年度1年01班〔導師：陸怡蒨〕編班名冊
+  const headerMatch = text.match(/(\d+)學年度\s*(\d+)\s*年\s*0?(\d+)\s*班\s*[〔\[]\s*導師[:：]\s*([^\]〕]+?)\s*[\]〕]/);
+  const schoolMatch = text.match(/([\u4e00-\u9fa5]{3,20}國[民小中]{0,2}[小國中]?學)/);
+
+  if (!headerMatch) return null;
+
+  const [, year, grade, classNum, teacher] = headerMatch;
+
+  const students = [];
+  const rowRegex = /(\d{1,2})\s+([\u4e00-\u9fa5]{2,6})\s+(男|女)\s+(\d{4})/g;
+  let m;
+  while ((m = rowRegex.exec(text)) !== null) {
+    students.push({
+      seq: m[1],
+      name: m[2],
+      gender: m[3],
+      idLast4: m[4]
+    });
+  }
+
+  return {
+    year, grade, classNum, teacher,
+    school: schoolMatch ? schoolMatch[1] : '',
+    students
+  };
+}
+
+function renderClasses(classes, fileName) {
+  classesContainer.innerHTML = '';
+  if (!classes.length) {
+    classesContainer.innerHTML = '<div class="empty-hint">尚未辨識出任何班級。</div>';
+    return;
+  }
+
+  const totalStudents = classes.reduce((sum, c) => sum + c.students.length, 0);
+  summaryTitle.textContent = classes[0].school ? classes[0].school : '解析結果';
+  summaryMeta.textContent = `${fileName} · 共 ${classes.length} 班 · ${totalStudents} 位學生`;
+  summaryBar.style.display = 'flex';
+
+  classes.forEach(cls => {
+    const card = document.createElement('div');
+    card.className = 'class-card';
+
+    const boys = cls.students.filter(s => s.gender === '男').length;
+    const girls = cls.students.filter(s => s.gender === '女').length;
+
+    card.innerHTML = `
+      <div class="class-head">
+        <div>
+          <div class="title"><span class="num">${cls.grade}年${cls.classNum.padStart(2,'0')}班</span>導師：${cls.teacher}</div>
+          <div class="sub">${cls.year}學年度 · 男 ${boys} / 女 ${girls}</div>
+        </div>
+        <div style="display:flex;align-items:center;">
+          <span class="count">${cls.students.length} 人</span>
+          <span class="chevron">▾</span>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr><th style="width:60px;">編號</th><th>姓名</th><th style="width:90px;">性別</th><th style="width:140px;">身分證後四碼</th></tr>
+        </thead>
+        <tbody>
+          ${cls.students.map(s => `
+            <tr>
+              <td>${s.seq}</td>
+              <td>${s.name}</td>
+              <td><span class="gender-tag ${s.gender === '男' ? 'boy' : 'girl'}"></span>${s.gender}</td>
+              <td class="idnum">${s.idLast4}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+
+    card.querySelector('.class-head').addEventListener('click', () => {
+      card.classList.toggle('collapsed');
+    });
+
+    classesContainer.appendChild(card);
+  });
+}
+
+document.getElementById('expandAllBtn').addEventListener('click', () => {
+  document.querySelectorAll('.class-card').forEach(c => c.classList.remove('collapsed'));
+});
+document.getElementById('collapseAllBtn').addEventListener('click', () => {
+  document.querySelectorAll('.class-card').forEach(c => c.classList.add('collapsed'));
+});
+document.getElementById('exportCsvBtn').addEventListener('click', () => {
+  if (!parsedClasses.length) return;
+  let csv = '\uFEFF班級,導師,編號,姓名,性別,身分證後四碼\n';
+  parsedClasses.forEach(cls => {
+    cls.students.forEach(s => {
+      csv += `${cls.grade}年${cls.classNum}班,${cls.teacher},${s.seq},${s.name},${s.gender},${s.idLast4}\n`;
+    });
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '編班名冊.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+</script>
+
+</body>
+</html>
