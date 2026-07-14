@@ -290,6 +290,7 @@ async function handleFile(file) {
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     const allClasses = [];
+    const debugPages = [];
 
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       statusEl.textContent = `正在解析第 ${pageNum} / ${pdf.numPages} 頁...`;
@@ -308,7 +309,7 @@ async function handleFile(file) {
         // bucket y-positions that are close together into the same row
         let key = null;
         for (const existingY of rowsMap.keys()) {
-          if (Math.abs(existingY - it.y) <= 3) { key = existingY; break; }
+          if (Math.abs(existingY - it.y) <= 5) { key = existingY; break; }
         }
         if (key === null) key = it.y;
         if (!rowsMap.has(key)) rowsMap.set(key, []);
@@ -321,47 +322,64 @@ async function handleFile(file) {
 
       const pageText = sortedRows.join('\n');
 
-      const classInfo = parseClassPage(pageText);
+      const classInfo = parseClassPage(pageText, pageNum);
       if (classInfo) allClasses.push(classInfo);
+      else debugPages.push({ pageNum, text: pageText });
     }
 
     parsedClasses = allClasses;
     renderClasses(allClasses, file.name);
-    statusEl.textContent = allClasses.length
-      ? `完成，共辨識出 ${allClasses.length} 個班級。`
-      : '完成讀取，但未辨識出班級資料，請確認 PDF 格式是否相符。';
+
+    if (allClasses.length) {
+      statusEl.textContent = `完成，共辨識出 ${allClasses.length} 個班級。`;
+    } else {
+      statusEl.textContent = '完成讀取，但未辨識出班級資料。以下是每頁實際抓到的文字內容，可用來確認格式落差：';
+      renderDebugPages(debugPages);
+    }
   } catch (err) {
     console.error(err);
     statusEl.textContent = '讀取失敗：' + err.message;
   }
 }
 
-function parseClassPage(text) {
-  // e.g. 115學年度1年01班〔導師：陸怡蒨〕編班名冊
-  const headerMatch = text.match(/(\d+)學年度\s*(\d+)\s*年\s*0?(\d+)\s*班\s*[〔\[]\s*導師[:：]\s*([^\]〕]+?)\s*[\]〕]/);
-  const schoolMatch = text.match(/([\u4e00-\u9fa5]{3,20}國[民小中]{0,2}[小國中]?學)/);
-
-  if (!headerMatch) return null;
-
-  const [, year, grade, classNum, teacher] = headerMatch;
+function parseClassPage(text, pageNum) {
+  const yearGradeMatch = text.match(/(\d{2,3})\s*學年度\s*(\d{1,2})\s*年\s*0?(\d{1,2})\s*班/);
+  const teacherMatch = text.match(/導師\s*[:：]\s*([\u4e00-\u9fa5]{2,4})/);
+  const schoolMatch = text.match(/([\u4e00-\u9fa5]{3,20}國[民小中]{0,2}[小中]?學)/);
 
   const students = [];
   const rowRegex = /(\d{1,2})\s+([\u4e00-\u9fa5]{2,6})\s+(男|女)\s+(\d{4})/g;
   let m;
   while ((m = rowRegex.exec(text)) !== null) {
-    students.push({
-      seq: m[1],
-      name: m[2],
-      gender: m[3],
-      idLast4: m[4]
-    });
+    students.push({ seq: m[1], name: m[2], gender: m[3], idLast4: m[4] });
   }
 
+  if (!yearGradeMatch && !teacherMatch && students.length === 0) return null;
+
   return {
-    year, grade, classNum, teacher,
+    year: yearGradeMatch ? yearGradeMatch[1] : '',
+    grade: yearGradeMatch ? yearGradeMatch[2] : '',
+    classNum: yearGradeMatch ? yearGradeMatch[3] : '',
+    teacher: teacherMatch ? teacherMatch[1] : '',
     school: schoolMatch ? schoolMatch[1] : '',
-    students
+    students,
+    pageNum,
+    rawText: text
   };
+}
+
+function renderDebugPages(debugPages) {
+  if (!debugPages.length) return;
+  const wrap = document.createElement('div');
+  wrap.style.marginTop = '20px';
+  debugPages.forEach(dp => {
+    const details = document.createElement('details');
+    details.style.cssText = 'background:#fff;border:1px solid var(--line);border-radius:6px;margin-bottom:10px;padding:10px 16px;';
+    details.innerHTML = `<summary style="cursor:pointer;font-size:13px;font-weight:600;">第 ${dp.pageNum} 頁 原始擷取文字</summary>
+      <pre style="white-space:pre-wrap;font-size:12px;color:#5b6b64;margin-top:10px;">${dp.text.replace(/</g,'&lt;')}</pre>`;
+    wrap.appendChild(details);
+  });
+  classesContainer.appendChild(wrap);
 }
 
 function renderClasses(classes, fileName) {
