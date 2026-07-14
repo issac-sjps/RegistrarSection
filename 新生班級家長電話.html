@@ -148,12 +148,15 @@
   }
   .print-class-btn:hover{ background:var(--accent-soft); }
 
-  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  table{ width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; }
   thead th{
     text-align:left; font-weight:600; font-size:11px; letter-spacing:0.03em; color:#7a8680;
     padding:8px 14px; border-bottom:1px solid var(--line); background:#fff; white-space:nowrap;
   }
-  tbody td{ padding:7px 14px; border-bottom:1px solid #eee9dd; }
+  tbody td{
+    padding:7px 14px; border-bottom:1px solid #eee9dd;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:0;
+  }
   tbody tr:last-child td{ border-bottom:none; }
   tbody tr:hover{ background:#fbfaf6; }
   tbody tr.unmatched{ background:var(--miss-soft); }
@@ -169,7 +172,7 @@
   td.editable{ cursor:text; border-bottom:1px dashed var(--line); }
   td.editable:hover{ background:var(--accent-soft); }
   td.editable:focus{ background:#fffbe0; outline:1px dashed var(--accent); }
-  td.editable:empty:before{ content:'點此輸入電話'; color:#c9c2ac; }
+  td.editable:empty:before{ content:'點此輸入'; color:#c9c2ac; }
   .tag-note{
     display:inline-block; font-size:10.5px; padding:1px 6px; border-radius:8px; margin-left:6px;
   }
@@ -644,7 +647,8 @@ function renderClasses() {
 
         const editKey = `${idx}_${s.seq}_${fieldKey}`;
         const current = manualEdits.hasOwnProperty(editKey) ? manualEdits[editKey] : val;
-        return `<td class="editable" contenteditable="true" data-edit-key="${editKey}">${current}</td>`;
+        const titleAttr = current ? ` title="${current.replace(/"/g, '&quot;')}"` : '';
+        return `<td class="editable" contenteditable="true" data-edit-key="${editKey}"${titleAttr}>${current}</td>`;
       }).join('');
 
       return `
@@ -714,7 +718,10 @@ document.querySelectorAll('input[name="orientation"]').forEach(radio => {
 classesContainer.addEventListener('focusout', (e) => {
   const cell = e.target.closest('td[data-edit-key]');
   if (!cell) return;
-  manualEdits[cell.dataset.editKey] = cell.textContent.trim();
+  const text = cell.textContent.trim();
+  manualEdits[cell.dataset.editKey] = text;
+  if (text) cell.setAttribute('title', text);
+  else cell.removeAttribute('title');
 });
 
 document.getElementById('expandAllBtn').addEventListener('click', () => {
