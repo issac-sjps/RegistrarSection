@@ -65,6 +65,17 @@
   .dropzone.done{ border-color:var(--accent); background:var(--accent-soft); }
   .dropzone strong{ display:block; font-size:14.5px; margin-bottom:4px; }
   .dropzone span{ font-size:12.5px; color:#7a8680; }
+  .upload-hint{
+    margin-top:10px; font-size:11.5px; color:#8a8072; line-height:1.6;
+    border-top:1px dashed var(--line); padding-top:8px;
+  }
+  .upload-hint a{ color:var(--accent); }
+  .no-excel-btn{
+    display:inline-block; margin-top:4px; border:1px solid var(--accent);
+    background:#fff; color:var(--accent); font-size:11.5px; padding:5px 10px;
+    border-radius:4px; cursor:pointer;
+  }
+  .no-excel-btn:hover{ background:var(--accent-soft); }
   input[type=file]{ display:none; }
 
   .status{ margin-top:14px; font-size:13px; color:#7a8680; text-align:center; min-height:18px; }
@@ -151,9 +162,8 @@
   tbody tr.mismatch:hover{ background:#f5dcb9; }
   tbody tr.notyet{ background:var(--notyet-soft); }
   tbody tr.notyet:hover{ background:#c3ddf6; }
-  .gender-tag{ display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align:middle; }
-  .gender-tag.boy{ background:var(--boy); }
-  .gender-tag.girl{ background:var(--girl); }
+  .gender-boy{ color:var(--boy); font-weight:600; }
+  .gender-girl{ color:var(--girl); font-weight:600; }
   .idnum{ font-family:var(--mono); color:#5b6b64; }
   .blank-fill{ color:#a9ada6; }
   td.editable{ cursor:text; border-bottom:1px dashed var(--line); }
@@ -181,7 +191,7 @@
   @media print{
     body{ background:#fff; }
     header, .upload-row, .privacy-note, .panel, .warning-panel, .summary-bar,
-    .class-head .right .chevron, .status, footer{ display:none !important; }
+    .class-head .right .chevron, .status, footer, .legend{ display:none !important; }
     main{ padding:0; max-width:none; }
     .classes{ gap:0; }
     .class-card{ border:none; border-radius:0; page-break-after:always; page-break-inside:avoid; }
@@ -200,7 +210,7 @@
     tbody tr.notyet{ background:#fff !important; }
     tbody tr.unmatched td, tbody tr.mismatch td{ box-shadow:inset 0 0 0 9999px rgba(0,0,0,0.06); }
     tbody tr.notyet td{ box-shadow:inset 0 0 0 9999px rgba(29,95,158,0.08); }
-    td.editable{ border-bottom:1px solid #000; }
+    td.editable{ border-bottom:1px solid #ccc; }
     td.editable:empty:before{ content:''; }
     .print-class-btn{ display:none; }
     .class-card:not(.print-target){ display:none; }
@@ -221,11 +231,18 @@
     <div class="dropzone" id="pdfDropzone">
       <strong>① 編班名冊 PDF</strong>
       <span>拖曳或點擊選擇（每班一頁）</span>
+      <div class="upload-hint">請使用「一年級－完整姓名版（校內使用）」的編班名冊 PDF</div>
       <input type="file" id="pdfInput" accept="application/pdf">
     </div>
     <div class="dropzone" id="xlsxDropzone">
       <strong>② 新生報到 Excel</strong>
       <span>拖曳或點擊選擇（.xlsx / .xls）</span>
+      <div class="upload-hint">
+        資料來源為高雄市新生報到系統
+        <a href="https://newstu.kh.edu.tw/login.jsp" target="_blank" rel="noopener" onclick="event.stopPropagation()">newstu.kh.edu.tw</a>
+        匯出的 Excel。如果報到最後一天忘記下載，就不會有這個檔案——
+        <button type="button" class="no-excel-btn" id="noExcelBtn">我沒有該檔案，直接手動填寫</button>
+      </div>
       <input type="file" id="xlsxInput" accept=".xlsx,.xls">
     </div>
   </div>
@@ -258,7 +275,7 @@
       </div>
       <div class="orientation-toggle font-size-toggle">
         <label for="printFontSize">列印字級</label>
-        <input type="range" id="printFontSize" min="7" max="14" step="0.5" value="10.5">
+        <input type="range" id="printFontSize" min="5" max="30" step="0.5" value="10.5">
         <span id="printFontSizeVal">10.5px</span>
       </div>
       <button class="btn" id="expandAllBtn">全部展開</button>
@@ -339,14 +356,14 @@ const SELECTABLE_FIELDS = [
   ['address',           COL.address,          '聯絡地址', false],
   ['emergencyName',     COL.emergencyName,    '緊急聯絡人姓名', true],
   ['emergencyRel',      COL.emergencyRel,     '緊急聯絡人關係', true],
-  ['emergencyPhone',    COL.emergencyPhone,   '緊急聯絡人電話', false],
+  ['emergencyPhone',    COL.emergencyPhone,   '緊急聯絡人電話', true],
   ['lowIncome',         COL.lowIncome,        '低收/中低收', true],
   ['disability',        COL.disability,       '學生身心障礙', false],
   ['disease',           COL.disease,          '關注疾病', true],
   ['lunch',             COL.lunch,            '午餐類型', false],
   ['indigenous',        COL.indigenous,       '原住民族別', false],
   ['langChoice',        COL.langChoice,       '選修本土語', false],
-  ['langName',          COL.langName,         '本土語言名稱', false],
+  ['langName',          COL.langName,         '本土語言名稱', true],
 ];
 
 function getKey(row, target) {
@@ -474,6 +491,16 @@ xlsxDropzone.addEventListener('drop', e => {
 });
 xlsxInput.addEventListener('change', e => { if (e.target.files.length) handleExcelFile(e.target.files[0]); });
 
+document.getElementById('noExcelBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  excelRows = [];
+  xlsxDropzone.classList.add('done');
+  xlsxDropzone.querySelector('strong').textContent = '② 新生報到 Excel ✓ 無檔案（全部手動填寫）';
+  statusEl.textContent = '已略過 Excel，所有學生欄位需手動輸入後再列印。';
+  buildFieldPanel();
+  tryMerge();
+});
+
 function handleExcelFile(file) {
   statusEl.textContent = `正在讀取「${file.name}」...`;
   const reader = new FileReader();
@@ -600,10 +627,10 @@ function renderClasses() {
         : isNotYetButListed(s) ? 'notyet'
         : '';
       const noteTag = s.matchStatus === 'unmatched'
-        ? '<span class="tag-note miss">Excel無資料</span>'
+        ? '<span class="tag-note miss">Excel無</span>'
         : s.matchStatus === 'mismatch'
           ? '<span class="tag-note warn">後四碼待確認</span>'
-          : isNotYetButListed(s) ? '<span class="tag-note notyet">紙本報到</span>' : '';
+          : isNotYetButListed(s) ? '<span class="tag-note notyet">紙本</span>' : '';
 
       const fieldCells = fieldLabels.map(f => {
         const [fieldKey, colKey] = f;
@@ -615,20 +642,16 @@ function renderClasses() {
         let val = '';
         if (s.excelRow) val = (getKey(s.excelRow, colKey) || '').toString().trim();
 
-        if (fieldKey === 'dadPhone' || fieldKey === 'momPhone') {
-          const editKey = `${idx}_${s.seq}_${fieldKey}`;
-          const current = manualEdits.hasOwnProperty(editKey) ? manualEdits[editKey] : val;
-          return `<td class="editable" contenteditable="true" data-edit-key="${editKey}">${current}</td>`;
-        }
-
-        return `<td>${val}</td>`;
+        const editKey = `${idx}_${s.seq}_${fieldKey}`;
+        const current = manualEdits.hasOwnProperty(editKey) ? manualEdits[editKey] : val;
+        return `<td class="editable" contenteditable="true" data-edit-key="${editKey}">${current}</td>`;
       }).join('');
 
       return `
         <tr class="${rowClass}">
           <td>${s.seq}</td>
           <td>${s.name}${noteTag}</td>
-          <td><span class="gender-tag ${s.gender === '男' ? 'boy' : 'girl'}"></span>${s.gender}</td>
+          <td class="gender-${s.gender === '男' ? 'boy' : 'girl'}">${s.gender}</td>
           ${fieldCells}
         </tr>`;
     }).join('');
