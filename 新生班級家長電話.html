@@ -146,6 +146,10 @@
   .gender-tag.girl{ background:var(--girl); }
   .idnum{ font-family:var(--mono); color:#5b6b64; }
   .blank-fill{ color:#a9ada6; }
+  td.editable{ cursor:text; border-bottom:1px dashed var(--line); }
+  td.editable:hover{ background:var(--accent-soft); }
+  td.editable:focus{ background:#fffbe0; outline:1px dashed var(--accent); }
+  td.editable:empty:before{ content:'點此輸入電話'; color:#c9c2ac; }
   .tag-note{
     display:inline-block; font-size:10.5px; padding:1px 6px; border-radius:8px; margin-left:6px;
   }
@@ -185,6 +189,8 @@
     tbody tr.notyet{ background:#fff !important; }
     tbody tr.unmatched td, tbody tr.mismatch td{ box-shadow:inset 0 0 0 9999px rgba(0,0,0,0.06); }
     tbody tr.notyet td{ box-shadow:inset 0 0 0 9999px rgba(29,95,158,0.08); }
+    td.editable{ border-bottom:1px solid #000; }
+    td.editable:empty:before{ content:''; }
     .print-class-btn{ display:none; }
     .class-card:not(.print-target){ display:none; }
   }
@@ -254,6 +260,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs
 let pdfClasses = null;     // [{grade, classNum, teacher, school, students:[{seq,name,gender,idLast4}]}]
 let excelRows = null;      // raw excel rows
 let mergedClasses = null;  // classes with merged excel data + match status
+const manualEdits = {};    // "classIdx_seq_field" -> manually typed value (e.g. phone copied from paper form)
 
 const statusEl = document.getElementById('status');
 const pdfDropzone = document.getElementById('pdfDropzone');
@@ -303,7 +310,7 @@ const COL = {
 
 // Selectable print fields (key -> [colKey, label]); dad/mom phone checked by default
 const SELECTABLE_FIELDS = [
-  ['status',            COL.status,           '報到狀態', true],
+  ['status',            COL.status,           '報到狀態', false],
   ['dadPhone',          COL.dadPhone,         '父親手機號碼', true],
   ['momPhone',          COL.momPhone,         '母親手機號碼', true],
   ['guardian',          COL.guardian,         '監護人', false],
@@ -575,12 +582,19 @@ function renderClasses() {
         ? '<span class="tag-note miss">Excel無資料</span>'
         : s.matchStatus === 'mismatch'
           ? '<span class="tag-note warn">後四碼待確認</span>'
-          : isNotYetButListed(s) ? '<span class="tag-note notyet">狀態顯示未報到</span>' : '';
+          : isNotYetButListed(s) ? '<span class="tag-note notyet">紙本報到</span>' : '';
 
       const fieldCells = fieldLabels.map(f => {
-        const colKey = f[1];
+        const [fieldKey, colKey] = f;
         let val = '';
         if (s.excelRow) val = (getKey(s.excelRow, colKey) || '').toString().trim();
+
+        if (fieldKey === 'dadPhone' || fieldKey === 'momPhone') {
+          const editKey = `${idx}_${s.seq}_${fieldKey}`;
+          const current = manualEdits.hasOwnProperty(editKey) ? manualEdits[editKey] : val;
+          return `<td class="editable" contenteditable="true" data-edit-key="${editKey}">${current}</td>`;
+        }
+
         if (!val) return `<td class="blank-fill">＿＿＿＿＿＿＿＿</td>`;
         return `<td>${val}</td>`;
       }).join('');
@@ -636,6 +650,12 @@ function renderClasses() {
   `;
   classesContainer.appendChild(legend);
 }
+
+classesContainer.addEventListener('focusout', (e) => {
+  const cell = e.target.closest('td[data-edit-key]');
+  if (!cell) return;
+  manualEdits[cell.dataset.editKey] = cell.textContent.trim();
+});
 
 document.getElementById('expandAllBtn').addEventListener('click', () => {
   document.querySelectorAll('.class-card').forEach(c => c.classList.remove('collapsed'));
