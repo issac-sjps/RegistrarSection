@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>編班名冊解析工具</title>
+<title>班級聯絡電話列印工具</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
     --ink:#1c2b33;
@@ -12,6 +13,10 @@
     --line:#d8d2c2;
     --accent:#2f6f5e;
     --accent-soft:#e4efe9;
+    --warn:#a8560f;
+    --warn-soft:#fbe9d8;
+    --miss:#8a1f2b;
+    --miss-soft:#f6dfe1;
     --boy:#3d6b96;
     --girl:#b45a6b;
     --mono: "Noto Sans Mono CJK TC","Courier New",monospace;
@@ -25,11 +30,9 @@
     line-height:1.6;
   }
   header{
-    padding:48px 24px 28px;
+    padding:40px 24px 24px;
     text-align:center;
     border-bottom:1px solid var(--line);
-    background:
-      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(47,111,94,0.06) 39px, rgba(47,111,94,0.06) 40px);
   }
   header .eyebrow{
     letter-spacing:0.35em;
@@ -38,211 +41,192 @@
     text-transform:uppercase;
     margin-bottom:10px;
   }
-  header h1{
-    margin:0;
-    font-size:32px;
-    font-weight:700;
-    letter-spacing:0.02em;
-  }
-  header p{
-    margin:10px auto 0;
-    max-width:520px;
-    color:#5b6b64;
-    font-size:14px;
-  }
-  main{
-    max-width:960px;
-    margin:0 auto;
-    padding:36px 24px 80px;
-  }
+  header h1{ margin:0; font-size:28px; font-weight:700; }
+  header p{ margin:10px auto 0; max-width:560px; color:#5b6b64; font-size:13.5px; }
+
+  main{ max-width:1000px; margin:0 auto; padding:32px 24px 100px; }
+
+  .upload-row{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  @media (max-width:720px){ .upload-row{ grid-template-columns:1fr; } }
+
   .dropzone{
     border:2px dashed var(--line);
     border-radius:6px;
-    padding:40px 20px;
+    padding:28px 16px;
     text-align:center;
     background:#fff;
     cursor:pointer;
     transition:border-color .15s ease, background .15s ease;
   }
-  .dropzone.drag{
-    border-color:var(--accent);
-    background:var(--accent-soft);
-  }
-  .dropzone strong{ display:block; font-size:16px; margin-bottom:6px; }
-  .dropzone span{ font-size:13px; color:#7a8680; }
+  .dropzone.drag{ border-color:var(--accent); background:var(--accent-soft); }
+  .dropzone.done{ border-color:var(--accent); background:var(--accent-soft); }
+  .dropzone strong{ display:block; font-size:14.5px; margin-bottom:4px; }
+  .dropzone span{ font-size:12.5px; color:#7a8680; }
   input[type=file]{ display:none; }
 
-  .status{
-    margin-top:16px;
-    font-size:13px;
-    color:#7a8680;
-    text-align:center;
-    min-height:18px;
-  }
+  .status{ margin-top:14px; font-size:13px; color:#7a8680; text-align:center; min-height:18px; }
 
   .privacy-note{
-    margin-top:18px;
-    padding:12px 16px;
-    border-left:3px solid var(--accent);
-    background:var(--accent-soft);
-    font-size:12.5px;
-    color:#33473f;
-    border-radius:2px;
+    margin-top:18px; padding:12px 16px; border-left:3px solid var(--accent);
+    background:var(--accent-soft); font-size:12.5px; color:#33473f; border-radius:2px;
   }
 
-  .summary-bar{
-    display:none;
-    margin-top:32px;
-    padding-bottom:14px;
-    border-bottom:1px solid var(--line);
-    justify-content:space-between;
-    align-items:baseline;
-    flex-wrap:wrap;
-    gap:8px;
+  .panel{
+    margin-top:28px; background:#fff; border:1px solid var(--line); border-radius:6px;
+    padding:18px 20px; display:none;
   }
-  .summary-bar h2{ font-size:15px; margin:0; font-weight:600; }
+  .panel h2{ font-size:14.5px; margin:0 0 12px; font-weight:700; }
+  .field-grid{
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:8px 16px;
+  }
+  .field-item{ display:flex; align-items:center; gap:7px; font-size:13px; }
+  .field-item input{ accent-color:var(--accent); }
+
+  .warning-panel{
+    display:none; margin-top:20px; padding:14px 18px; border-radius:6px;
+    background:var(--warn-soft); border:1px solid #e6c393; color:#5c3c12; font-size:13px;
+  }
+  .warning-panel strong{ display:block; margin-bottom:6px; font-size:13.5px; }
+  .warning-panel ul{ margin:6px 0 0; padding-left:20px; }
+  .warning-panel li{ margin-bottom:3px; }
+
+  .summary-bar{
+    display:none; margin-top:28px; padding-bottom:14px; border-bottom:1px solid var(--line);
+    justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:10px;
+  }
+  .summary-bar h2{ font-size:15px; margin:0; font-weight:700; }
   .summary-bar .meta{ font-size:12.5px; color:#7a8680; }
-  .actions{ display:flex; gap:8px; }
+  .actions{ display:flex; gap:8px; flex-wrap:wrap; }
   .btn{
-    border:1px solid var(--line);
-    background:#fff;
-    color:var(--ink);
-    font-size:12.5px;
-    padding:7px 14px;
-    border-radius:4px;
-    cursor:pointer;
+    border:1px solid var(--line); background:#fff; color:var(--ink); font-size:12.5px;
+    padding:7px 14px; border-radius:4px; cursor:pointer;
   }
   .btn:hover{ border-color:var(--accent); color:var(--accent); }
   .btn.primary{ background:var(--accent); color:#fff; border-color:var(--accent); }
   .btn.primary:hover{ opacity:.9; }
 
-  .classes{
-    margin-top:24px;
-    display:flex;
-    flex-direction:column;
-    gap:22px;
-  }
-  .class-card{
-    background:#fff;
-    border:1px solid var(--line);
-    border-radius:6px;
-    overflow:hidden;
-  }
+  .classes{ margin-top:22px; display:flex; flex-direction:column; gap:20px; }
+  .class-card{ background:#fff; border:1px solid var(--line); border-radius:6px; overflow:hidden; }
   .class-head{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:14px 18px;
-    background:#fbfaf6;
-    border-bottom:1px solid var(--line);
-    cursor:pointer;
+    display:flex; justify-content:space-between; align-items:center;
+    padding:14px 18px; background:#fbfaf6; border-bottom:1px solid var(--line); cursor:pointer;
   }
-  .class-head .title{
-    font-size:15px;
-    font-weight:700;
-  }
-  .class-head .title .num{
-    color:var(--accent);
-    margin-right:8px;
-    font-variant-numeric:tabular-nums;
-  }
-  .class-head .sub{
-    font-size:12.5px;
-    color:#7a8680;
-    margin-top:2px;
-  }
-  .class-head .count{
-    font-size:12px;
-    color:#7a8680;
-    font-variant-numeric:tabular-nums;
-  }
-  .class-head .chevron{
-    margin-left:12px;
-    transition:transform .15s ease;
-    color:#a9ada6;
-  }
+  .class-head .title{ font-size:15px; font-weight:700; }
+  .class-head .title .num{ color:var(--accent); margin-right:8px; font-variant-numeric:tabular-nums; }
+  .class-head .sub{ font-size:12.5px; color:#7a8680; margin-top:2px; }
+  .class-head .right{ display:flex; align-items:center; gap:10px; }
+  .class-head .count{ font-size:12px; color:#7a8680; }
+  .class-head .chevron{ transition:transform .15s ease; color:#a9ada6; }
   .class-card.collapsed .chevron{ transform:rotate(-90deg); }
   .class-card.collapsed table{ display:none; }
+  .print-class-btn{
+    font-size:11.5px; border:1px solid var(--line); background:#fff; padding:5px 10px;
+    border-radius:4px; cursor:pointer; color:var(--accent);
+  }
+  .print-class-btn:hover{ background:var(--accent-soft); }
 
-  table{
-    width:100%;
-    border-collapse:collapse;
-    font-size:13.5px;
-  }
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
   thead th{
-    text-align:left;
-    font-weight:600;
-    font-size:11.5px;
-    letter-spacing:0.04em;
-    color:#7a8680;
-    padding:8px 18px;
-    border-bottom:1px solid var(--line);
-    background:#fff;
+    text-align:left; font-weight:600; font-size:11px; letter-spacing:0.03em; color:#7a8680;
+    padding:8px 14px; border-bottom:1px solid var(--line); background:#fff; white-space:nowrap;
   }
-  tbody td{
-    padding:7px 18px;
-    border-bottom:1px solid #eee9dd;
-    font-variant-numeric:tabular-nums;
-  }
+  tbody td{ padding:7px 14px; border-bottom:1px solid #eee9dd; }
   tbody tr:last-child td{ border-bottom:none; }
   tbody tr:hover{ background:#fbfaf6; }
-  .gender-tag{
-    display:inline-block;
-    width:8px; height:8px;
-    border-radius:50%;
-    margin-right:6px;
-    vertical-align:middle;
-  }
+  tbody tr.unmatched{ background:var(--miss-soft); }
+  tbody tr.unmatched:hover{ background:#f2ccd0; }
+  tbody tr.mismatch{ background:var(--warn-soft); }
+  tbody tr.mismatch:hover{ background:#f5dcb9; }
+  .gender-tag{ display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align:middle; }
   .gender-tag.boy{ background:var(--boy); }
   .gender-tag.girl{ background:var(--girl); }
   .idnum{ font-family:var(--mono); color:#5b6b64; }
-
-  .empty-hint{
-    text-align:center;
-    color:#a9ada6;
-    font-size:13px;
-    padding:24px;
+  .blank-fill{ color:#a9ada6; }
+  .tag-note{
+    display:inline-block; font-size:10.5px; padding:1px 6px; border-radius:8px; margin-left:6px;
   }
+  .tag-note.miss{ background:var(--miss); color:#fff; }
+  .tag-note.warn{ background:var(--warn); color:#fff; }
 
-  footer{
-    text-align:center;
-    font-size:12px;
-    color:#a9ada6;
-    padding:20px;
+  .legend{ display:flex; gap:18px; flex-wrap:wrap; font-size:12px; color:#5b6b64; margin-top:10px; }
+  .legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .legend .box{ width:12px; height:12px; border-radius:3px; display:inline-block; }
+  .box.miss{ background:var(--miss-soft); border:1px solid var(--miss); }
+  .box.warn{ background:var(--warn-soft); border:1px solid var(--warn); }
+
+  footer{ text-align:center; font-size:12px; color:#a9ada6; padding:20px; }
+
+  /* ---------- PRINT ---------- */
+  @media print{
+    body{ background:#fff; }
+    header, .upload-row, .privacy-note, .panel, .warning-panel, .summary-bar,
+    .class-head .right .chevron, .status, footer{ display:none !important; }
+    main{ padding:0; max-width:none; }
+    .classes{ gap:0; }
+    .class-card{ border:none; border-radius:0; page-break-after:always; }
+    .class-card:last-child{ page-break-after:auto; }
+    .class-card.collapsed table{ display:table !important; }
+    .class-head{ background:#fff; border-bottom:2px solid #000; padding:10px 4px; }
+    .class-head .right{ display:none; }
+    table{ font-size:12px; }
+    thead th{ border-bottom:1px solid #000; color:#000; }
+    tbody td{ border-bottom:1px solid #ccc; }
+    tbody tr.unmatched{ background:#fff !important; }
+    tbody tr.mismatch{ background:#fff !important; }
+    tbody tr.unmatched td, tbody tr.mismatch td{ box-shadow:inset 0 0 0 9999px rgba(0,0,0,0.06); }
+    .print-class-btn{ display:none; }
+    .class-card:not(.print-target){ display:none; }
   }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="eyebrow">編班名冊 · 解析工具</div>
-  <h1>上傳 PDF，自動整理各班名單</h1>
-  <p>拖曳或選擇「編班名冊」PDF，即可自動辨識每個班級、導師與學生資料。所有解析都在你的瀏覽器內完成，檔案不會上傳到任何伺服器。</p>
+  <div class="eyebrow">編班名冊 × 報到資料 · 比對列印</div>
+  <h1>分班聯絡電話列印工具</h1>
+  <p>上傳「編班名冊 PDF」與「新生報到 Excel」，自動比對每位學生的聯絡電話，產出可直接列印給導師的分班清單。所有比對都在瀏覽器本機完成，不會上傳到任何伺服器。</p>
 </header>
 
 <main>
 
-  <div id="dropzone" class="dropzone">
-    <strong>點擊選擇 PDF 檔案，或拖放到這裡</strong>
-    <span>支援多班合併於同一份 PDF（每班一頁）</span>
-    <input type="file" id="fileInput" accept="application/pdf">
+  <div class="upload-row">
+    <div class="dropzone" id="pdfDropzone">
+      <strong>① 編班名冊 PDF</strong>
+      <span>拖曳或點擊選擇（每班一頁）</span>
+      <input type="file" id="pdfInput" accept="application/pdf">
+    </div>
+    <div class="dropzone" id="xlsxDropzone">
+      <strong>② 新生報到 Excel</strong>
+      <span>拖曳或點擊選擇（.xlsx / .xls）</span>
+      <input type="file" id="xlsxInput" accept=".xlsx,.xls">
+    </div>
   </div>
 
   <div class="privacy-note">
-    此工具僅在你的瀏覽器本機端讀取與解析 PDF 內容，不會將檔案或資料上傳、傳送到任何伺服器，關閉分頁後資料即消失。請留意名冊內含學生個資，僅供校內合法用途使用。
+    此工具僅在你的瀏覽器本機端讀取與比對資料，PDF 與 Excel 都不會上傳、傳送到任何伺服器，關閉分頁後資料即消失。請留意檔案內含學生個資，僅供校內合法用途使用。
   </div>
 
   <div class="status" id="status"></div>
 
+  <div class="panel" id="fieldPanel">
+    <h2>③ 選擇要列印的欄位（除了姓名/座號/性別固定顯示外）</h2>
+    <div class="field-grid" id="fieldGrid"></div>
+  </div>
+
+  <div class="warning-panel" id="warningPanel">
+    <strong>⚠️ 發現姓名相符但身分證後四碼對不起來的學生：</strong>
+    <ul id="warningList"></ul>
+  </div>
+
   <div class="summary-bar" id="summaryBar">
     <div>
-      <h2 id="summaryTitle">解析結果</h2>
+      <h2 id="summaryTitle">比對結果</h2>
       <div class="meta" id="summaryMeta"></div>
     </div>
     <div class="actions">
       <button class="btn" id="expandAllBtn">全部展開</button>
       <button class="btn" id="collapseAllBtn">全部收合</button>
-      <button class="btn primary" id="exportCsvBtn">匯出 CSV</button>
+      <button class="btn primary" id="printAllBtn">列印全部班級</button>
     </div>
   </div>
 
@@ -250,63 +234,142 @@
 
 </main>
 
-<footer>僅供校內行政作業使用，請妥善保管含個資之檔案。</footer>
+<footer>僅供校內行政作業使用，請妥善保管含個資之檔案與列印文件。</footer>
 
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-const dropzone = document.getElementById('dropzone');
-const fileInput = document.getElementById('fileInput');
+// ---------- State ----------
+let pdfClasses = null;     // [{grade, classNum, teacher, school, students:[{seq,name,gender,idLast4}]}]
+let excelRows = null;      // raw excel rows
+let mergedClasses = null;  // classes with merged excel data + match status
+
 const statusEl = document.getElementById('status');
-const classesContainer = document.getElementById('classesContainer');
+const pdfDropzone = document.getElementById('pdfDropzone');
+const pdfInput = document.getElementById('pdfInput');
+const xlsxDropzone = document.getElementById('xlsxDropzone');
+const xlsxInput = document.getElementById('xlsxInput');
+const fieldPanel = document.getElementById('fieldPanel');
+const fieldGrid = document.getElementById('fieldGrid');
+const warningPanel = document.getElementById('warningPanel');
+const warningList = document.getElementById('warningList');
 const summaryBar = document.getElementById('summaryBar');
 const summaryTitle = document.getElementById('summaryTitle');
 const summaryMeta = document.getElementById('summaryMeta');
+const classesContainer = document.getElementById('classesContainer');
 
-let parsedClasses = [];
+// ---------- Column mapping (matches typical registration excel) ----------
+const COL = {
+  status: '報到狀態',
+  id: '學生編號',
+  idNum: '身份證號',
+  name: '姓名',
+  birth: '出生日期',
+  address: '聯絡地址',
+  phone: '聯絡電話',
+  guardian: '監護人',
+  guardianName: '監護人姓名',
+  guardianPhone: '監護人\n電話',
+  dadPhone: '父親\n手機號碼',
+  momPhone: '母親\n手機號碼',
+  emergencyName: '緊急聯絡人姓名',
+  emergencyRel: '緊急聯絡人\n與新生關係',
+  emergencyPhone: '緊急聯絡人\n電話',
+  lowIncome: '低收/中低收',
+  sibling: '兄弟姐妹\n同時入學',
+  siblingName: '兄弟姐妹\n姓名',
+  disability: '學生是否\n身心障礙',
+  disabilityType: '學生\n身心障礙類別',
+  parentDisability: '父母是否\n身心障礙',
+  parentDisabilityType: '父母\n身心障礙類別',
+  disease: '關注疾病',
+  indigenous: '原住民學生\n族別',
+  foreignParent: '外配子女\n父母國籍',
+  langChoice: '選修本土語',
+  langName: '本土語言名稱',
+  lunch: '營養午餐\n類型',
+};
 
-dropzone.addEventListener('click', () => fileInput.click());
-dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
-dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
-dropzone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropzone.classList.remove('drag');
-  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+// Selectable print fields (key -> [colKey, label]); dad/mom phone checked by default
+const SELECTABLE_FIELDS = [
+  ['dadPhone',        COL.dadPhone,        '父親手機號碼', true],
+  ['momPhone',         COL.momPhone,        '母親手機號碼', true],
+  ['guardianName',     COL.guardianName,    '監護人姓名', false],
+  ['guardianPhone',    COL.guardianPhone,   '監護人電話', false],
+  ['phone',            COL.phone,           '聯絡電話', false],
+  ['address',          COL.address,         '聯絡地址', false],
+  ['emergencyName',    COL.emergencyName,   '緊急聯絡人姓名', false],
+  ['emergencyRel',     COL.emergencyRel,    '緊急聯絡人關係', false],
+  ['emergencyPhone',   COL.emergencyPhone,  '緊急聯絡人電話', false],
+  ['lowIncome',        COL.lowIncome,       '低收/中低收', false],
+  ['disability',       COL.disability,      '學生身心障礙', false],
+  ['disease',          COL.disease,         '關注疾病', false],
+  ['lunch',            COL.lunch,           '午餐類型', false],
+  ['indigenous',       COL.indigenous,      '原住民族別', false],
+  ['langChoice',       COL.langChoice,      '選修本土語', false],
+  ['langName',         COL.langName,        '本土語言名稱', false],
+];
+
+function getKey(row, target) {
+  const keys = Object.keys(row);
+  const normalized = target.replace(/[\s\n]/g, '');
+  const found = keys.find(k => k.replace(/[\s\n]/g, '') === normalized);
+  return found ? row[found] : '';
+}
+
+function extractLast4(idStr) {
+  if (!idStr) return '';
+  const digits = idStr.toString().replace(/\D/g, '');
+  return digits.slice(-4);
+}
+
+// ---------- Build field checkboxes ----------
+function buildFieldPanel() {
+  fieldGrid.innerHTML = SELECTABLE_FIELDS.map(([key, , label, checked]) => `
+    <label class="field-item">
+      <input type="checkbox" data-field="${key}" ${checked ? 'checked' : ''}>
+      ${label}
+    </label>
+  `).join('');
+  fieldGrid.querySelectorAll('input').forEach(cb => {
+    cb.addEventListener('change', () => { if (mergedClasses) renderClasses(); });
+  });
+  fieldPanel.style.display = 'block';
+}
+
+function getSelectedFields() {
+  return [...fieldGrid.querySelectorAll('input:checked')].map(cb => cb.dataset.field);
+}
+
+// ================= PDF PARSING =================
+pdfDropzone.addEventListener('click', () => pdfInput.click());
+pdfDropzone.addEventListener('dragover', e => { e.preventDefault(); pdfDropzone.classList.add('drag'); });
+pdfDropzone.addEventListener('dragleave', () => pdfDropzone.classList.remove('drag'));
+pdfDropzone.addEventListener('drop', e => {
+  e.preventDefault(); pdfDropzone.classList.remove('drag');
+  if (e.dataTransfer.files.length) handlePdfFile(e.dataTransfer.files[0]);
 });
-fileInput.addEventListener('change', e => {
-  if (e.target.files.length) handleFile(e.target.files[0]);
-});
+pdfInput.addEventListener('change', e => { if (e.target.files.length) handlePdfFile(e.target.files[0]); });
 
-async function handleFile(file) {
-  if (file.type !== 'application/pdf') {
-    statusEl.textContent = '請選擇 PDF 檔案。';
-    return;
-  }
+async function handlePdfFile(file) {
+  if (file.type !== 'application/pdf') { statusEl.textContent = '請選擇 PDF 檔案。'; return; }
   statusEl.textContent = `正在讀取「${file.name}」...`;
-  classesContainer.innerHTML = '';
-  summaryBar.style.display = 'none';
 
   try {
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     const allClasses = [];
-    const debugPages = [];
 
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       statusEl.textContent = `正在解析第 ${pageNum} / ${pdf.numPages} 頁...`;
       const page = await pdf.getPage(pageNum);
       const content = await page.getTextContent();
-
-      // Group text items into rows by their y-position
       const items = content.items.map(it => ({
-        text: it.str,
-        x: it.transform[4],
-        y: Math.round(it.transform[5])
+        text: it.str, x: it.transform[4], y: Math.round(it.transform[5])
       })).filter(it => it.text.trim() !== '');
 
       const rowsMap = new Map();
       for (const it of items) {
-        // bucket y-positions that are close together into the same row
         let key = null;
         for (const existingY of rowsMap.keys()) {
           if (Math.abs(existingY - it.y) <= 5) { key = existingY; break; }
@@ -315,34 +378,31 @@ async function handleFile(file) {
         if (!rowsMap.has(key)) rowsMap.set(key, []);
         rowsMap.get(key).push(it);
       }
-
       const sortedRows = [...rowsMap.entries()]
         .sort((a, b) => b[0] - a[0])
         .map(([, arr]) => arr.sort((a, b) => a.x - b.x).map(i => i.text).join(' '));
-
       const pageText = sortedRows.join('\n');
 
-      const classInfo = parseClassPage(pageText, pageNum);
+      const classInfo = parseClassPage(pageText);
       if (classInfo) allClasses.push(classInfo);
-      else debugPages.push({ pageNum, text: pageText });
     }
 
-    parsedClasses = allClasses;
-    renderClasses(allClasses, file.name);
+    pdfClasses = allClasses;
+    statusEl.textContent = allClasses.length
+      ? `PDF 解析完成，共 ${allClasses.length} 個班級。`
+      : 'PDF 讀取完成，但未辨識出班級資料，請確認格式。';
 
-    if (allClasses.length) {
-      statusEl.textContent = `完成，共辨識出 ${allClasses.length} 個班級。`;
-    } else {
-      statusEl.textContent = '完成讀取，但未辨識出班級資料。以下是每頁實際抓到的文字內容，可用來確認格式落差：';
-      renderDebugPages(debugPages);
-    }
+    pdfDropzone.classList.toggle('done', allClasses.length > 0);
+    pdfDropzone.querySelector('strong').textContent = `① 編班名冊 PDF ✓ ${file.name}`;
+
+    tryMerge();
   } catch (err) {
     console.error(err);
-    statusEl.textContent = '讀取失敗：' + err.message;
+    statusEl.textContent = 'PDF 讀取失敗：' + err.message;
   }
 }
 
-function parseClassPage(text, pageNum) {
+function parseClassPage(text) {
   const yearGradeMatch = text.match(/(\d{2,3})\s*學年度\s*(\d{1,2})\s*年\s*0?(\d{1,2})\s*班/);
   const teacherMatch = text.match(/導師\s*[:：]\s*([\u4e00-\u9fa5]{2,4})/);
   const schoolMatch = text.match(/([\u4e00-\u9fa5]{3,20}國[民小中]{0,2}[小中]?學)/);
@@ -353,7 +413,6 @@ function parseClassPage(text, pageNum) {
   while ((m = rowRegex.exec(text)) !== null) {
     students.push({ seq: m[1], name: m[2], gender: m[3], idLast4: m[4] });
   }
-
   if (!yearGradeMatch && !teacherMatch && students.length === 0) return null;
 
   return {
@@ -362,79 +421,197 @@ function parseClassPage(text, pageNum) {
     classNum: yearGradeMatch ? yearGradeMatch[3] : '',
     teacher: teacherMatch ? teacherMatch[1] : '',
     school: schoolMatch ? schoolMatch[1] : '',
-    students,
-    pageNum,
-    rawText: text
+    students
   };
 }
 
-function renderDebugPages(debugPages) {
-  if (!debugPages.length) return;
-  const wrap = document.createElement('div');
-  wrap.style.marginTop = '20px';
-  debugPages.forEach(dp => {
-    const details = document.createElement('details');
-    details.style.cssText = 'background:#fff;border:1px solid var(--line);border-radius:6px;margin-bottom:10px;padding:10px 16px;';
-    details.innerHTML = `<summary style="cursor:pointer;font-size:13px;font-weight:600;">第 ${dp.pageNum} 頁 原始擷取文字</summary>
-      <pre style="white-space:pre-wrap;font-size:12px;color:#5b6b64;margin-top:10px;">${dp.text.replace(/</g,'&lt;')}</pre>`;
-    wrap.appendChild(details);
-  });
-  classesContainer.appendChild(wrap);
+// ================= EXCEL PARSING =================
+xlsxDropzone.addEventListener('click', () => xlsxInput.click());
+xlsxDropzone.addEventListener('dragover', e => { e.preventDefault(); xlsxDropzone.classList.add('drag'); });
+xlsxDropzone.addEventListener('dragleave', () => xlsxDropzone.classList.remove('drag'));
+xlsxDropzone.addEventListener('drop', e => {
+  e.preventDefault(); xlsxDropzone.classList.remove('drag');
+  if (e.dataTransfer.files.length) handleExcelFile(e.dataTransfer.files[0]);
+});
+xlsxInput.addEventListener('change', e => { if (e.target.files.length) handleExcelFile(e.target.files[0]); });
+
+function handleExcelFile(file) {
+  statusEl.textContent = `正在讀取「${file.name}」...`;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+      excelRows = json;
+
+      xlsxDropzone.classList.add('done');
+      xlsxDropzone.querySelector('strong').textContent = `② 新生報到 Excel ✓ ${file.name}`;
+      statusEl.textContent = `Excel 讀取完成，共 ${json.length} 筆資料。`;
+
+      buildFieldPanel();
+      tryMerge();
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = 'Excel 讀取失敗：' + err.message;
+    }
+  };
+  reader.readAsArrayBuffer(file);
 }
 
-function renderClasses(classes, fileName) {
-  classesContainer.innerHTML = '';
-  if (!classes.length) {
-    classesContainer.innerHTML = '<div class="empty-hint">尚未辨識出任何班級。</div>';
+// ================= MERGE =================
+function tryMerge() {
+  if (!pdfClasses || !excelRows) return;
+
+  // Build lookup maps from excel
+  const byNameAndId = new Map(); // "name_last4" -> row
+  const byNameOnly = new Map();  // name -> [rows]
+
+  excelRows.forEach(row => {
+    const name = (getKey(row, COL.name) || '').toString().trim();
+    const last4 = extractLast4(getKey(row, COL.idNum));
+    if (!name) return;
+    if (last4) byNameAndId.set(`${name}_${last4}`, row);
+    if (!byNameOnly.has(name)) byNameOnly.set(name, []);
+    byNameOnly.get(name).push(row);
+  });
+
+  const mismatches = [];
+
+  mergedClasses = pdfClasses.map(cls => {
+    const students = cls.students.map(s => {
+      const exactKey = `${s.name}_${s.idLast4}`;
+      let excelRow = byNameAndId.get(exactKey);
+      let status = 'matched';
+
+      if (!excelRow) {
+        const candidates = byNameOnly.get(s.name);
+        if (candidates && candidates.length > 0) {
+          // Name found but ID last4 doesn't match any of them
+          status = 'mismatch';
+          excelRow = candidates[0]; // still show data for reference, but flagged
+          const foundIds = candidates.map(r => extractLast4(getKey(r, COL.idNum)) || '（無資料）').join('、');
+          mismatches.push({
+            className: `${cls.grade}年${cls.classNum.padStart(2,'0')}班`,
+            name: s.name,
+            pdfLast4: s.idLast4,
+            excelLast4: foundIds
+          });
+        } else {
+          status = 'unmatched';
+        }
+      }
+
+      return { ...s, excelRow: excelRow || null, matchStatus: status };
+    });
+    return { ...cls, students };
+  });
+
+  renderWarnings(mismatches);
+  renderClasses();
+}
+
+function renderWarnings(mismatches) {
+  if (mismatches.length === 0) {
+    warningPanel.style.display = 'none';
+    warningList.innerHTML = '';
     return;
   }
+  warningPanel.style.display = 'block';
+  warningList.innerHTML = mismatches.map(m =>
+    `<li>${m.className}　${m.name}　— 名冊後四碼「${m.pdfLast4}」，Excel 中找到的後四碼為「${m.excelLast4}」，請人工核對</li>`
+  ).join('');
+}
 
-  const totalStudents = classes.reduce((sum, c) => sum + c.students.length, 0);
-  summaryTitle.textContent = classes[0].school ? classes[0].school : '解析結果';
-  summaryMeta.textContent = `${fileName} · 共 ${classes.length} 班 · ${totalStudents} 位學生`;
+// ================= RENDER =================
+function renderClasses() {
+  classesContainer.innerHTML = '';
+  if (!mergedClasses || !mergedClasses.length) return;
+
+  const selectedFields = getSelectedFields();
+  const totalStudents = mergedClasses.reduce((sum, c) => sum + c.students.length, 0);
+  const totalUnmatched = mergedClasses.reduce((sum, c) => sum + c.students.filter(s => s.matchStatus !== 'matched').length, 0);
+
+  summaryTitle.textContent = mergedClasses[0].school || '比對結果';
+  summaryMeta.textContent = `共 ${mergedClasses.length} 班 · ${totalStudents} 位學生 · ${totalUnmatched} 位需人工確認/填寫`;
   summaryBar.style.display = 'flex';
 
-  classes.forEach(cls => {
+  mergedClasses.forEach((cls, idx) => {
     const card = document.createElement('div');
     card.className = 'class-card';
+    card.dataset.classIndex = idx;
 
-    const boys = cls.students.filter(s => s.gender === '男').length;
-    const girls = cls.students.filter(s => s.gender === '女').length;
+    const unmatchedCount = cls.students.filter(s => s.matchStatus !== 'matched').length;
+
+    const fieldLabels = SELECTABLE_FIELDS.filter(f => selectedFields.includes(f[0]));
+
+    const headCols = `<th style="width:56px;">座號</th><th>姓名</th><th style="width:70px;">性別</th><th style="width:120px;">身分證後四碼</th>` +
+      fieldLabels.map(f => `<th>${f[2]}</th>`).join('');
+
+    const bodyRows = cls.students.map(s => {
+      const rowClass = s.matchStatus === 'unmatched' ? 'unmatched' : (s.matchStatus === 'mismatch' ? 'mismatch' : '');
+      const noteTag = s.matchStatus === 'unmatched'
+        ? '<span class="tag-note miss">Excel無資料</span>'
+        : (s.matchStatus === 'mismatch' ? '<span class="tag-note warn">後四碼待確認</span>' : '');
+
+      const fieldCells = fieldLabels.map(f => {
+        const colKey = f[1];
+        let val = '';
+        if (s.excelRow) val = (getKey(s.excelRow, colKey) || '').toString().trim();
+        if (!val) return `<td class="blank-fill">＿＿＿＿＿＿＿＿</td>`;
+        return `<td>${val}</td>`;
+      }).join('');
+
+      return `
+        <tr class="${rowClass}">
+          <td>${s.seq}</td>
+          <td>${s.name}${noteTag}</td>
+          <td><span class="gender-tag ${s.gender === '男' ? 'boy' : 'girl'}"></span>${s.gender}</td>
+          <td class="idnum">${s.idLast4}</td>
+          ${fieldCells}
+        </tr>`;
+    }).join('');
 
     card.innerHTML = `
       <div class="class-head">
         <div>
           <div class="title"><span class="num">${cls.grade}年${cls.classNum.padStart(2,'0')}班</span>導師：${cls.teacher}</div>
-          <div class="sub">${cls.year}學年度 · 男 ${boys} / 女 ${girls}</div>
+          <div class="sub">${cls.year}學年度 · 共 ${cls.students.length} 人${unmatchedCount ? ` · ${unmatchedCount} 人需確認/填寫` : ''}</div>
         </div>
-        <div style="display:flex;align-items:center;">
+        <div class="right">
+          <button class="print-class-btn" data-print-idx="${idx}">列印本班</button>
           <span class="count">${cls.students.length} 人</span>
           <span class="chevron">▾</span>
         </div>
       </div>
       <table>
-        <thead>
-          <tr><th style="width:60px;">編號</th><th>姓名</th><th style="width:90px;">性別</th><th style="width:140px;">身分證後四碼</th></tr>
-        </thead>
-        <tbody>
-          ${cls.students.map(s => `
-            <tr>
-              <td>${s.seq}</td>
-              <td>${s.name}</td>
-              <td><span class="gender-tag ${s.gender === '男' ? 'boy' : 'girl'}"></span>${s.gender}</td>
-              <td class="idnum">${s.idLast4}</td>
-            </tr>
-          `).join('')}
-        </tbody>
+        <thead><tr>${headCols}</tr></thead>
+        <tbody>${bodyRows}</tbody>
       </table>
     `;
 
-    card.querySelector('.class-head').addEventListener('click', () => {
+    card.querySelector('.class-head').addEventListener('click', (e) => {
+      if (e.target.closest('.print-class-btn')) return;
       card.classList.toggle('collapsed');
+    });
+
+    card.querySelector('.print-class-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      printSingleClass(idx);
     });
 
     classesContainer.appendChild(card);
   });
+
+  // legend
+  const legend = document.createElement('div');
+  legend.className = 'legend';
+  legend.innerHTML = `
+    <span><span class="box miss"></span>Excel 中完全找不到（現場報到，需手動填寫）</span>
+    <span><span class="box warn"></span>姓名相符但身分證後四碼對不起來（需人工核對）</span>
+  `;
+  classesContainer.appendChild(legend);
 }
 
 document.getElementById('expandAllBtn').addEventListener('click', () => {
@@ -443,22 +620,27 @@ document.getElementById('expandAllBtn').addEventListener('click', () => {
 document.getElementById('collapseAllBtn').addEventListener('click', () => {
   document.querySelectorAll('.class-card').forEach(c => c.classList.add('collapsed'));
 });
-document.getElementById('exportCsvBtn').addEventListener('click', () => {
-  if (!parsedClasses.length) return;
-  let csv = '\uFEFF班級,導師,編號,姓名,性別,身分證後四碼\n';
-  parsedClasses.forEach(cls => {
-    cls.students.forEach(s => {
-      csv += `${cls.grade}年${cls.classNum}班,${cls.teacher},${s.seq},${s.name},${s.gender},${s.idLast4}\n`;
-    });
+document.getElementById('printAllBtn').addEventListener('click', () => {
+  document.querySelectorAll('.class-card').forEach(c => {
+    c.classList.remove('collapsed');
+    c.classList.add('print-target');
   });
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = '編班名冊.csv';
-  a.click();
-  URL.revokeObjectURL(url);
+  window.print();
+  document.querySelectorAll('.class-card').forEach(c => c.classList.remove('print-target'));
 });
+
+function printSingleClass(idx) {
+  document.querySelectorAll('.class-card').forEach(c => {
+    c.classList.remove('print-target');
+  });
+  const target = document.querySelector(`.class-card[data-class-index="${idx}"]`);
+  if (target) {
+    target.classList.remove('collapsed');
+    target.classList.add('print-target');
+  }
+  window.print();
+  if (target) target.classList.remove('print-target');
+}
 </script>
 
 </body>
