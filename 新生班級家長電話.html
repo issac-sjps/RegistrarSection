@@ -369,6 +369,27 @@ const SELECTABLE_FIELDS = [
   ['langName',          COL.langName,         '本土語言名稱', true],
 ];
 
+// Relative width hints (px) for print/screen table columns — short-content fields get less space
+const WIDTH_HINTS = {
+  idLast4: 90,
+  status: 68,
+  dadPhone: 100,
+  momPhone: 100,
+  guardian: 110,
+  phone: 100,
+  address: 170,
+  emergencyName: 90,
+  emergencyRel: 68,
+  emergencyPhone: 100,
+  lowIncome: 68,
+  disability: 68,
+  disease: 150,
+  lunch: 70,
+  indigenous: 80,
+  langChoice: 80,
+  langName: 130,
+};
+
 function getKey(row, target) {
   const keys = Object.keys(row);
   const normalized = target.replace(/[\s\n]/g, '');
@@ -621,8 +642,11 @@ function renderClasses() {
 
     const fieldLabels = SELECTABLE_FIELDS.filter(f => selectedFields.includes(f[0]));
 
-    const headCols = `<th style="width:56px;">座號</th><th>姓名</th><th style="width:70px;">性別</th>` +
-      fieldLabels.map(f => `<th>${f[2]}</th>`).join('');
+    const headCols = `<th style="width:44px;">座號</th><th style="width:90px;">姓名</th><th style="width:44px;">性別</th>` +
+      fieldLabels.map(f => {
+        const w = WIDTH_HINTS[f[0]];
+        return `<th${w ? ` style="width:${w}px;"` : ''}>${f[2]}</th>`;
+      }).join('');
 
     const bodyRows = cls.students.map(s => {
       const rowClass = s.matchStatus === 'unmatched' ? 'unmatched'
