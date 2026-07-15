@@ -369,25 +369,25 @@ const SELECTABLE_FIELDS = [
   ['langName',          COL.langName,         '本土語言名稱', true],
 ];
 
-// Relative width hints (px) for print/screen table columns — short-content fields get less space
+// Relative width hints (in "em" = roughly N Chinese characters wide) so columns scale with the print font-size slider
 const WIDTH_HINTS = {
-  idLast4: 90,
-  status: 68,
-  dadPhone: 100,
-  momPhone: 100,
-  guardian: 110,
-  phone: 100,
-  address: 170,
-  emergencyName: 90,
-  emergencyRel: 68,
-  emergencyPhone: 100,
-  lowIncome: 68,
-  disability: 68,
-  disease: 150,
-  lunch: 70,
-  indigenous: 80,
-  langChoice: 80,
-  langName: 130,
+  idLast4: 6,
+  status: 4,
+  dadPhone: 7,
+  momPhone: 7,
+  guardian: 7,
+  phone: 7,
+  address: 12,
+  emergencyName: 6,
+  emergencyRel: 4,
+  emergencyPhone: 7,
+  lowIncome: 4,
+  disability: 4,
+  disease: 10,
+  lunch: 4,
+  indigenous: 5,
+  langChoice: 5,
+  langName: 8,
 };
 
 function getKey(row, target) {
@@ -642,10 +642,10 @@ function renderClasses() {
 
     const fieldLabels = SELECTABLE_FIELDS.filter(f => selectedFields.includes(f[0]));
 
-    const headCols = `<th style="width:44px;">座號</th><th style="width:90px;">姓名</th><th style="width:44px;">性別</th>` +
+    const headCols = `<th style="width:3em;">座號</th><th style="width:6em;">姓名</th><th style="width:3em;">性別</th>` +
       fieldLabels.map(f => {
         const w = WIDTH_HINTS[f[0]];
-        return `<th${w ? ` style="width:${w}px;"` : ''}>${f[2]}</th>`;
+        return `<th${w ? ` style="width:${w}em;"` : ''}>${f[2]}</th>`;
       }).join('');
 
     const bodyRows = cls.students.map(s => {
@@ -654,10 +654,10 @@ function renderClasses() {
         : isNotYetButListed(s) ? 'notyet'
         : '';
       const noteTag = s.matchStatus === 'unmatched'
-        ? '<span class="tag-note miss">Excel無</span>'
+        ? '<span class="tag-note miss">現場</span>'
         : s.matchStatus === 'mismatch'
           ? '<span class="tag-note warn">後四碼待確認</span>'
-          : isNotYetButListed(s) ? '<span class="tag-note notyet">紙本</span>' : '';
+          : isNotYetButListed(s) ? '<span class="tag-note notyet">後報</span>' : '';
 
       const fieldCells = fieldLabels.map(f => {
         const [fieldKey, colKey] = f;
