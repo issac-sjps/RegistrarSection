@@ -640,7 +640,13 @@ function renderClasses() {
     card.className = 'class-card';
     card.dataset.classIndex = idx;
 
-    const unmatchedCount = cls.students.filter(s => s.matchStatus !== 'matched').length;
+    const missCount = cls.students.filter(s => s.matchStatus === 'unmatched').length;
+    const mismatchCount = cls.students.filter(s => s.matchStatus === 'mismatch').length;
+    const notyetCount = cls.students.filter(s => isNotYetButListed(s)).length;
+    const statParts = [];
+    if (missCount) statParts.push(`現場 ${missCount}`);
+    if (notyetCount) statParts.push(`後報 ${notyetCount}`);
+    if (mismatchCount) statParts.push(`後四碼待確認 ${mismatchCount}`);
 
     const fieldLabels = SELECTABLE_FIELDS.filter(f => selectedFields.includes(f[0]));
 
@@ -691,7 +697,7 @@ function renderClasses() {
       <div class="class-head">
         <div class="title-line">
           <span class="title"><span class="num">${cls.grade}年${cls.classNum.padStart(2,'0')}班</span>導師：${cls.teacher}</span>
-          <span class="sub">${cls.year}學年度 · 共 ${cls.students.length} 人${unmatchedCount ? ` · ${unmatchedCount} 人需確認/填寫` : ''}</span>
+          <span class="sub">${cls.year}學年度 · 共 ${cls.students.length} 人${statParts.length ? ` · ${statParts.join('・')}` : ''}</span>
         </div>
         <div class="right">
           <button class="print-class-btn" data-print-idx="${idx}">列印本班</button>
