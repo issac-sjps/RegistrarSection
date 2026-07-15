@@ -170,6 +170,7 @@
   .idnum{ font-family:var(--mono); color:#5b6b64; }
   .blank-fill{ color:#a9ada6; }
   td.editable{ cursor:text; border-bottom:1px dashed var(--line); }
+  td.wrap-cell{ white-space:normal !important; word-break:break-all; line-height:1.3; }
   td.editable:hover{ background:var(--accent-soft); }
   td.editable:focus{ background:#fffbe0; outline:1px dashed var(--accent); }
   td.editable:empty:before{ content:'點此輸入'; color:#c9c2ac; }
@@ -383,7 +384,7 @@ const WIDTH_HINTS = {
   emergencyPhone: 7,
   lowIncome: 4,
   disability: 4,
-  disease: 10,
+  disease: 5,
   lunch: 4,
   indigenous: 5,
   langChoice: 5,
@@ -672,7 +673,8 @@ function renderClasses() {
         const editKey = `${idx}_${s.seq}_${fieldKey}`;
         const current = manualEdits.hasOwnProperty(editKey) ? manualEdits[editKey] : val;
         const titleAttr = current ? ` title="${current.replace(/"/g, '&quot;')}"` : '';
-        return `<td class="editable" contenteditable="true" data-edit-key="${editKey}"${titleAttr}>${current}</td>`;
+        const wrapClass = fieldKey === 'disease' ? ' wrap-cell' : '';
+        return `<td class="editable${wrapClass}" contenteditable="true" data-edit-key="${editKey}"${titleAttr}>${current}</td>`;
       }).join('');
 
       return `
