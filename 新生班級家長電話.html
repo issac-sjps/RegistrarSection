@@ -285,6 +285,7 @@
       <button class="btn" id="expandAllBtn">全部展開</button>
       <button class="btn" id="collapseAllBtn">全部收合</button>
       <button class="btn primary" id="printAllBtn">列印全部班級</button>
+      <button class="btn" id="downloadAllBtn">下載全部班級 Excel</button>
     </div>
   </div>
 
@@ -694,6 +695,7 @@ function renderClasses() {
         </div>
         <div class="right">
           <button class="print-class-btn" data-print-idx="${idx}">列印本班</button>
+          <button class="print-class-btn" data-download-idx="${idx}">下載本班 Excel</button>
           <span class="count">${cls.students.length} 人</span>
           <span class="chevron">▾</span>
         </div>
@@ -709,9 +711,14 @@ function renderClasses() {
       card.classList.toggle('collapsed');
     });
 
-    card.querySelector('.print-class-btn').addEventListener('click', (e) => {
+    card.querySelector('[data-print-idx]').addEventListener('click', (e) => {
       e.stopPropagation();
       printSingleClass(idx);
+    });
+
+    card.querySelector('[data-download-idx]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      downloadClassExcel(idx);
     });
 
     classesContainer.appendChild(card);
@@ -777,7 +784,57 @@ function printSingleClass(idx) {
   window.print();
   if (target) target.classList.remove('print-target');
 }
+
+// ================= EXCEL EXPORT =================
+function getClassExportRows(idx) {
+  const cls = mergedClasses[idx];
+  const selectedFields = getSelectedFields();
+  const fieldLabels = SELECTABLE_FIELDS.filter(f => selectedFields.includes(f[0]));
+
+  return cls.students.map(s => {
+    const row = { '座號': s.seq, '姓名': s.name, '性別': s.gender };
+
+    fieldLabels.forEach(f => {
+      const [fieldKey, colKey, label] = f;
+      if (fieldKey === 'idLast4') { row[label] = s.idLast4; return; }
+      let val = '';
+      if (s.excelRow) val = (getKey(s.excelRow, colKey) || '').toString().trim();
+      const editKey = `${idx}_${s.seq}_${fieldKey}`;
+      row[label] = manualEdits.hasOwnProperty(editKey) ? manualEdits[editKey] : val;
+    });
+
+    row['備註'] = s.matchStatus === 'unmatched' ? '現場報到，Excel無資料'
+      : s.matchStatus === 'mismatch' ? '姓名相符但身分證後四碼待確認'
+      : isNotYetButListed(s) ? 'Excel報到狀態顯示未報到' : '';
+
+    return row;
+  });
+}
+
+function downloadClassExcel(idx) {
+  if (!mergedClasses || !mergedClasses[idx]) return;
+  const cls = mergedClasses[idx];
+  const rows = getClassExportRows(idx);
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  const sheetName = `${cls.grade}年${cls.classNum.padStart(2,'0')}班`;
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, `${sheetName}_聯絡資料.xlsx`);
+}
+
+document.getElementById('downloadAllBtn').addEventListener('click', () => {
+  if (!mergedClasses || !mergedClasses.length) return;
+  const wb = XLSX.utils.book_new();
+  mergedClasses.forEach((cls, idx) => {
+    const rows = getClassExportRows(idx);
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const sheetName = `${cls.grade}年${cls.classNum.padStart(2,'0')}班`.slice(0, 31);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  });
+  XLSX.writeFile(wb, `全部班級_聯絡資料.xlsx`);
+});
 </script>
 
 </body>
+
 </html>
