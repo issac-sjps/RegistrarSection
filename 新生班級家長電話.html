@@ -352,6 +352,7 @@ const COL = {
 
 // Selectable print fields (key -> [colKey, label]); dad/mom phone checked by default
 const SELECTABLE_FIELDS = [
+  ['birth',             COL.birth,            '出生日期', true],
   ['idLast4',           null,                 '身分證後四碼', false],
   ['status',            COL.status,           '報到狀態', false],
   ['dadPhone',          COL.dadPhone,         '父親手機號碼', true],
@@ -373,6 +374,7 @@ const SELECTABLE_FIELDS = [
 
 // Relative width hints (in "em" = roughly N Chinese characters wide) so columns scale with the print font-size slider
 const WIDTH_HINTS = {
+  birth: 7,
   idLast4: 6,
   status: 4,
   dadPhone: 7,
@@ -403,6 +405,16 @@ function extractLast4(idStr) {
   if (!idStr) return '';
   const digits = idStr.toString().replace(/\D/g, '');
   return digits.slice(-4);
+}
+
+function formatCellValue(raw) {
+  if (raw instanceof Date && !isNaN(raw)) {
+    const y = raw.getFullYear();
+    const m = String(raw.getMonth() + 1).padStart(2, '0');
+    const d = String(raw.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  return (raw ?? '').toString().trim();
 }
 
 // ---------- Build field checkboxes ----------
@@ -533,7 +545,7 @@ function handleExcelFile(file) {
   reader.onload = (e) => {
     try {
       const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
+      const workbook = XLSX.read(data, { type: 'array', cellDates: true });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
       excelRows = json;
@@ -675,7 +687,7 @@ function renderClasses() {
         }
 
         let val = '';
-        if (s.excelRow) val = (getKey(s.excelRow, colKey) || '').toString().trim();
+        if (s.excelRow) val = formatCellValue(getKey(s.excelRow, colKey));
 
         const editKey = `${idx}_${s.seq}_${fieldKey}`;
         const current = manualEdits.hasOwnProperty(editKey) ? manualEdits[editKey] : val;
@@ -804,7 +816,7 @@ function getClassExportRows(idx) {
       const [fieldKey, colKey, label] = f;
       if (fieldKey === 'idLast4') { row[label] = s.idLast4; return; }
       let val = '';
-      if (s.excelRow) val = (getKey(s.excelRow, colKey) || '').toString().trim();
+      if (s.excelRow) val = formatCellValue(getKey(s.excelRow, colKey));
       const editKey = `${idx}_${s.seq}_${fieldKey}`;
       row[label] = manualEdits.hasOwnProperty(editKey) ? manualEdits[editKey] : val;
     });
