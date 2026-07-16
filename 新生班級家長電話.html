@@ -89,7 +89,13 @@
     margin-top:28px; background:#fff; border:1px solid var(--line); border-radius:6px;
     padding:18px 20px; display:none;
   }
-  .panel h2{ font-size:14.5px; margin:0 0 12px; font-weight:700; }
+  .panel h2{ font-size:14.5px; margin:0; font-weight:700; }
+  .field-panel-head{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  .field-panel-actions{ display:flex; gap:8px; }
+  .field-panel-note{
+    margin-top:14px; padding:10px 14px; border-radius:4px; font-size:12px; color:#5b6b64;
+    background:var(--accent-soft); border-left:3px solid var(--accent);
+  }
   .field-grid{
     display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:8px 16px;
   }
@@ -181,7 +187,7 @@
   .tag-note.warn{ background:var(--warn); color:#fff; }
   .tag-note.notyet{ background:var(--notyet); color:#fff; }
 
-  .legend{ display:flex; gap:18px; flex-wrap:wrap; font-size:12px; color:#5b6b64; margin-top:10px; }
+  .legend{ display:flex; gap:18px; flex-wrap:wrap; font-size:12px; color:#5b6b64; margin:10px 0; width:100%; }
   .legend span{ display:inline-flex; align-items:center; gap:6px; }
   .legend .box{ width:12px; height:12px; border-radius:3px; display:inline-block; }
   .box.miss{ background:var(--miss-soft); border:1px solid var(--miss); }
@@ -258,8 +264,15 @@
   <div class="status" id="status"></div>
 
   <div class="panel" id="fieldPanel">
-    <h2>③ 選擇要列印的欄位（除了姓名/座號/性別固定顯示外）</h2>
+    <div class="field-panel-head">
+      <h2>③ 選擇要列印的欄位（除了姓名/座號/性別固定顯示外）</h2>
+      <div class="field-panel-actions">
+        <button type="button" class="btn" id="selectAllFieldsBtn">全勾選</button>
+        <button type="button" class="btn" id="clearAllFieldsBtn">全取消</button>
+      </div>
+    </div>
     <div class="field-grid" id="fieldGrid"></div>
+    <div class="field-panel-note">💡 備註：勾選的欄位太多時，畫面上會不好逐格編輯。建議先下載 Excel，自己或請導師直接在 Excel 裡編輯，會比在網頁上一格一格改更方便。</div>
   </div>
 
   <div class="warning-panel" id="warningPanel">
@@ -271,6 +284,11 @@
     <div>
       <h2 id="summaryTitle">比對結果</h2>
       <div class="meta" id="summaryMeta"></div>
+    </div>
+    <div class="legend" id="legend">
+      <span><span class="box miss"></span>Excel 中完全找不到（現場報到，需手動填寫）</span>
+      <span><span class="box warn"></span>姓名相符但身分證後四碼對不起來（需人工核對）</span>
+      <span><span class="box notyet"></span>Excel 中報到狀態顯示「未報到」，但仍在名冊中（請確認）</span>
     </div>
     <div class="actions">
       <div class="orientation-toggle">
@@ -444,6 +462,14 @@ function buildFieldPanel() {
   fieldGrid.querySelectorAll('input').forEach(cb => {
     cb.addEventListener('change', () => { if (mergedClasses) renderClasses(); });
   });
+  document.getElementById('selectAllFieldsBtn').onclick = () => {
+    fieldGrid.querySelectorAll('input').forEach(cb => cb.checked = true);
+    if (mergedClasses) renderClasses();
+  };
+  document.getElementById('clearAllFieldsBtn').onclick = () => {
+    fieldGrid.querySelectorAll('input').forEach(cb => cb.checked = false);
+    if (mergedClasses) renderClasses();
+  };
   fieldPanel.style.display = 'block';
 }
 
@@ -757,16 +783,6 @@ function renderClasses() {
 
     classesContainer.appendChild(card);
   });
-
-  // legend
-  const legend = document.createElement('div');
-  legend.className = 'legend';
-  legend.innerHTML = `
-    <span><span class="box miss"></span>Excel 中完全找不到（現場報到，需手動填寫）</span>
-    <span><span class="box warn"></span>姓名相符但身分證後四碼對不起來（需人工核對）</span>
-    <span><span class="box notyet"></span>Excel 中報到狀態顯示「未報到」，但仍在名冊中（請確認）</span>
-  `;
-  classesContainer.appendChild(legend);
 }
 
 document.getElementById('printFontSize').addEventListener('input', (e) => {
