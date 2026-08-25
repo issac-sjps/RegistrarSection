@@ -343,6 +343,8 @@
     <div class="filters" id="filters2">
       <p class="filters-title">年級</p>
       <div class="chip-group" id="gradeGroup"></div>
+      <p class="filters-title" style="margin-top:16px;">性別</p>
+      <div class="chip-group" id="genderGroup"></div>
       <p class="filters-title" style="margin-top:16px;">類別</p>
       <div class="chip-group" id="chipGroup"></div>
     </div>
@@ -534,6 +536,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   const filters2 = document.getElementById('filters2');
   const chipGroup = document.getElementById('chipGroup');
   const gradeGroup = document.getElementById('gradeGroup');
+  const genderGroup = document.getElementById('genderGroup');
   const resultWrap = document.getElementById('resultWrap');
   const resultSummary = document.getElementById('resultSummary');
   const resultHead = document.getElementById('resultHead');
@@ -558,6 +561,18 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   let categoryColumns = []; // actual column names found in matchData matching keywords
   let activeCategory = null;  // null = 全選；否則為單一類別名稱
   let activeGrade = null;     // null = 全部年級；否則為 "1","2","3"...
+  let activeGender = null;    // null = 全部；否則為 "男" 或 "女"
+
+  const GENDER_COLOR = {
+    '男': {bg:'#e8f0fb', fg:'#2d5ea6'},
+    '女': {bg:'#fbe9f0', fg:'#a63d6f'}
+  };
+  function normalizeGender(v){
+    const s = String(v).trim();
+    if(s.includes('男')) return '男';
+    if(s.includes('女')) return '女';
+    return s;
+  }
 
   function gradeOf(cls){
     const m = String(cls).match(/\d/);
@@ -620,6 +635,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     const seatIdx = findColIdx(rosterData.header, ['座號']);
     const nameIdxRoster = findColIdx(rosterData.header, ['姓名']);
     const idIdxRoster = findColIdx(rosterData.header, ['身分證','身份證']);
+    const genderIdxRoster = findColIdx(rosterData.header, ['性別']);
 
     if(classIdx === -1 || seatIdx === -1 || nameIdxRoster === -1){
       setStatus('全校名冊需含「班級、座號、姓名」欄位，請確認格式。', true);
@@ -686,7 +702,9 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
         });
         if(cats.length === 0) return; // 沒有任何一項符合，不列入名單
         records.push({
-          class: cls, seat: seat, name: name, id: idVal, categories: cats
+          class: cls, seat: seat, name: name, id: idVal,
+          gender: genderIdxRoster !== -1 ? normalizeGender(row[genderIdxRoster]) : '',
+          categories: cats
         });
       });
     });
@@ -721,6 +739,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 
     activeCategory = null;
     activeGrade = null;
+    activeGender = null;
 
     const countByCat = {};
     uniqueCats.forEach(c => countByCat[c] = 0);
@@ -784,27 +803,68 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
       gradeGroup.appendChild(chip);
     });
 
+    // --- 性別 chips（單選切換）---
+    const uniqueGenders = [...new Set(mergedRecords.map(r => r.gender).filter(Boolean))];
+    const countByGender = {};
+    uniqueGenders.forEach(g => countByGender[g] = 0);
+    mergedRecords.forEach(r => { if(countByGender[r.gender] !== undefined) countByGender[r.gender]++; });
+
+    genderGroup.innerHTML = '';
+    const allGenderChip = document.createElement('div');
+    allGenderChip.className = 'chip all active';
+    allGenderChip.textContent = `全部 (${mergedRecords.length})`;
+    allGenderChip.onclick = () => {
+      activeGender = null;
+      genderGroup.querySelectorAll('.chip').forEach(c=>{c.classList.remove('active'); c.style.background=''; c.style.borderColor=''; c.style.color='';});
+      allGenderChip.classList.add('active');
+      renderResult();
+    };
+    genderGroup.appendChild(allGenderChip);
+
+    uniqueGenders.forEach(g => {
+      const chip = document.createElement('div');
+      chip.className = 'chip';
+      chip.textContent = `${g} (${countByGender[g]})`;
+      const col = GENDER_COLOR[g];
+      chip.onclick = () => {
+        activeGender = g;
+        genderGroup.querySelectorAll('.chip').forEach(c=>{c.classList.remove('active'); c.style.background=''; c.style.borderColor=''; c.style.color='';});
+        chip.classList.add('active');
+        if(col){ chip.style.background = col.fg; chip.style.borderColor = col.fg; chip.style.color = '#fff'; }
+        renderResult();
+      };
+      genderGroup.appendChild(chip);
+    });
+
     filters2.style.display = 'block';
   }
 
   function renderResult(){
     const filtered = mergedRecords
       .filter(r => activeGrade === null || gradeOf(r.class) === activeGrade)
+      .filter(r => activeGender === null || r.gender === activeGender)
       .map(r => ({...r, categories: activeCategory === null ? r.categories : r.categories.filter(c => c === activeCategory)}))
       .filter(r => r.categories.length > 0);
 
     resultSummary.textContent = `符合條件學生：共 ${filtered.length} 位`;
 
-    resultHead.innerHTML = '<th>班級</th><th>座號</th><th>姓名</th><th>身分證號</th><th>符合類別</th>';
-    resultBody.innerHTML = filtered.map(r => `
+    resultHead.innerHTML = '<th>班級</th><th>座號</th><th>姓名</th><th>性別</th><th>身分證號</th><th>符合類別</th>';
+    resultBody.innerHTML = filtered.map(r => {
+      const gc = GENDER_COLOR[r.gender];
+      const genderCell = r.gender
+        ? `<span class="cat-tag" style="background:${gc?.bg || '#eee'};color:${gc?.fg || '#555'};">${escapeHtml(r.gender)}</span>`
+        : '';
+      return `
       <tr>
         <td>${escapeHtml(r.class)}</td>
         <td>${escapeHtml(r.seat)}</td>
         <td>${escapeHtml(r.name)}</td>
+        <td>${genderCell}</td>
         <td>${escapeHtml(r.id)}</td>
         <td>${r.categories.map(c=>`<span class="cat-tag" style="background:${catColorMap[c]?.bg || '#e4efe9'};color:${catColorMap[c]?.fg || '#2f6f5e'};">${escapeHtml(c)}</span>`).join('')}</td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
 
     const useId = window.__useId;
     const rosterIdIdx = findColIdx(rosterData.header, ['身分證','身份證']);
@@ -844,6 +904,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
       '班級': r.class,
       '座號': r.seat,
       '姓名': r.name,
+      '性別': r.gender,
       '身分證號': r.id,
       '符合類別': r.categories.join('、')
     }));
