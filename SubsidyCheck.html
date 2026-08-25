@@ -848,14 +848,15 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 
     resultSummary.textContent = `符合條件學生：共 ${filtered.length} 位`;
 
-    resultHead.innerHTML = '<th>班級</th><th>座號</th><th>姓名</th><th>性別</th><th>身分證號</th><th>符合類別</th>';
-    resultBody.innerHTML = filtered.map(r => {
+    resultHead.innerHTML = '<th>序號</th><th>班級</th><th>座號</th><th>姓名</th><th>性別</th><th>身分證號</th><th>符合類別</th>';
+    resultBody.innerHTML = filtered.map((r, i) => {
       const gc = GENDER_COLOR[r.gender];
       const genderCell = r.gender
         ? `<span class="cat-tag" style="background:${gc?.bg || '#eee'};color:${gc?.fg || '#555'};">${escapeHtml(r.gender)}</span>`
         : '';
       return `
       <tr>
+        <td>${i + 1}</td>
         <td>${escapeHtml(r.class)}</td>
         <td>${escapeHtml(r.seat)}</td>
         <td>${escapeHtml(r.name)}</td>
