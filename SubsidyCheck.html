@@ -542,6 +542,15 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   const downloadBtn2 = document.getElementById('downloadBtn2');
 
   const CATEGORY_KEYWORDS = ['低收入戶','中低收入戶','單親家庭子女','身障生活補助','弱勢兒童及少年'];
+  const CAT_PALETTE = [
+    {bg:'#e4efe9', fg:'#2f6f5e'}, // 綠
+    {bg:'#eaf0fb', fg:'#3859a8'}, // 藍
+    {bg:'#fdeee0', fg:'#c06a1f'}, // 橘
+    {bg:'#f4e8f5', fg:'#8a3f96'}, // 紫
+    {bg:'#fdecec', fg:'#b3492f'}, // 紅
+    {bg:'#fdf6de', fg:'#9c7e12'}, // 黃
+  ];
+  let catColorMap = {};
 
   let rosterData = null;   // {header, rows}
   let matchData = null;    // {header, rows}
@@ -633,6 +642,11 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
       return;
     }
 
+    catColorMap = {};
+    categoryColumns.forEach((cc, idx) => {
+      catColorMap[cc.name] = CAT_PALETTE[idx % CAT_PALETTE.length];
+    });
+
     // 優先使用身分證比對；兩邊都有身分證欄位時才會啟用
     const useId = idIdxRoster !== -1 && idIdxMatch !== -1;
 
@@ -723,7 +737,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     allCatChip.textContent = `全選 (${mergedRecords.length})`;
     allCatChip.onclick = () => {
       activeCategory = null;
-      chipGroup.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+      chipGroup.querySelectorAll('.chip').forEach(c=>{c.classList.remove('active'); c.style.background=''; c.style.borderColor=''; c.style.color='';});
       allCatChip.classList.add('active');
       renderResult();
     };
@@ -733,10 +747,12 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
       const chip = document.createElement('div');
       chip.className = 'chip';
       chip.textContent = `${cat} (${countByCat[cat]})`;
+      const col = catColorMap[cat];
       chip.onclick = () => {
         activeCategory = cat;
-        chipGroup.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+        chipGroup.querySelectorAll('.chip').forEach(c=>{c.classList.remove('active'); c.style.background=''; c.style.borderColor=''; c.style.color='';});
         chip.classList.add('active');
+        if(col){ chip.style.background = col.fg; chip.style.borderColor = col.fg; chip.style.color = '#fff'; }
         renderResult();
       };
       chipGroup.appendChild(chip);
@@ -786,7 +802,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
         <td>${escapeHtml(r.seat)}</td>
         <td>${escapeHtml(r.name)}</td>
         <td>${escapeHtml(r.id)}</td>
-        <td>${r.categories.map(c=>`<span class="cat-tag">${escapeHtml(c)}</span>`).join('')}</td>
+        <td>${r.categories.map(c=>`<span class="cat-tag" style="background:${catColorMap[c]?.bg || '#e4efe9'};color:${catColorMap[c]?.fg || '#2f6f5e'};">${escapeHtml(c)}</span>`).join('')}</td>
       </tr>
     `).join('');
 
