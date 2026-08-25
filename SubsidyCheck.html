@@ -341,7 +341,9 @@
     <div class="status" id="status2"></div>
 
     <div class="filters" id="filters2">
-      <p class="filters-title">篩選類別（可複選，預設全選）</p>
+      <p class="filters-title">年級</p>
+      <div class="chip-group" id="gradeGroup"></div>
+      <p class="filters-title" style="margin-top:16px;">類別</p>
       <div class="chip-group" id="chipGroup"></div>
     </div>
 
@@ -531,6 +533,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   const status2 = document.getElementById('status2');
   const filters2 = document.getElementById('filters2');
   const chipGroup = document.getElementById('chipGroup');
+  const gradeGroup = document.getElementById('gradeGroup');
   const resultWrap = document.getElementById('resultWrap');
   const resultSummary = document.getElementById('resultSummary');
   const resultHead = document.getElementById('resultHead');
@@ -544,7 +547,13 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   let matchData = null;    // {header, rows}
   let mergedRecords = [];  // combined result
   let categoryColumns = []; // actual column names found in matchData matching keywords
-  let activeCategories = new Set();
+  let activeCategory = null;  // null = 全選；否則為單一類別名稱
+  let activeGrade = null;     // null = 全部年級；否則為 "1","2","3"...
+
+  function gradeOf(cls){
+    const m = String(cls).match(/\d/);
+    return m ? m[0] : '';
+  }
 
   setupDrop(drop2a, fileInput2a, fname2a, (json) => { rosterData = parseSheet(json); tryMerge(); });
   setupDrop(drop2b, fileInput2b, fname2b, (json) => { matchData = parseSheet(json); tryMerge(); });
@@ -692,50 +701,71 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 
   function buildFilters(){
     const uniqueCats = [...new Set(categoryColumns.map(c=>c.name))];
-    activeCategories = new Set(uniqueCats); // 預設全選
+    const uniqueGrades = [...new Set(mergedRecords.map(r => gradeOf(r.class)).filter(Boolean))]
+      .sort((a,b) => parseInt(a) - parseInt(b));
+    const gradeName = g => `${['','一','二','三','四','五','六','七','八','九','十'][parseInt(g)] || g}年級`;
+
+    activeCategory = null;
+    activeGrade = null;
 
     const countByCat = {};
     uniqueCats.forEach(c => countByCat[c] = 0);
-    mergedRecords.forEach(r => {
-      r.categories.forEach(c => { if(countByCat[c] !== undefined) countByCat[c]++; });
-    });
+    mergedRecords.forEach(r => r.categories.forEach(c => { if(countByCat[c] !== undefined) countByCat[c]++; }));
 
+    const countByGrade = {};
+    uniqueGrades.forEach(g => countByGrade[g] = 0);
+    mergedRecords.forEach(r => { const g = gradeOf(r.class); if(countByGrade[g] !== undefined) countByGrade[g]++; });
+
+    // --- 類別 chips（單選切換）---
     chipGroup.innerHTML = '';
-
-    const allChip = document.createElement('div');
-    allChip.className = 'chip all active';
-    allChip.textContent = `全選 (${mergedRecords.length})`;
-    allChip.onclick = () => {
-      const isAllActive = allChip.classList.contains('active');
-      if(isAllActive){
-        activeCategories.clear();
-        allChip.classList.remove('active');
-        chipGroup.querySelectorAll('.chip:not(.all)').forEach(c=>c.classList.remove('active'));
-      } else {
-        activeCategories = new Set(uniqueCats);
-        allChip.classList.add('active');
-        chipGroup.querySelectorAll('.chip:not(.all)').forEach(c=>c.classList.add('active'));
-      }
+    const allCatChip = document.createElement('div');
+    allCatChip.className = 'chip all active';
+    allCatChip.textContent = `全選 (${mergedRecords.length})`;
+    allCatChip.onclick = () => {
+      activeCategory = null;
+      chipGroup.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+      allCatChip.classList.add('active');
       renderResult();
     };
-    chipGroup.appendChild(allChip);
+    chipGroup.appendChild(allCatChip);
 
     uniqueCats.forEach(cat => {
       const chip = document.createElement('div');
-      chip.className = 'chip active';
+      chip.className = 'chip';
       chip.textContent = `${cat} (${countByCat[cat]})`;
       chip.onclick = () => {
-        if(activeCategories.has(cat)){
-          activeCategories.delete(cat);
-          chip.classList.remove('active');
-        } else {
-          activeCategories.add(cat);
-          chip.classList.add('active');
-        }
-        allChip.classList.toggle('active', activeCategories.size === uniqueCats.length);
+        activeCategory = cat;
+        chipGroup.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+        chip.classList.add('active');
         renderResult();
       };
       chipGroup.appendChild(chip);
+    });
+
+    // --- 年級 chips（單選切換）---
+    gradeGroup.innerHTML = '';
+    const allGradeChip = document.createElement('div');
+    allGradeChip.className = 'chip all active';
+    allGradeChip.textContent = `全部年級 (${mergedRecords.length})`;
+    allGradeChip.onclick = () => {
+      activeGrade = null;
+      gradeGroup.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+      allGradeChip.classList.add('active');
+      renderResult();
+    };
+    gradeGroup.appendChild(allGradeChip);
+
+    uniqueGrades.forEach(g => {
+      const chip = document.createElement('div');
+      chip.className = 'chip';
+      chip.textContent = `${gradeName(g)} (${countByGrade[g]})`;
+      chip.onclick = () => {
+        activeGrade = g;
+        gradeGroup.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+        chip.classList.add('active');
+        renderResult();
+      };
+      gradeGroup.appendChild(chip);
     });
 
     filters2.style.display = 'block';
@@ -743,7 +773,8 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 
   function renderResult(){
     const filtered = mergedRecords
-      .map(r => ({...r, categories: r.categories.filter(c => activeCategories.has(c))}))
+      .filter(r => activeGrade === null || gradeOf(r.class) === activeGrade)
+      .map(r => ({...r, categories: activeCategory === null ? r.categories : r.categories.filter(c => c === activeCategory)}))
       .filter(r => r.categories.length > 0);
 
     resultSummary.textContent = `符合條件學生：共 ${filtered.length} 位`;
