@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Excel身分證欄位 轉TXT｜給補助系統使用</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --ink:#1f2933;
+    --paper:#fafaf8;
+    --line:#d7d3c9;
+    --accent:#2f6f5e;
+    --accent-soft:#e4efe9;
+    --warn:#b3492f;
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    display:flex;
+    justify-content:center;
+    padding:48px 20px;
+  }
+  .wrap{
+    width:100%;
+    max-width:720px;
+  }
+  header.page-head{
+    margin-bottom:20px;
+  }
+  h1{
+    font-size:21px;
+    margin:0 0 6px;
+    letter-spacing:.01em;
+  }
+  .sub{
+    color:#6b7280;
+    font-size:13px;
+    margin:0;
+    line-height:1.6;
+  }
+
+  .tabs{
+    display:flex;
+    gap:4px;
+    margin:24px 0 18px;
+    border-bottom:1px solid var(--line);
+  }
+  .tab-btn{
+    border:none;
+    background:none;
+    padding:10px 4px;
+    margin-right:22px;
+    font-size:14px;
+    color:#9ca3af;
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+    font-weight:600;
+  }
+  .tab-btn.active{
+    color:var(--ink);
+    border-bottom-color:var(--accent);
+  }
+
+  .card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:32px;
+    display:none;
+  }
+  .card.active{display:block;}
+
+  h2.section-title{
+    font-size:15px;
+    margin:0 0 4px;
+  }
+  p.section-desc{
+    font-size:12.5px;
+    color:#9ca3af;
+    margin:0 0 18px;
+    line-height:1.6;
+  }
+
+  .drop{
+    display:block;
+    width:100%;
+    border:1.5px dashed var(--line);
+    border-radius:10px;
+    padding:24px 20px;
+    text-align:center;
+    cursor:pointer;
+    transition:.15s;
+    background:var(--paper);
+  }
+  .drop:hover, .drop.dragover{
+    border-color:var(--accent);
+    background:var(--accent-soft);
+  }
+  .drop input{display:none;}
+  .drop p{margin:0;font-size:13.5px;color:#4b5563;}
+  .drop .fname{margin-top:6px;font-size:12.5px;color:var(--accent);font-weight:600;word-break:break-all;}
+
+  .two-drops{
+    display:flex;
+    gap:14px;
+  }
+  .two-drops .drop-block{
+    flex:1;
+    min-width:0;
+  }
+  .drop-label{
+    font-size:12px;
+    color:#6b7280;
+    margin:0 0 8px;
+    font-weight:600;
+  }
+
+  .col-select{
+    margin-top:16px;
+    display:none;
+  }
+  .col-select label{font-size:12px;color:#6b7280;display:block;margin-bottom:6px;}
+  select{
+    width:100%;
+    padding:8px 10px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    font-size:13px;
+    background:#fff;
+    color:var(--ink);
+  }
+
+  .status{
+    margin-top:16px;
+    font-size:13px;
+    min-height:18px;
+  }
+  .status.ok{color:var(--accent);}
+  .status.err{color:var(--warn);}
+
+  .preview{
+    margin-top:14px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:#fbfbf9;
+    padding:12px 14px;
+    font-family:var(--mono);
+    font-size:12.5px;
+    max-height:180px;
+    overflow-y:auto;
+    display:none;
+    white-space:pre-wrap;
+    line-height:1.7;
+    color:#374151;
+  }
+
+  .primary-btn{
+    width:100%;
+    margin-top:20px;
+    padding:12px;
+    border:none;
+    border-radius:8px;
+    background:var(--ink);
+    color:#fff;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    display:none;
+  }
+  .primary-btn:disabled{opacity:.5;cursor:not-allowed;}
+  .count{
+    font-size:12px;
+    color:#9ca3af;
+    margin-top:8px;
+    display:none;
+  }
+  .note{
+    margin-top:24px;
+    font-size:12px;
+    color:#9ca3af;
+    line-height:1.6;
+    border-top:1px solid var(--line);
+    padding-top:16px;
+  }
+
+  /* --- Tab 2 specific --- */
+  .filters{
+    margin-top:22px;
+    display:none;
+  }
+  .filters-title{
+    font-size:12px;
+    color:#6b7280;
+    margin:0 0 10px;
+    font-weight:600;
+  }
+  .chip-group{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .chip{
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:6px 14px;
+    font-size:12.5px;
+    cursor:pointer;
+    background:#fff;
+    color:#4b5563;
+    user-select:none;
+  }
+  .chip.active{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+  }
+  .chip.all{
+    font-weight:700;
+  }
+
+  .result-wrap{
+    margin-top:20px;
+    display:none;
+  }
+  .result-summary{
+    font-size:13px;
+    color:var(--accent);
+    margin-bottom:10px;
+    font-weight:600;
+  }
+  table.result-table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:12.5px;
+  }
+  table.result-table th{
+    text-align:left;
+    background:var(--accent-soft);
+    color:var(--ink);
+    padding:8px 10px;
+    font-weight:600;
+    white-space:nowrap;
+  }
+  table.result-table td{
+    padding:8px 10px;
+    border-bottom:1px solid #f0efe9;
+    color:#374151;
+  }
+  .cat-tag{
+    display:inline-block;
+    background:var(--accent-soft);
+    color:var(--accent);
+    border-radius:6px;
+    padding:2px 7px;
+    font-size:11px;
+    margin:1px 3px 1px 0;
+  }
+  .table-scroll{
+    max-height:420px;
+    overflow-y:auto;
+    border:1px solid var(--line);
+    border-radius:10px;
+  }
+  .unmatched-note{
+    margin-top:10px;
+    font-size:11.5px;
+    color:#9ca3af;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="page-head">
+    <h1>Excel身分證欄位 轉TXT｜給補助系統使用</h1>
+    <p class="sub">上傳 Excel，自動整理成補助系統可用的 txt 上傳檔，並能比對全校名冊、篩選出符合弱勢類別資格的學生名單。</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="tab1">身分證轉 TXT</button>
+    <button class="tab-btn" data-tab="tab2">弱勢類別比對名單</button>
+  </div>
+
+  <!-- TAB 1 -->
+  <div class="card active" id="tab1">
+    <h2 class="section-title">上傳含身分證欄位的 Excel</h2>
+    <p class="section-desc">系統會自動找出欄位標題含「身分證」的欄位，整理成一行一筆的 txt 檔，可直接上傳補助系統使用。</p>
+
+    <label class="drop" id="drop1">
+      <input type="file" id="fileInput1" accept=".xlsx,.xls,.csv">
+      <p>點擊選擇或拖曳 Excel 檔案到這裡</p>
+      <div class="fname" id="fname1"></div>
+    </label>
+
+    <div class="col-select" id="colSelect1">
+      <label>偵測到多個可能欄位，請選擇正確的「身分證」欄位：</label>
+      <select id="colDropdown1"></select>
+    </div>
+
+    <div class="status" id="status1"></div>
+    <div class="count" id="count1"></div>
+    <div class="preview" id="preview1"></div>
+
+    <button class="primary-btn" id="downloadBtn1">下載 身分證字號.txt</button>
+
+    <div class="note">
+      * 上傳的文字檔案僅為身分證字號，採一行一筆（換行分隔）格式，符合多數補助系統的匯入慣例。<br>
+      * 本工具僅在瀏覽器端處理檔案，不會上傳或外傳任何資料。
+    </div>
+  </div>
+
+  <!-- TAB 2 -->
+  <div class="card" id="tab2">
+    <h2 class="section-title">上傳兩份 Excel 進行比對</h2>
+    <p class="section-desc">左邊上傳全校學生名冊（需含「班級、座號、姓名」），右邊上傳比對結果檔（需含「身分證號、姓名」及各弱勢類別欄位）。系統會用姓名比對，列出符合資格的學生，並依班級座號排序。</p>
+
+    <div class="two-drops">
+      <div class="drop-block">
+        <p class="drop-label">① 全校學生名冊</p>
+        <label class="drop" id="drop2a">
+          <input type="file" id="fileInput2a" accept=".xlsx,.xls,.csv">
+          <p>班級 / 座號 / 姓名</p>
+          <div class="fname" id="fname2a"></div>
+        </label>
+      </div>
+      <div class="drop-block">
+        <p class="drop-label">② 比對結果檔</p>
+        <label class="drop" id="drop2b">
+          <input type="file" id="fileInput2b" accept=".xlsx,.xls,.csv">
+          <p>身分證號 / 姓名 / 各類別</p>
+          <div class="fname" id="fname2b"></div>
+        </label>
+      </div>
+    </div>
+
+    <div class="status" id="status2"></div>
+
+    <div class="filters" id="filters2">
+      <p class="filters-title">篩選類別（可複選，預設全選）</p>
+      <div class="chip-group" id="chipGroup"></div>
+    </div>
+
+    <div class="result-wrap" id="resultWrap">
+      <div class="result-summary" id="resultSummary"></div>
+      <div class="table-scroll">
+        <table class="result-table" id="resultTable">
+          <thead>
+            <tr id="resultHead"></tr>
+          </thead>
+          <tbody id="resultBody"></tbody>
+        </table>
+      </div>
+      <div class="unmatched-note" id="unmatchedNote"></div>
+      <button class="primary-btn" id="downloadBtn2" style="display:block;">下載符合資格名單（Excel）</button>
+    </div>
+
+    <div class="note">
+      * 比對是以「姓名」為依據，若有同名同姓的情形，建議再自行核對身分證號。<br>
+      * 「符合類別」欄位會列出該生在比對結果檔中被標記為「符合」的所有類別。
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- Tab 切換 ---------- */
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.onclick = () => {
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.card').forEach(c=>c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  };
+});
+
+/* ============================================================
+   TAB 1：身分證轉 TXT
+   ============================================================ */
+(function(){
+  const fileInput = document.getElementById('fileInput1');
+  const drop = document.getElementById('drop1');
+  const fname = document.getElementById('fname1');
+  const statusEl = document.getElementById('status1');
+  const preview = document.getElementById('preview1');
+  const downloadBtn = document.getElementById('downloadBtn1');
+  const countEl = document.getElementById('count1');
+  const colSelect = document.getElementById('colSelect1');
+  const colDropdown = document.getElementById('colDropdown1');
+
+  let extractedIds = [];
+  let sheetRows = [];
+
+  drop.addEventListener('dragover', e=>{e.preventDefault(); drop.classList.add('dragover');});
+  drop.addEventListener('dragleave', ()=> drop.classList.remove('dragover'));
+  drop.addEventListener('drop', e=>{
+    e.preventDefault();
+    drop.classList.remove('dragover');
+    if(e.dataTransfer.files.length){
+      fileInput.files = e.dataTransfer.files;
+      handleFile(e.dataTransfer.files[0]);
+    }
+  });
+  fileInput.addEventListener('change', e=>{
+    if(e.target.files.length) handleFile(e.target.files[0]);
+  });
+
+  function handleFile(file){
+    fname.textContent = file.name;
+    statusEl.textContent = '讀取中...';
+    statusEl.className = 'status';
+    preview.style.display = 'none';
+    downloadBtn.style.display = 'none';
+    countEl.style.display = 'none';
+    colSelect.style.display = 'none';
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try{
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, {type:'array'});
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(sheet, {header:1, defval:''});
+        if(!json.length){ showError('這個檔案是空的，或無法讀取內容。'); return; }
+        sheetRows = json;
+        findIdColumn(json);
+      }catch(err){
+        showError('讀取失敗，請確認檔案是否為正確的 Excel 格式。');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function findIdColumn(json){
+    const headerRow = json[0];
+    const keywords = ['身分證','身份證','ID','id','統一編號','證號'];
+    const candidateCols = [];
+    headerRow.forEach((h, idx) => {
+      const hs = String(h);
+      if(keywords.some(k => hs.includes(k))) candidateCols.push({idx, name: hs || `欄位 ${idx+1}`});
+    });
+
+    if(candidateCols.length === 0){
+      showError('找不到含有「身分證」字樣的欄位標題，請確認 Excel 第一列是否為欄位名稱。');
+      return;
+    }
+    if(candidateCols.length === 1){
+      extractFromColumn(candidateCols[0].idx);
+    } else {
+      colDropdown.innerHTML = candidateCols.map(c => `<option value="${c.idx}">${c.name}</option>`).join('');
+      colSelect.style.display = 'block';
+      colDropdown.onchange = () => extractFromColumn(parseInt(colDropdown.value));
+      extractFromColumn(candidateCols[0].idx);
+    }
+  }
+
+  function extractFromColumn(colIdx){
+    const idPattern = /^[A-Za-z][12]\d{8}$/;
+    const ids = [];
+    for(let i=1; i<sheetRows.length; i++){
+      const raw = sheetRows[i][colIdx];
+      if(raw === undefined || raw === '') continue;
+      const val = String(raw).trim().toUpperCase();
+      if(val) ids.push(val);
+    }
+    extractedIds = ids;
+    if(ids.length === 0){ showError('該欄位底下沒有任何資料。'); return; }
+
+    const validCount = ids.filter(id => idPattern.test(id)).length;
+    if(validCount < ids.length){
+      statusEl.textContent = `已擷取 ${ids.length} 筆資料（其中 ${ids.length - validCount} 筆格式看起來不太像身分證字號，仍會一併輸出，請自行確認）`;
+      statusEl.className = 'status err';
+    } else {
+      statusEl.textContent = `已成功擷取 ${ids.length} 筆身分證字號`;
+      statusEl.className = 'status ok';
+    }
+    countEl.textContent = `共 ${ids.length} 筆`;
+    countEl.style.display = 'block';
+    downloadBtn.style.display = 'block';
+    downloadBtn.disabled = false;
+    renderPreview();
+  }
+
+  function renderPreview(){
+    const text = extractedIds.join('\n');
+    preview.textContent = text.length > 800 ? text.slice(0,800) + '\n...（僅預覽前段）' : text;
+    preview.style.display = 'block';
+  }
+
+  function showError(msg){
+    statusEl.textContent = msg;
+    statusEl.className = 'status err';
+  }
+
+  downloadBtn.onclick = () => {
+    const text = extractedIds.join('\n');
+    const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '身分證字號.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+})();
+
+/* ============================================================
+   TAB 2：弱勢類別比對名單
+   ============================================================ */
+(function(){
+  const fileInput2a = document.getElementById('fileInput2a');
+  const fileInput2b = document.getElementById('fileInput2b');
+  const drop2a = document.getElementById('drop2a');
+  const drop2b = document.getElementById('drop2b');
+  const fname2a = document.getElementById('fname2a');
+  const fname2b = document.getElementById('fname2b');
+  const status2 = document.getElementById('status2');
+  const filters2 = document.getElementById('filters2');
+  const chipGroup = document.getElementById('chipGroup');
+  const resultWrap = document.getElementById('resultWrap');
+  const resultSummary = document.getElementById('resultSummary');
+  const resultHead = document.getElementById('resultHead');
+  const resultBody = document.getElementById('resultBody');
+  const unmatchedNote = document.getElementById('unmatchedNote');
+  const downloadBtn2 = document.getElementById('downloadBtn2');
+
+  const CATEGORY_KEYWORDS = ['低收入戶','中低收入戶','單親家庭子女','身障生活補助','弱勢兒童及少年'];
+
+  let rosterData = null;   // {header, rows}
+  let matchData = null;    // {header, rows}
+  let mergedRecords = [];  // combined result
+  let categoryColumns = []; // actual column names found in matchData matching keywords
+  let activeCategories = new Set();
+
+  setupDrop(drop2a, fileInput2a, fname2a, (json) => { rosterData = parseSheet(json); tryMerge(); });
+  setupDrop(drop2b, fileInput2b, fname2b, (json) => { matchData = parseSheet(json); tryMerge(); });
+
+  function setupDrop(dropEl, inputEl, fnameEl, onLoaded){
+    dropEl.addEventListener('dragover', e=>{e.preventDefault(); dropEl.classList.add('dragover');});
+    dropEl.addEventListener('dragleave', ()=> dropEl.classList.remove('dragover'));
+    dropEl.addEventListener('drop', e=>{
+      e.preventDefault();
+      dropEl.classList.remove('dragover');
+      if(e.dataTransfer.files.length){
+        inputEl.files = e.dataTransfer.files;
+        readFile(e.dataTransfer.files[0]);
+      }
+    });
+    inputEl.addEventListener('change', e=>{
+      if(e.target.files.length) readFile(e.target.files[0]);
+    });
+    function readFile(file){
+      fnameEl.textContent = file.name;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try{
+          const data = new Uint8Array(e.target.result);
+          const wb = XLSX.read(data, {type:'array'});
+          const sheet = wb.Sheets[wb.SheetNames[0]];
+          const json = XLSX.utils.sheet_to_json(sheet, {header:1, defval:''});
+          onLoaded(json);
+        }catch(err){
+          setStatus('讀取失敗，請確認檔案格式是否正確。', true);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+  }
+
+  function parseSheet(json){
+    if(!json.length) return null;
+    const header = json[0].map(h => String(h).trim());
+    const rows = json.slice(1).filter(r => r.some(c => c !== ''));
+    return {header, rows};
+  }
+
+  function findColIdx(header, keywords){
+    for(let i=0;i<header.length;i++){
+      if(keywords.some(k => header[i].includes(k))) return i;
+    }
+    return -1;
+  }
+
+  function tryMerge(){
+    if(!rosterData || !matchData){ return; }
+
+    const classIdx = findColIdx(rosterData.header, ['班級']);
+    const seatIdx = findColIdx(rosterData.header, ['座號']);
+    const nameIdxRoster = findColIdx(rosterData.header, ['姓名']);
+    const idIdxRoster = findColIdx(rosterData.header, ['身分證','身份證']);
+
+    if(classIdx === -1 || seatIdx === -1 || nameIdxRoster === -1){
+      setStatus('全校名冊需含「班級、座號、姓名」欄位，請確認格式。', true);
+      return;
+    }
+
+    const nameIdxMatch = findColIdx(matchData.header, ['姓名']);
+    const idIdxMatch = findColIdx(matchData.header, ['身分證','身份證']);
+    if(nameIdxMatch === -1){
+      setStatus('比對結果檔需含「姓名」欄位，請確認格式。', true);
+      return;
+    }
+
+    categoryColumns = [];
+    matchData.header.forEach((h, idx) => {
+      if(CATEGORY_KEYWORDS.some(k => h.includes(k))) categoryColumns.push({idx, name: h});
+    });
+    if(categoryColumns.length === 0){
+      setStatus('比對結果檔中找不到任何弱勢類別欄位（低收入戶／中低收入戶／單親家庭子女／身障生活補助／弱勢兒童及少年）。', true);
+      return;
+    }
+
+    // 優先使用身分證比對；兩邊都有身分證欄位時才會啟用
+    const useId = idIdxRoster !== -1 && idIdxMatch !== -1;
+
+    // build lookup from matchData, keyed by id（優先）或姓名（備援）
+    const matchByKey = new Map();
+    matchData.rows.forEach(row => {
+      const key = useId
+        ? String(row[idIdxMatch]).trim().toUpperCase()
+        : String(row[nameIdxMatch]).trim();
+      if(!key) return;
+      if(!matchByKey.has(key)) matchByKey.set(key, []);
+      matchByKey.get(key).push(row);
+    });
+
+    const records = [];
+
+    rosterData.rows.forEach(row => {
+      const cls = String(row[classIdx]).trim();
+      const seat = String(row[seatIdx]).trim();
+      const name = String(row[nameIdxRoster]).trim();
+      if(!name) return;
+
+      const key = useId
+        ? String(row[idIdxRoster]).trim().toUpperCase()
+        : name;
+      if(!key) return;
+
+      const hits = matchByKey.get(key);
+      if(!hits) return; // 名冊中此生完全沒出現在比對結果檔，跳過（未被判定任何資格）
+
+      hits.forEach(hitRow => {
+        const idVal = idIdxMatch !== -1 ? String(hitRow[idIdxMatch]).trim() : (idIdxRoster !== -1 ? String(row[idIdxRoster]).trim() : '');
+        const cats = [];
+        categoryColumns.forEach(cc => {
+          const v = String(hitRow[cc.idx]).trim();
+          if(v === '符合') cats.push(cc.name);
+        });
+        if(cats.length === 0) return; // 沒有任何一項符合，不列入名單
+        records.push({
+          class: cls, seat: seat, name: name, id: idVal, categories: cats
+        });
+      });
+    });
+
+    mergedRecords = records;
+
+    // sort by 班級 -> 座號（數字優先排序）
+    mergedRecords.sort((a,b) => {
+      const ca = a.class, cb = b.class;
+      if(ca !== cb) return ca.localeCompare(cb, 'zh-Hant-u-co-standard', {numeric:true});
+      const sa = parseInt(a.seat) || 0, sb = parseInt(b.seat) || 0;
+      return sa - sb;
+    });
+
+    const methodNote = useId ? '（以身分證號比對）' : '（全校名冊或比對結果檔缺少身分證欄位，改以姓名比對，姓名如有遮蔽或同名同姓可能有誤，建議自行核對）';
+    setStatus(`比對完成，共比對出 ${mergedRecords.length} 筆符合資格的學生資料 ${methodNote}`, !useId);
+    window.__useId = useId;
+    buildFilters();
+    renderResult();
+  }
+
+  function setStatus(msg, isErr){
+    status2.textContent = msg;
+    status2.className = 'status ' + (isErr ? 'err' : 'ok');
+  }
+
+  function buildFilters(){
+    const uniqueCats = [...new Set(categoryColumns.map(c=>c.name))];
+    activeCategories = new Set(uniqueCats); // 預設全選
+    chipGroup.innerHTML = '';
+
+    const allChip = document.createElement('div');
+    allChip.className = 'chip all active';
+    allChip.textContent = '全選';
+    allChip.onclick = () => {
+      const isAllActive = allChip.classList.contains('active');
+      if(isAllActive){
+        activeCategories.clear();
+        allChip.classList.remove('active');
+        chipGroup.querySelectorAll('.chip:not(.all)').forEach(c=>c.classList.remove('active'));
+      } else {
+        activeCategories = new Set(uniqueCats);
+        allChip.classList.add('active');
+        chipGroup.querySelectorAll('.chip:not(.all)').forEach(c=>c.classList.add('active'));
+      }
+      renderResult();
+    };
+    chipGroup.appendChild(allChip);
+
+    uniqueCats.forEach(cat => {
+      const chip = document.createElement('div');
+      chip.className = 'chip active';
+      chip.textContent = cat;
+      chip.onclick = () => {
+        if(activeCategories.has(cat)){
+          activeCategories.delete(cat);
+          chip.classList.remove('active');
+        } else {
+          activeCategories.add(cat);
+          chip.classList.add('active');
+        }
+        allChip.classList.toggle('active', activeCategories.size === uniqueCats.length);
+        renderResult();
+      };
+      chipGroup.appendChild(chip);
+    });
+
+    filters2.style.display = 'block';
+  }
+
+  function renderResult(){
+    const filtered = mergedRecords
+      .map(r => ({...r, categories: r.categories.filter(c => activeCategories.has(c))}))
+      .filter(r => r.categories.length > 0);
+
+    resultSummary.textContent = `符合條件學生：共 ${filtered.length} 位`;
+
+    resultHead.innerHTML = '<th>班級</th><th>座號</th><th>姓名</th><th>身分證號</th><th>符合類別</th>';
+    resultBody.innerHTML = filtered.map(r => `
+      <tr>
+        <td>${escapeHtml(r.class)}</td>
+        <td>${escapeHtml(r.seat)}</td>
+        <td>${escapeHtml(r.name)}</td>
+        <td>${escapeHtml(r.id)}</td>
+        <td>${r.categories.map(c=>`<span class="cat-tag">${escapeHtml(c)}</span>`).join('')}</td>
+      </tr>
+    `).join('');
+
+    const useId = window.__useId;
+    const rosterIdIdx = findColIdx(rosterData.header, ['身分證','身份證']);
+    const matchIdIdx = findColIdx(matchData.header, ['身分證','身份證']);
+    const rosterNameIdx = findColIdx(rosterData.header, ['姓名']);
+    const matchNameIdx = findColIdx(matchData.header, ['姓名']);
+
+    let notInRosterCount = 0;
+    if(useId){
+      const rosterIds = new Set(rosterData.rows.map(r => String(r[rosterIdIdx]).trim().toUpperCase()).filter(Boolean));
+      const matchIds = [...new Set(matchData.rows.map(r => String(r[matchIdIdx]).trim().toUpperCase()).filter(Boolean))];
+      notInRosterCount = matchIds.filter(id => !rosterIds.has(id)).length;
+      unmatchedNote.textContent = notInRosterCount
+        ? `註：比對結果檔中有 ${notInRosterCount} 筆身分證號未能對應到全校名冊，可能為已離校或非該校學生。`
+        : '';
+    } else {
+      const rosterNames = new Set(rosterData.rows.map(r => String(r[rosterNameIdx]).trim()));
+      const matchNames = [...new Set(matchData.rows.map(r => String(r[matchNameIdx]).trim()))];
+      notInRosterCount = matchNames.filter(n => n && !rosterNames.has(n)).length;
+      unmatchedNote.textContent = notInRosterCount
+        ? `註：比對結果檔中有 ${notInRosterCount} 位姓名未能對應到全校名冊，可能為姓名寫法不同或已離校，建議自行核對。`
+        : '';
+    }
+
+    resultWrap.style.display = 'block';
+    downloadBtn2._filtered = filtered;
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  downloadBtn2.onclick = () => {
+    const filtered = downloadBtn2._filtered || [];
+    if(filtered.length === 0) return;
+    const exportRows = filtered.map(r => ({
+      '班級': r.class,
+      '座號': r.seat,
+      '姓名': r.name,
+      '身分證號': r.id,
+      '符合類別': r.categories.join('、')
+    }));
+    const ws = XLSX.utils.json_to_sheet(exportRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '符合資格名單');
+    XLSX.writeFile(wb, '符合資格名單.xlsx');
+  };
+})();
+</script>
+
+</body>
+</html>
