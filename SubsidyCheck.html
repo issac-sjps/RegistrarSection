@@ -86,6 +86,48 @@
     line-height:1.6;
   }
 
+  .howto{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:18px 20px;
+    margin-bottom:22px;
+  }
+  .howto-title{
+    font-size:12.5px;
+    font-weight:700;
+    color:var(--accent);
+    margin:0 0 10px;
+  }
+  .howto ol{
+    margin:0;
+    padding-left:20px;
+    font-size:12.5px;
+    color:#4b5563;
+    line-height:1.9;
+  }
+  .howto ol.sub-ol{
+    margin-top:6px;
+    padding-left:18px;
+    font-size:12px;
+    color:#6b7280;
+    line-height:1.8;
+  }
+  .howto a{
+    color:var(--accent);
+    font-weight:600;
+    text-decoration:underline;
+  }
+  .req-list{
+    display:inline-block;
+    background:var(--accent-soft);
+    color:var(--accent);
+    border-radius:6px;
+    padding:2px 8px;
+    font-weight:600;
+    margin-top:2px;
+  }
+
   .drop{
     display:block;
     width:100%;
@@ -278,7 +320,7 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Excel身分證欄位 轉TXT｜給補助系統使用</h1>
-    <p class="sub">上傳 Excel，自動整理成補助系統可用的 txt 上傳檔，並能比對全校名冊、篩選出符合弱勢類別資格的學生名單。</p>
+    <p class="sub">給高雄市各校老師使用：整理全校學生的身分證字號、上傳高雄市社會救助資訊網（socmap）比對，並將比對結果與全校名冊合併，篩選出符合各項弱勢資格的學生名單。</p>
   </header>
 
   <div class="tabs">
@@ -289,7 +331,23 @@
   <!-- TAB 1 -->
   <div class="card active" id="tab1">
     <h2 class="section-title">上傳含身分證欄位的 Excel</h2>
-    <p class="section-desc">系統會自動找出欄位標題含「身分證」的欄位，整理成一行一筆的 txt 檔，可直接上傳補助系統使用。</p>
+    <p class="section-desc">
+      直接上傳「全校學生名冊」（從校務系統下載的 Excel 檔），系統會自動找出欄位標題含「身分證」的欄位，整理成一行一筆的 txt 檔，可直接上傳到高雄市社會救助資訊網（socmap）進行比對。
+    </p>
+
+    <div class="howto">
+      <p class="howto-title">操作步驟</p>
+      <ol>
+        <li>從校務系統匯出全校學生名冊 Excel（需含身分證字號欄位）</li>
+        <li>將檔案拖曳或點擊上傳到下方框框</li>
+        <li>系統自動擷取身分證字號，下方會顯示筆數與預覽內容，請簡單核對一下筆數是否正確</li>
+        <li>點擊「下載 身分證字號.txt」，取得可上傳的 txt 檔</li>
+        <li>前往 <a href="https://socmap.kcg.gov.tw/app30new/auth/logout" target="_blank" rel="noopener">高雄市社會救助資訊網（socmap）</a> 登入後，選擇「上傳檔案（身分證字號 txt 文字檔）」，把剛剛下載的 txt 檔上傳並執行比對</li>
+        <li>比對送出後，系統會給一組「查詢批號」，請先記下來</li>
+        <li>之後回到 socmap 網站的「比對結果」頁面，輸入該查詢批號查詢並下載，就會拿到「比對結果檔」（Excel，內含身分證號、姓名、各弱勢類別欄位）</li>
+        <li>把「比對結果檔」連同原本的「全校學生名冊」，一起拿到本頁的<strong>第二個分頁「弱勢類別比對名單」</strong>使用，即可篩選、查看符合資格的學生名單</li>
+      </ol>
+    </div>
 
     <label class="drop" id="drop1">
       <input type="file" id="fileInput1" accept=".xlsx,.xls,.csv">
@@ -309,30 +367,57 @@
     <button class="primary-btn" id="downloadBtn1">下載 身分證字號.txt</button>
 
     <div class="note">
-      * 上傳的文字檔案僅為身分證字號，採一行一筆（換行分隔）格式，符合多數補助系統的匯入慣例。<br>
-      * 本工具僅在瀏覽器端處理檔案，不會上傳或外傳任何資料。
+      * 上傳的文字檔案僅為身分證字號，採一行一筆（換行分隔）格式，符合 socmap 系統的匯入格式。<br>
+      * 本工具僅在瀏覽器端處理檔案，資料不會上傳到任何伺服器，也不會被記錄或外傳，請放心使用。<br>
+      * 「全校學生名冊」只要欄位標題含有「身分證」三個字（例如「身分證字號」「身分證號」），系統就能自動辨識，不用調整欄位順序。
     </div>
   </div>
 
   <!-- TAB 2 -->
   <div class="card" id="tab2">
     <h2 class="section-title">上傳兩份 Excel 進行比對</h2>
-    <p class="section-desc">左邊上傳全校學生名冊（需含「班級、座號、姓名」），右邊上傳比對結果檔（需含「身分證號、姓名」及各弱勢類別欄位）。系統會用姓名比對，列出符合資格的學生，並依班級座號排序。</p>
+    <p class="section-desc">
+      這個分頁用來把「全校學生名冊」跟 socmap 下載回來的「比對結果檔」合併，直接列出符合各項弱勢資格的學生名單，並可依年級、性別、類別篩選查看。
+    </p>
+
+    <div class="howto">
+      <p class="howto-title">兩份檔案分別是什麼、要去哪裡拿</p>
+      <ol>
+        <li>
+          <strong>① 全校學生名冊</strong>：從貴校「校務系統」匯出的 Excel 檔案，
+          <strong>需包含以下欄位</strong>：<br>
+          <span class="req-list">班級、座號、姓名、身分證字號（若有）、性別（若有）</span><br>
+          其中「班級、座號、姓名」為必要欄位；「身分證字號」建議一併匯出，可讓比對更準確（尤其比對結果檔中的姓名常有部分字被遮蔽，例如「陳Ｏ辰」，此時姓名比對會失敗，需要靠身分證字號比對）；「性別」欄位若有，系統會自動顯示在結果中。
+        </li>
+        <li>
+          <strong>② 比對結果檔</strong>：來自
+          <a href="https://socmap.kcg.gov.tw/app30new/auth/logout" target="_blank" rel="noopener">高雄市社會救助資訊網（socmap）</a>
+          的比對結果，取得方式：
+          <ol class="sub-ol">
+            <li>先用本頁<strong>第一個分頁「身分證轉 TXT」</strong>，把全校學生名冊轉成 txt 檔</li>
+            <li>登入 socmap，選擇「上傳檔案（身分證字號 txt 文字檔）」，上傳該 txt 並執行比對</li>
+            <li>送出後系統會產生一組「查詢批號」，請先記下來</li>
+            <li>回到 socmap「比對結果」頁面，輸入查詢批號查詢並下載，即可取得「比對結果檔」（Excel）</li>
+            <li>這份檔案需包含：<span class="req-list">身分證號、姓名，以及低收入戶、中低收入戶、單親家庭子女、身障生活補助(本人)、弱勢兒童及少年 等各弱勢類別欄位</span>，欄位內容為「符合」的即代表該生具有該項資格</li>
+          </ol>
+        </li>
+      </ol>
+    </div>
 
     <div class="two-drops">
       <div class="drop-block">
         <p class="drop-label">① 全校學生名冊</p>
         <label class="drop" id="drop2a">
           <input type="file" id="fileInput2a" accept=".xlsx,.xls,.csv">
-          <p>班級 / 座號 / 姓名</p>
+          <p>班級 / 座號 / 姓名（建議含身分證字號、性別）</p>
           <div class="fname" id="fname2a"></div>
         </label>
       </div>
       <div class="drop-block">
-        <p class="drop-label">② 比對結果檔</p>
+        <p class="drop-label">② 比對結果檔（socmap 下載）</p>
         <label class="drop" id="drop2b">
           <input type="file" id="fileInput2b" accept=".xlsx,.xls,.csv">
-          <p>身分證號 / 姓名 / 各類別</p>
+          <p>身分證號 / 姓名 / 各弱勢類別欄位</p>
           <div class="fname" id="fname2b"></div>
         </label>
       </div>
@@ -901,7 +986,8 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   downloadBtn2.onclick = () => {
     const filtered = downloadBtn2._filtered || [];
     if(filtered.length === 0) return;
-    const exportRows = filtered.map(r => ({
+    const exportRows = filtered.map((r, i) => ({
+      '序號': i + 1,
       '班級': r.class,
       '座號': r.seat,
       '姓名': r.name,
