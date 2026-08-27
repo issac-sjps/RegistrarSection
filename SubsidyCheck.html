@@ -221,6 +221,35 @@
     margin-top:8px;
     display:none;
   }
+  .arc-box{
+    margin-top:16px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:14px 16px;
+    background:#fdf6de;
+  }
+  .arc-box .arc-title{
+    font-size:13px;
+    font-weight:700;
+    color:#9c7e12;
+    margin:0 0 8px;
+  }
+  .arc-box table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:12.5px;
+  }
+  .arc-box th{
+    text-align:left;
+    padding:5px 8px;
+    color:#6b7280;
+    font-weight:600;
+  }
+  .arc-box td{
+    padding:5px 8px;
+    border-top:1px solid #f0e6bd;
+    color:#4b5563;
+  }
   .note{
     margin-top:24px;
     font-size:12px;
@@ -363,11 +392,13 @@
     <div class="status" id="status1"></div>
     <div class="count" id="count1"></div>
     <div class="preview" id="preview1"></div>
+    <div class="arc-box" id="arcBox1" style="display:none;"></div>
 
     <button class="primary-btn" id="downloadBtn1">下載 身分證字號.txt</button>
 
     <div class="note">
       * 上傳的文字檔案僅為身分證字號，採一行一筆（換行分隔）格式，符合 socmap 系統的匯入格式。<br>
+      * 系統會一併判斷格式，列出疑似「居留證（非本國籍）」的學生班級姓名，方便你確認是否需要另外處理。<br>
       * 本工具僅在瀏覽器端處理檔案，資料不會上傳到任何伺服器，也不會被記錄或外傳，請放心使用。<br>
       * 「全校學生名冊」只要欄位標題含有「身分證」三個字（例如「身分證字號」「身分證號」），系統就能自動辨識，不用調整欄位順序。
     </div>
@@ -482,6 +513,9 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 
   let extractedIds = [];
   let sheetRows = [];
+  let headerRowCache = [];
+  let dataStartRow = 1;
+  const arcBox = document.getElementById('arcBox1');
 
   drop.addEventListener('dragover', e=>{e.preventDefault(); drop.classList.add('dragover');});
   drop.addEventListener('dragleave', ()=> drop.classList.remove('dragover'));
@@ -505,6 +539,8 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     downloadBtn.style.display = 'none';
     countEl.style.display = 'none';
     colSelect.style.display = 'none';
+    arcBox.style.display = 'none';
+    dataStartRow = 1;
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -524,18 +560,33 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   }
 
   function findIdColumn(json){
-    const headerRow = json[0];
     const keywords = ['身分證','身份證','ID','id','統一編號','證號'];
-    const candidateCols = [];
-    headerRow.forEach((h, idx) => {
-      const hs = String(h);
-      if(keywords.some(k => hs.includes(k))) candidateCols.push({idx, name: hs || `欄位 ${idx+1}`});
-    });
+    const maxScanRows = Math.min(5, json.length);
+    let headerRowIdx = -1;
+    let candidateCols = [];
 
-    if(candidateCols.length === 0){
-      showError('找不到含有「身分證」字樣的欄位標題，請確認 Excel 第一列是否為欄位名稱。');
+    for(let r = 0; r < maxScanRows; r++){
+      const row = json[r];
+      const found = [];
+      row.forEach((h, idx) => {
+        const hs = String(h).trim();
+        if(hs && keywords.some(k => hs.includes(k))) found.push({idx, name: hs});
+      });
+      if(found.length > 0){
+        headerRowIdx = r;
+        candidateCols = found;
+        break;
+      }
+    }
+
+    if(headerRowIdx === -1){
+      showError('找不到含有「身分證」字樣的欄位標題，請確認 Excel 檔案前幾列是否有正確的欄位名稱。');
       return;
     }
+
+    headerRowCache = json[headerRowIdx];
+    dataStartRow = headerRowIdx + 1;
+
     if(candidateCols.length === 1){
       extractFromColumn(candidateCols[0].idx);
     } else {
@@ -556,13 +607,34 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   }
 
   function extractFromColumn(colIdx){
-    const idPattern = /^[A-Za-z][12]\d{8}$/;
+    const idPattern = /^[A-Za-z][12]\d{8}$/;      // 中華民國國民身分證
+    const arcPattern = /^[A-Za-z][89]\d{8}$/;     // 舊式居留證（第2碼為8或9）
+    const arcPatternNew = /^[A-Za-z]{2}\d{8}$/;   // 新式統一證號（2碼英文字母開頭）
+
+    const classIdx = headerRowCache.findIndex(h => String(h).includes('班級'));
+    const seatIdx = headerRowCache.findIndex(h => String(h).includes('座號'));
+    const nameIdx = headerRowCache.findIndex(h => String(h).includes('姓名'));
+
     const ids = [];
-    for(let i=1; i<sheetRows.length; i++){
+    const arcList = [];
+
+    for(let i=dataStartRow; i<sheetRows.length; i++){
       const raw = sheetRows[i][colIdx];
       if(raw === undefined || raw === '') continue;
       const val = normalizeId(raw);
-      if(val) ids.push(val);
+      if(!val) continue;
+      ids.push(val);
+
+      const isTwId = idPattern.test(val);
+      const isArc = !isTwId && (arcPattern.test(val) || arcPatternNew.test(val));
+      if(isArc){
+        arcList.push({
+          class: classIdx !== -1 ? String(sheetRows[i][classIdx]).trim() : '',
+          seat: seatIdx !== -1 ? String(sheetRows[i][seatIdx]).trim() : '',
+          name: nameIdx !== -1 ? String(sheetRows[i][nameIdx]).trim() : '',
+          id: val
+        });
+      }
     }
     extractedIds = ids;
     if(ids.length === 0){ showError('該欄位底下沒有任何資料。'); return; }
@@ -580,6 +652,34 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     downloadBtn.style.display = 'block';
     downloadBtn.disabled = false;
     renderPreview();
+    renderArcBox(arcList, classIdx !== -1, nameIdx !== -1);
+  }
+
+  function renderArcBox(arcList, hasClass, hasName){
+    if(arcList.length === 0){
+      arcBox.style.display = 'none';
+      arcBox.innerHTML = '';
+      return;
+    }
+    let colsNote = '';
+    if(!hasClass || !hasName){
+      colsNote = `<div style="font-size:11.5px;color:#9c7e12;margin-top:6px;">（此檔案缺少「班級」或「姓名」欄位，僅能顯示身分證字號本身）</div>`;
+    }
+    arcBox.innerHTML = `
+      <p class="arc-title">⚠ 偵測到 ${arcList.length} 筆疑似居留證（非本國籍）格式的資料</p>
+      <table>
+        <thead><tr><th>班級</th><th>座號</th><th>姓名</th><th>證號</th></tr></thead>
+        <tbody>
+          ${arcList.map(a => `<tr><td>${escHtml(a.class)}</td><td>${escHtml(a.seat)}</td><td>${escHtml(a.name)}</td><td>${escHtml(a.id)}</td></tr>`).join('')}
+        </tbody>
+      </table>
+      ${colsNote}
+    `;
+    arcBox.style.display = 'block';
+  }
+
+  function escHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
   function renderPreview(){
