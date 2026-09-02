@@ -1046,7 +1046,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
       .filter(r => activeGender === null || r.gender === activeGender)
       .filter(r => activeCategory === null || r.categories.includes(activeCategory));
 
-    resultSummary.textContent = `符合條件學生：共 ${filtered.length} 位`;
+    resultSummary.textContent = `符合條件學生：共 ${filtered.length} 位（男：${filtered.filter(r=>r.gender==='男').length} 人、女：${filtered.filter(r=>r.gender==='女').length} 人）`;
 
     resultHead.innerHTML = '<th>序號</th><th>班級</th><th>座號</th><th>姓名</th><th>性別</th><th>身分證號</th><th>符合類別</th>';
     resultBody.innerHTML = filtered.map((r, i) => {
