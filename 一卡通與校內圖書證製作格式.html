@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>學生資料轉換工具</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#f4f6f9;
+    --card:#ffffff;
+    --primary:#2f5aa8;
+    --primary-dark:#1f3d75;
+    --accent:#e8edf7;
+    --text:#1c2331;
+    --muted:#5b6472;
+    --border:#dbe1ea;
+    --good:#1f8a4c;
+    --warn:#b3541e;
+    --error:#c62828;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,-apple-system,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.6;
+  }
+  header{
+    background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+    color:#fff;
+    padding:28px 20px;
+    text-align:center;
+  }
+  header h1{margin:0 0 6px;font-size:1.6rem;}
+  header p{margin:0;opacity:.9;font-size:.95rem;}
+  .wrap{max-width:960px;margin:0 auto;padding:24px 16px 60px;}
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:22px;
+    margin-bottom:20px;
+    box-shadow:0 1px 3px rgba(0,0,0,.04);
+  }
+  .card h2{
+    margin-top:0;
+    font-size:1.15rem;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .step-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:26px;height:26px;
+    background:var(--primary);
+    color:#fff;
+    border-radius:50%;
+    font-size:.85rem;
+    flex:none;
+  }
+  label{display:block;font-weight:600;margin-bottom:6px;font-size:.92rem;}
+  input[type="text"], input[type="file"]{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    font-size:.95rem;
+    background:#fbfcfe;
+  }
+  input[type="text"]:focus{outline:2px solid var(--primary);outline-offset:1px;}
+  .hint{color:var(--muted);font-size:.85rem;margin-top:6px;}
+  .row{display:flex;gap:16px;flex-wrap:wrap;}
+  .row > div{flex:1;min-width:220px;}
+  button{
+    background:var(--primary);
+    color:#fff;
+    border:none;
+    padding:11px 22px;
+    border-radius:8px;
+    font-size:.95rem;
+    font-weight:600;
+    cursor:pointer;
+    transition:background .15s;
+  }
+  button:hover{background:var(--primary-dark);}
+  button:disabled{background:#a9b3c2;cursor:not-allowed;}
+  .btn-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;}
+  .btn-secondary{background:var(--accent);color:var(--primary-dark);}
+  .btn-secondary:hover{background:#dbe4f5;}
+  #status{
+    margin-top:14px;
+    padding:12px 14px;
+    border-radius:8px;
+    font-size:.9rem;
+    display:none;
+    white-space:pre-wrap;
+  }
+  #status.info{display:block;background:var(--accent);color:var(--primary-dark);}
+  #status.error{display:block;background:#fdecea;color:var(--error);}
+  #status.good{display:block;background:#e9f7ef;color:var(--good);}
+  table{
+    border-collapse:collapse;
+    width:100%;
+    font-size:.82rem;
+    margin-top:14px;
+  }
+  th,td{
+    border:1px solid var(--border);
+    padding:6px 8px;
+    text-align:center;
+    white-space:nowrap;
+  }
+  th{background:var(--accent);}
+  .table-scroll{overflow-x:auto;}
+  .preview-title{font-weight:700;margin:18px 0 4px;font-size:.95rem;color:var(--primary-dark);}
+  footer{
+    text-align:center;
+    color:var(--muted);
+    font-size:.82rem;
+    padding-bottom:30px;
+  }
+  .tag{
+    display:inline-block;
+    background:var(--accent);
+    color:var(--primary-dark);
+    font-size:.78rem;
+    padding:2px 8px;
+    border-radius:12px;
+    margin-left:6px;
+  }
+  details{margin-top:10px;font-size:.85rem;color:var(--muted);}
+  summary{cursor:pointer;font-weight:600;color:var(--primary);}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🪪 學生資料轉換工具</h1>
+  <p>上傳全校 Excel 名冊，自動轉換成一卡通申請格式與圖書館系統匯入格式</p>
+</header>
+
+<div class="wrap">
+
+  <div class="card">
+    <h2><span class="step-badge">1</span> 上傳 Excel 檔案</h2>
+    <label for="fileInput">選擇檔案（.xlsx / .xls / .csv）</label>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+    <p class="hint">
+      原始欄位需包含：<strong>班級</strong>（如 101，表示 1 年級 01 班）、<strong>座號</strong>、<strong>學號</strong>、<strong>身分證</strong>、<strong>姓名</strong>、<strong>出生年月日</strong>（民國制，如 1090627）。
+      欄位名稱只要包含這些關鍵字即可自動辨識，順序不拘。
+    </p>
+  </div>
+
+  <div class="card">
+    <h2><span class="step-badge">2</span> 篩選特定學生（選填）</h2>
+    <p class="hint">若只想抓取部分學生（例如轉學生），可在此輸入名單；不填則輸出全校資料。</p>
+    <div class="row" style="margin-bottom:10px;">
+      <div>
+        <label>篩選方式</label>
+        <label style="font-weight:400;display:inline-flex;align-items:center;gap:6px;margin-right:16px;">
+          <input type="radio" name="filterMode" value="none" checked style="width:auto;"> 不篩選（全部輸出）
+        </label>
+        <label style="font-weight:400;display:inline-flex;align-items:center;gap:6px;margin-right:16px;">
+          <input type="radio" name="filterMode" value="sid" style="width:auto;"> 依學號篩選
+        </label>
+        <label style="font-weight:400;display:inline-flex;align-items:center;gap:6px;margin-right:16px;">
+          <input type="radio" name="filterMode" value="name" style="width:auto;"> 依姓名篩選
+        </label>
+        <label style="font-weight:400;display:inline-flex;align-items:center;gap:6px;">
+          <input type="radio" name="filterMode" value="grade" style="width:auto;"> 只輸出某一年級
+        </label>
+      </div>
+    </div>
+    <div id="filterListWrap" style="display:none;">
+      <label for="filterList">名單（每行一筆）</label>
+      <textarea id="filterList" rows="6" placeholder="依學號範例：&#10;10101&#10;10102&#10;10105&#10;&#10;依姓名範例：&#10;王大明&#10;王大花&#10;王小花" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:.95rem;background:#fbfcfe;font-family:inherit;"></textarea>
+      <p class="hint">依姓名篩選時，若有同名同姓的學生會全部抓出來並在結果中提醒，請自行確認要留哪一位。</p>
+    </div>
+    <div id="filterGradeWrap" style="display:none;">
+      <label for="filterGrade">要輸出的年級</label>
+      <input type="text" id="filterGrade" placeholder="例如輸入 6，代表只輸出6年級">
+      <p class="hint">依「班級」欄位拆解出的年級判斷，例如班級 601 → 6年級。</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="step-badge">3</span> 設定畢業年月日（依年級自動推算）</h2>
+    <div class="row">
+      <div>
+        <label for="curYear">目前學年度（民國）</label>
+        <input type="text" id="curYear" placeholder="例如 115">
+        <p class="hint">例如現在是 115 學年度，就輸入 115。</p>
+      </div>
+      <div>
+        <label for="finalGrade">該校畢業年級</label>
+        <input type="text" id="finalGrade" placeholder="國小輸入 6">
+        <p class="hint">國小填 6、國中/高中填 3。程式會依每位學生目前年級推算畢業西元年。</p>
+      </div>
+      <div>
+        <label for="gradMonthDay">畢業月日（西元/民國皆同）</label>
+        <input type="text" id="gradMonthDay" value="10/31" placeholder="MM/DD">
+        <p class="hint">預設 10/31，可依需要修改。</p>
+      </div>
+    </div>
+    <p class="hint">
+      推算方式：以「目前學年度」對應的西元年為基準，畢業年 = 基準西元年 + 1 + (畢業年級 − 目前年級)。<br>
+      例如 115 學年度（西元 2026 學年）、6 年級 → 畢業西元年 2027（即 20271031）；5 年級 → 2028（20281031），以此類推。
+    </p>
+  </div>
+
+  <div class="card">
+    <h2><span class="step-badge">4</span> 轉換並下載</h2>
+    <div class="row" style="margin-bottom:6px;">
+      <div>
+        <label for="enrolledStatus">格式三專用：是否在籍</label>
+        <select id="enrolledStatus" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:.95rem;background:#fbfcfe;">
+          <option value="是" selected>是</option>
+          <option value="否">否</option>
+        </select>
+        <p class="hint">此欄位資料來源未提供在籍狀態，統一套用此設定（可依需要另外調整名單後分開匯出）。</p>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button id="convertBtn">開始轉換</button>
+      <button id="downloadType1" class="btn-secondary" disabled>下載格式一（轉學生一卡通申請格式－西元制）</button>
+      <button id="downloadType2" class="btn-secondary" disabled>下載格式二（轉學生一卡通申請格式－民國制）</button>
+      <button id="downloadType3" class="btn-secondary" disabled>下載格式三（校內圖書館系統匯入格式）</button>
+    </div>
+    <div id="status"></div>
+
+    <details>
+      <summary>欄位轉換規則說明</summary>
+      <p><strong>年級 / 班級：</strong>由「班級」欄位拆解，如 101 → 年級 1、班級 01；若為 4 位數如 1201 → 年級 12、班級 01（依總碼位數自動判斷，去掉最後 2 碼即為年級）。</p>
+      <p><strong>性別：</strong>由身分證字號第 2 碼判斷，1 為男、2 為女，其餘標示為「其他」。</p>
+      <p><strong>出生年月日：</strong>來源為民國格式（如 1090627 = 民國109年06月27日）。<br>
+      格式一輸出西元制無分隔（如 20200627 = 西元2020年06月27日）。<br>
+      格式二輸出民國制含斜線（如 109/06/27）。<br>
+      格式三維持民國制原始格式並補滿3碼年（如 0990801）。</p>
+      <p><strong>畢業年月日：</strong>依「目前學年度」與該生目前年級自動推算畢業西元年，公式為：畢業西元年 = (目前學年度+1911) + 1 + (畢業年級 − 目前年級)。例如 115 學年度、6 年級 → 2027 年（20271031）；5 年級 → 2028 年（20281031）。月日則採用您設定的畢業月日（預設 10/31）。</p>
+      <p><strong>入學學年（格式三）：</strong>入學學年 = 目前學年度 − (目前年級 − 1)。例如 115 學年度、7 年級 → 入學學年 109（098格式，補滿3碼）。</p>
+      <p><strong>班級代碼（格式三）：</strong>由年級與班級重組成 3 碼，如 7 年級 01 班 → 701。</p>
+    </details>
+  </div>
+
+  <div class="card" id="previewCard" style="display:none;">
+    <h2>📋 預覽（前 5 筆）</h2>
+    <div class="preview-title">格式一：轉學生一卡通申請格式（西元制）</div>
+    <div class="table-scroll"><table id="table1"></table></div>
+    <div class="preview-title">格式二：轉學生一卡通申請格式（民國制）</div>
+    <div class="table-scroll"><table id="table2"></table></div>
+    <div class="preview-title">格式三：校內圖書館系統匯入格式</div>
+    <div class="table-scroll"><table id="table3"></table></div>
+  </div>
+
+</div>
+
+<footer>此工具完全在您的瀏覽器端執行，資料不會上傳到任何伺服器，可安心用於學生個資處理。</footer>
+
+<script>
+let rawRows = [];
+let output1 = [];
+let output2 = [];
+let output3 = [];
+
+const fileInput = document.getElementById('fileInput');
+const convertBtn = document.getElementById('convertBtn');
+const filterListWrap = document.getElementById('filterListWrap');
+const filterListInput = document.getElementById('filterList');
+const filterGradeWrap = document.getElementById('filterGradeWrap');
+const filterGradeInput = document.getElementById('filterGrade');
+document.querySelectorAll('input[name="filterMode"]').forEach(radio => {
+  radio.addEventListener('change', () => {
+    const mode = document.querySelector('input[name="filterMode"]:checked').value;
+    filterListWrap.style.display = (mode === 'sid' || mode === 'name') ? 'block' : 'none';
+    filterGradeWrap.style.display = (mode === 'grade') ? 'block' : 'none';
+  });
+});
+const curYearInput = document.getElementById('curYear');
+const finalGradeInput = document.getElementById('finalGrade');
+const gradMonthDayInput = document.getElementById('gradMonthDay');
+const statusEl = document.getElementById('status');
+const downloadType1 = document.getElementById('downloadType1');
+const downloadType2 = document.getElementById('downloadType2');
+const downloadType3 = document.getElementById('downloadType3');
+const enrolledStatusInput = document.getElementById('enrolledStatus');
+
+function setStatus(msg, type){
+  statusEl.textContent = msg;
+  statusEl.className = type || 'info';
+}
+
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try{
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type:'array'});
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      rawRows = XLSX.utils.sheet_to_json(sheet, {defval:''});
+      setStatus(`已讀取「${file.name}」，共 ${rawRows.length} 筆資料。請設定畢業日期後按下「開始轉換」。`, 'good');
+    }catch(err){
+      console.error(err);
+      setStatus('讀取檔案失敗，請確認檔案格式為 Excel 或 CSV。\n' + err.message, 'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+// 找出符合關鍵字的欄位名稱
+function findKey(row, keywords){
+  const keys = Object.keys(row);
+  for(const k of keys){
+    for(const kw of keywords){
+      if(k.replace(/\s/g,'').includes(kw)) return k;
+    }
+  }
+  return null;
+}
+
+// 把任意輸入的日期字串（民國，含或不含斜線）解析成 {y, m, d}（y為民國年，m/d已補0為2位）
+function parseROC(str){
+  if(str === null || str === undefined) return null;
+  str = String(str).trim();
+  if(str === '') return null;
+
+  // 含斜線或 - 的格式：105/06/30 或 105-6-30
+  if(/[\/\-\.]/.test(str)){
+    const parts = str.split(/[\/\-\.]/).map(s => s.trim()).filter(Boolean);
+    if(parts.length === 3){
+      let [y, m, d] = parts;
+      m = m.padStart(2,'0');
+      d = d.padStart(2,'0');
+      return {y: y, m: m, d: d};
+    }
+    return null;
+  }
+
+  // 純數字格式，例如 1090627 或 990627（民國年為2位數時共6碼）
+  const digits = str.replace(/\D/g,'');
+  if(digits.length === 7){
+    return {y: digits.slice(0,3), m: digits.slice(3,5), d: digits.slice(5,7)};
+  }
+  if(digits.length === 6){
+    return {y: digits.slice(0,2), m: digits.slice(2,4), d: digits.slice(4,6)};
+  }
+  return null;
+}
+
+function rocToWestern(parsed){
+  if(!parsed) return '';
+  const westYear = parseInt(parsed.y, 10) + 1911;
+  return `${westYear}${parsed.m}${parsed.d}`;
+}
+
+function rocToSlash(parsed){
+  if(!parsed) return '';
+  return `${parseInt(parsed.y,10)}/${parsed.m}/${parsed.d}`;
+}
+
+// 拆解班級碼，例如 101 -> 年級1 班級01；1201 -> 年級12 班級01
+function splitClassCode(raw){
+  const str = String(raw).trim();
+  const digits = str.replace(/\D/g,'');
+  if(digits.length <= 2){
+    return {grade:'', classNum: digits.padStart(2,'0')};
+  }
+  const grade = digits.slice(0, digits.length - 2);
+  const classNum = digits.slice(-2);
+  return {grade, classNum};
+}
+
+function getGender(idNumber){
+  const str = String(idNumber).trim();
+  const secondChar = str.charAt(1);
+  if(secondChar === '1') return '男';
+  if(secondChar === '2') return '女';
+  return '其他';
+}
+
+// 依目前學年度(民國) + 畢業年級 + 該生目前年級，推算畢業西元年
+// 畢業西元年 = (目前學年度+1911) + 1 + (畢業年級 - 目前年級)
+function computeGradYear(curRocYear, finalGrade, studentGrade){
+  const curWestern = curRocYear + 1911;
+  const grade = parseInt(studentGrade, 10);
+  if(isNaN(grade)) return null;
+  return curWestern + 1 + (finalGrade - grade);
+}
+
+function pad2(n){
+  return String(n).padStart(2,'0');
+}
+
+convertBtn.addEventListener('click', () => {
+  if(rawRows.length === 0){
+    setStatus('請先上傳 Excel 檔案。', 'error');
+    return;
+  }
+
+  const curRocYear = parseInt(curYearInput.value.trim(), 10);
+  const finalGrade = parseInt(finalGradeInput.value.trim(), 10);
+  const mdParts = gradMonthDayInput.value.trim().split(/[\/\-\.]/).map(s => s.trim());
+
+  if(isNaN(curRocYear)){
+    setStatus('請輸入目前學年度（民國），例如 115。', 'error');
+    return;
+  }
+  if(isNaN(finalGrade)){
+    setStatus('請輸入該校畢業年級，例如國小填 6。', 'error');
+    return;
+  }
+  if(mdParts.length !== 2 || isNaN(parseInt(mdParts[0],10)) || isNaN(parseInt(mdParts[1],10))){
+    setStatus('畢業月日格式錯誤，請輸入例如 10/31。', 'error');
+    return;
+  }
+  const gradMonth = pad2(parseInt(mdParts[0],10));
+  const gradDay = pad2(parseInt(mdParts[1],10));
+
+  const sample = rawRows[0];
+  const kClass = findKey(sample, ['班級','班别','班級碼']);
+  const kSeat = findKey(sample, ['座號','座位號']);
+  const kSid = findKey(sample, ['學號']);
+  const kIdNum = findKey(sample, ['身分證','身份證']);
+  const kName = findKey(sample, ['姓名']);
+  const kBirth = findKey(sample, ['出生年月日','出生日期','生日']);
+
+  const missing = [];
+  if(!kClass) missing.push('班級');
+  if(!kSeat) missing.push('座號');
+  if(!kSid) missing.push('學號');
+  if(!kIdNum) missing.push('身分證');
+  if(!kName) missing.push('姓名');
+  if(!kBirth) missing.push('出生年月日');
+
+  if(missing.length > 0){
+    setStatus('找不到以下欄位，請確認 Excel 欄位名稱：' + missing.join('、'), 'error');
+    return;
+  }
+
+  // 篩選特定學生
+  const filterMode = document.querySelector('input[name="filterMode"]:checked').value;
+  let rowsToProcess = rawRows;
+  let filterWarnings = [];
+
+  if(filterMode === 'sid' || filterMode === 'name'){
+    const rawList = filterListInput.value.split('\n').map(s => s.trim()).filter(Boolean);
+    if(rawList.length === 0){
+      setStatus('請輸入要篩選的名單，或選擇「不篩選」。', 'error');
+      return;
+    }
+
+    if(filterMode === 'sid'){
+      const wanted = new Set(rawList);
+      rowsToProcess = rawRows.filter(row => wanted.has(String(row[kSid]).trim()));
+      const foundSids = new Set(rowsToProcess.map(row => String(row[kSid]).trim()));
+      const notFound = rawList.filter(sid => !foundSids.has(sid));
+      if(notFound.length > 0){
+        filterWarnings.push(`⚠️ 以下學號在名冊中找不到：${notFound.join('、')}`);
+      }
+    } else if(filterMode === 'name'){
+      rowsToProcess = rawRows.filter(row => rawList.includes(String(row[kName]).trim()));
+      // 檢查同名同姓
+      const nameCounts = {};
+      rowsToProcess.forEach(row => {
+        const n = String(row[kName]).trim();
+        nameCounts[n] = (nameCounts[n] || 0) + 1;
+      });
+      const duplicates = Object.keys(nameCounts).filter(n => nameCounts[n] > 1);
+      if(duplicates.length > 0){
+        filterWarnings.push(`⚠️ 以下姓名有同名同姓，已全部抓出，請自行確認要留哪一位：${duplicates.map(n => `${n}(${nameCounts[n]}筆)`).join('、')}`);
+      }
+      const foundNames = new Set(rowsToProcess.map(row => String(row[kName]).trim()));
+      const notFound = rawList.filter(n => !foundNames.has(n));
+      if(notFound.length > 0){
+        filterWarnings.push(`⚠️ 以下姓名在名冊中找不到：${notFound.join('、')}`);
+      }
+    }
+
+    if(rowsToProcess.length === 0){
+      setStatus('篩選後沒有符合的學生，請確認名單內容。', 'error');
+      return;
+    }
+  } else if(filterMode === 'grade'){
+    const wantedGrade = filterGradeInput.value.trim();
+    if(wantedGrade === ''){
+      setStatus('請輸入要輸出的年級。', 'error');
+      return;
+    }
+    rowsToProcess = rawRows.filter(row => {
+      const {grade} = splitClassCode(row[kClass]);
+      return String(grade) === String(wantedGrade);
+    });
+    if(rowsToProcess.length === 0){
+      setStatus(`找不到年級為「${wantedGrade}」的學生，請確認輸入的年級是否正確。`, 'error');
+      return;
+    }
+  }
+
+  output1 = [];
+  output2 = [];
+  output3 = [];
+  let birthErrorCount = 0;
+  let gradErrorCount = 0;
+  const enrolledStatus = enrolledStatusInput.value;
+
+  rowsToProcess.forEach(row => {
+    const {grade, classNum} = splitClassCode(row[kClass]);
+    const seat = String(row[kSeat]).trim().padStart(2,'0');
+    const sid = String(row[kSid]).trim();
+    const idNum = String(row[kIdNum]).trim();
+    const name = String(row[kName]).trim();
+    const birthParsed = parseROC(row[kBirth]);
+    if(!birthParsed) birthErrorCount++;
+    const gender = getGender(idNum);
+
+    const gradYearWestern = computeGradYear(curRocYear, finalGrade, grade);
+    let gradWestern = '';
+    let gradSlash = '';
+    if(gradYearWestern !== null){
+      gradWestern = `${gradYearWestern}${gradMonth}${gradDay}`;
+      gradSlash = `${gradYearWestern - 1911}/${gradMonth}/${gradDay}`;
+    } else {
+      gradErrorCount++;
+    }
+
+    output1.push({
+      '年級': grade,
+      '班級': classNum,
+      '座號': seat,
+      '學號': sid,
+      '姓名': name,
+      '身分證字號': idNum,
+      '出生年月日': birthParsed ? rocToWestern(birthParsed) : '',
+      '畢業年月日': gradWestern
+    });
+
+    output2.push({
+      '年級': grade,
+      '班級': classNum,
+      '座號': seat,
+      '性別': gender,
+      '學號': sid,
+      '姓名': name,
+      '身分證字號': idNum,
+      '出生年月日': birthParsed ? rocToSlash(birthParsed) : '',
+      '畢業年月日': gradSlash
+    });
+
+    // 格式三：系統匯入格式
+    const gradeNum = parseInt(grade, 10);
+    const classCode3 = `${grade}${classNum}`;
+    let entranceYearRoc = '';
+    if(!isNaN(curRocYear) && !isNaN(gradeNum)){
+      entranceYearRoc = String(curRocYear - (gradeNum - 1)).padStart(3,'0');
+    }
+    let birthRocRaw = '';
+    if(birthParsed){
+      birthRocRaw = `${String(parseInt(birthParsed.y,10)).padStart(3,'0')}${birthParsed.m}${birthParsed.d}`;
+    }
+
+    output3.push({
+      '身分證字號': idNum,
+      '姓名': name,
+      '性別': gender,
+      '學號': sid,
+      '班級代碼': classCode3,
+      '座號': seat,
+      '是否在籍': enrolledStatus,
+      '入學學年': entranceYearRoc,
+      '電子郵件': '',
+      '生日': birthRocRaw
+    });
+  });
+
+  renderPreview(output1, 'table1');
+  renderPreview(output2, 'table2');
+  renderPreview(output3, 'table3');
+  document.getElementById('previewCard').style.display = 'block';
+
+  downloadType1.disabled = false;
+  downloadType2.disabled = false;
+  downloadType3.disabled = false;
+
+  let msg = `轉換完成，共 ${output1.length} 筆資料。`;
+  if(birthErrorCount > 0) msg += `\n⚠️ 有 ${birthErrorCount} 筆出生年月日格式無法辨識，該欄位已留空，請人工確認。`;
+  if(gradErrorCount > 0) msg += `\n⚠️ 有 ${gradErrorCount} 筆因班級年級無法辨識，畢業年月日已留空，請人工確認。`;
+  if(filterWarnings.length > 0) msg += '\n' + filterWarnings.join('\n');
+  const hasWarning = birthErrorCount > 0 || gradErrorCount > 0 || filterWarnings.length > 0;
+  setStatus(msg, hasWarning ? 'error' : 'good');
+});
+
+function renderPreview(data, tableId){
+  const table = document.getElementById(tableId);
+  table.innerHTML = '';
+  if(data.length === 0) return;
+  const headers = Object.keys(data[0]);
+  const thead = document.createElement('tr');
+  headers.forEach(h => {
+    const th = document.createElement('th');
+    th.textContent = h;
+    thead.appendChild(th);
+  });
+  table.appendChild(thead);
+
+  data.slice(0,5).forEach(row => {
+    const tr = document.createElement('tr');
+    headers.forEach(h => {
+      const td = document.createElement('td');
+      td.textContent = row[h];
+      tr.appendChild(td);
+    });
+    table.appendChild(tr);
+  });
+}
+
+function downloadExcel(data, filename){
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  XLSX.writeFile(wb, filename);
+}
+
+downloadType1.addEventListener('click', () => {
+  if(output1.length === 0) return;
+  downloadExcel(output1, '轉學生一卡通申請格式_西元制.xlsx');
+});
+
+downloadType2.addEventListener('click', () => {
+  if(output2.length === 0) return;
+  downloadExcel(output2, '轉學生一卡通申請格式_民國制.xlsx');
+});
+
+downloadType3.addEventListener('click', () => {
+  if(output3.length === 0) return;
+  downloadExcel(output3, '校內圖書館系統匯入格式.xlsx');
+});
+</script>
+
+</body>
+</html>
