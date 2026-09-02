@@ -150,8 +150,15 @@
     <label for="fileInput">選擇檔案（.xlsx / .xls / .csv）</label>
     <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
     <p class="hint">
+      此檔案來自「校務系統 A00行政管理 → 08表單及名冊下載 → 校長審核資料下載」所匯出的全校名冊。
+    </p>
+    <p class="hint">
       原始欄位需包含：<strong>班級</strong>（如 101，表示 1 年級 01 班）、<strong>座號</strong>、<strong>學號</strong>、<strong>身分證</strong>、<strong>姓名</strong>、<strong>出生年月日</strong>（民國制，如 1090627）。
       欄位名稱只要包含這些關鍵字即可自動辨識，順序不拘。
+    </p>
+    <p class="hint" style="color:var(--warn);">
+      ⚠️ 本系統的「班級」欄位假設是純數字代碼（如 101、701），最後 2 碼為班級、其餘為年級。
+      如果貴校班級格式是文字型態（如「一年甲班」「二年忠班」），無法自動拆解出年級與班級，本系統暫不適用，需要先手動整理成數字代碼格式才能使用。
     </p>
   </div>
 
