@@ -220,6 +220,7 @@
     color:#9ca3af;
     margin-top:8px;
     display:none;
+    line-height:1.6;
   }
   .arc-box{
     margin-top:16px;
@@ -515,6 +516,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   let sheetRows = [];
   let headerRowCache = [];
   let dataStartRow = 1;
+  let headerRowIdxCache = 0;
   const arcBox = document.getElementById('arcBox1');
 
   drop.addEventListener('dragover', e=>{e.preventDefault(); drop.classList.add('dragover');});
@@ -586,11 +588,12 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 
     headerRowCache = json[headerRowIdx];
     dataStartRow = headerRowIdx + 1;
+    headerRowIdxCache = headerRowIdx;
 
     if(candidateCols.length === 1){
       extractFromColumn(candidateCols[0].idx);
     } else {
-      colDropdown.innerHTML = candidateCols.map(c => `<option value="${c.idx}">${c.name}</option>`).join('');
+      colDropdown.innerHTML = candidateCols.map(c => `<option value="${c.idx}">${c.name}（第${headerRowIdx+1}列第${c.idx+1}欄）</option>`).join('');
       colSelect.style.display = 'block';
       colDropdown.onchange = () => extractFromColumn(parseInt(colDropdown.value));
       extractFromColumn(candidateCols[0].idx);
@@ -604,6 +607,19 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
       .replace(/[Ａ-Ｚａ-ｚ０-９]/g, ch =>   // 全形英數轉半形
         String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
       .toUpperCase();
+  }
+
+  function neighborHeaders(colIdx){
+    const names = [];
+    for(let d = -1; d <= 1; d++){
+      if(d === 0) continue;
+      const idx = colIdx + d;
+      if(idx >= 0 && idx < headerRowCache.length){
+        const h = String(headerRowCache[idx]).trim();
+        if(h) names.push(h);
+      }
+    }
+    return names.length ? names.join('、') : '（無）';
   }
 
   function extractFromColumn(colIdx){
@@ -647,7 +663,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
       statusEl.textContent = `已成功擷取 ${ids.length} 筆身分證字號`;
       statusEl.className = 'status ok';
     }
-    countEl.textContent = `共 ${ids.length} 筆`;
+    countEl.textContent = `共 ${ids.length} 筆　｜　欄位位置：第 ${headerRowIdxCache+1} 列、第 ${colIdx+1} 欄（欄位標題：「${headerRowCache[colIdx]}」，同列鄰近欄位：${neighborHeaders(colIdx)}）`;
     countEl.style.display = 'block';
     downloadBtn.style.display = 'block';
     downloadBtn.disabled = false;
@@ -1028,8 +1044,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     const filtered = mergedRecords
       .filter(r => activeGrade === null || gradeOf(r.class) === activeGrade)
       .filter(r => activeGender === null || r.gender === activeGender)
-      .map(r => ({...r, categories: activeCategory === null ? r.categories : r.categories.filter(c => c === activeCategory)}))
-      .filter(r => r.categories.length > 0);
+      .filter(r => activeCategory === null || r.categories.includes(activeCategory));
 
     resultSummary.textContent = `符合條件學生：共 ${filtered.length} 位`;
 
