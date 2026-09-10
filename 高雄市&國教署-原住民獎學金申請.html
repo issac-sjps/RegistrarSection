@@ -533,7 +533,7 @@
 
 <div class="tab-nav">
   <button type="button" class="tab-btn active" data-tab="tabData">01 資料匯入與核對<span class="tab-sub">上傳 Excel、配對、逐生核對</span></button>
-  <button type="button" class="tab-btn" data-tab="tabKCG">02 高雄市政府格式<span class="tab-sub">申請表（Word）</span></button>
+  <button type="button" class="tab-btn" data-tab="tabKCG">02 高雄市政府格式<span class="tab-sub">申請表（紙本在校留存）</span></button>
   <button type="button" class="tab-btn" data-tab="tabMOE">03 教育部國教署格式<span class="tab-sub">申請書＋名冊（紙本送件）</span></button>
 </div>
 
@@ -550,6 +550,7 @@
         <h3>成績清冊</h3>
         <p>需含班級、座號、姓名、身分證號、身份別（族別）、上學期成績等欄位。</p>
         <p class="source-hint">📂 下載位置：<b>A00校務行政管理 → 03特殊身分註記 → 身分交叉查詢 → 原住民父母</b></p>
+        <p class="source-hint">⚠️ 上傳前請檢查：檔案<b>最後一列若是「總人數」之類的統計列，請先刪除</b>，不然工具會把它當成一位空白學生，多跑出一筆奇怪的資料。</p>
         <label class="file-drop" id="drop1">
           <input type="file" id="file1" accept=".xlsx,.xls,.csv">
           <div>點擊選擇檔案，或拖曳到這裡</div>
@@ -608,7 +609,7 @@
 
   <!-- STEP 3 -->
   <section class="block" id="step3">
-    <div class="block-head"><span class="num">03</span><h2>下載正式申請表（Word）</h2></div>
+    <div class="block-head"><span class="num">03</span><h2>下載正式申請表（Word，校內留存）</h2></div>
     <p class="block-note">依照高雄市原住民事務委員會的申請表格式自動填好每位「可申請」學生的資料，一個年段一份 Word 檔，每位學生各佔一頁，下載後可直接列印、送出前再人工核對一次即可。以下設定欄位可自行修改，之後每次下載都會沿用。</p>
 
     <div class="upload-card" style="margin-bottom:20px;">
