@@ -128,6 +128,16 @@
   }
   .upload-card h3{font-size:1.05rem;margin-bottom:4px;}
   .upload-card p{color:var(--ink-soft);font-size:.88rem;margin:0 0 14px;}
+  .upload-card p.source-hint{
+    background:var(--paper-raise);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:8px 12px;
+    color:var(--ink);
+    font-size:.85rem;
+    margin:0 0 14px;
+  }
+  .upload-card p.source-hint b{color:var(--copper-deep);}
   .file-drop{
     display:block;
     box-sizing:border-box;
@@ -539,6 +549,7 @@
       <div class="upload-card">
         <h3>成績清冊</h3>
         <p>需含班級、座號、姓名、身分證號、身份別（族別）、上學期成績等欄位。</p>
+        <p class="source-hint">📂 下載位置：<b>A00校務行政管理 → 03特殊身分註記 → 身分交叉查詢 → 原住民父母</b></p>
         <label class="file-drop" id="drop1">
           <input type="file" id="file1" accept=".xlsx,.xls,.csv">
           <div>點擊選擇檔案，或拖曳到這裡</div>
@@ -551,6 +562,7 @@
       <div class="upload-card">
         <h3>全校學籍資料</h3>
         <p>需含班級、座號、身分證、姓名、出生年月日、家長／監護人／緊急聯絡人資訊等欄位。</p>
+        <p class="source-hint">📂 下載位置：<b>A00校務行政管理 → 08表單及名冊下載 → 校長審核資料下載</b></p>
         <label class="file-drop" id="drop2">
           <input type="file" id="file2" accept=".xlsx,.xls,.csv">
           <div>點擊選擇檔案，或拖曳到這裡</div>
