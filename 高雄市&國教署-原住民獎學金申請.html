@@ -1597,8 +1597,7 @@ function getMoeDateValues(){
 }
 
 function studentToMoeFormValues(s, settings, moeDate){
-  const shift = state.semesterMode === 'first' ? 1 : 0;
-  const effectiveGrade = s.classInfo ? Math.max(1, s.classInfo.grade - shift) : '';
+  const currentGrade = s.classInfo ? s.classInfo.grade : '';
   const contactPhone = s.p1phone || bestContact(s).phone || '';
   return {
     NAME: s.name || '',
@@ -1606,7 +1605,7 @@ function studentToMoeFormValues(s, settings, moeDate){
     BIRTH: s.birthDateStr || '',
     PHONE: contactPhone,
     SCHOOL_NAME: settings.schoolName,
-    GRADE: String(effectiveGrade),
+    GRADE: String(currentGrade),
     AVG: s.weightedAvg || '',
     DATE_Y: moeDate.DATE_Y,
     DATE_M: moeDate.DATE_M,
