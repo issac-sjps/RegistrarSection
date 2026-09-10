@@ -1281,6 +1281,7 @@ function buildVerifyTable(title, keys, students){
       <td class="name-col">${s.name||''}</td>
       <td>${s.classInfo? s.classInfo.grade : ''}</td>
       <td>${classLabel}</td>
+      <td>${s.seat||''}</td>
       ${vals.map(v=>`<td>${v===null? '' : v}</td>`).join('')}
       <td>${avg.toFixed(2)}</td>
       <td class="sum-col">${sum.toFixed(2)}</td>
@@ -1290,11 +1291,11 @@ function buildVerifyTable(title, keys, students){
   return `
     <div class="verify-block">
       <h4>${title}（可申請，共 ${students.length} 位）</h4>
-      <p class="verify-note">平均／總分為該生此區塊科目成績的簡單平均與加總，供輸入系統後核對比對用；可直接框選表格內容複製貼到 Excel。</p>
+      <p class="verify-note">已依「年級 → 班級 → 座號」排序；平均／總分為該生此區塊科目成績的簡單平均與加總，供輸入系統後核對比對用；可直接框選表格內容複製貼到 Excel。</p>
       <table class="verify-table">
         <thead>
           <tr>
-            <th class="name-col">學生姓名</th><th>年級</th><th>班級</th>
+            <th class="name-col">學生姓名</th><th>年級</th><th>班級</th><th>座號</th>
             ${subjectLabels.map(l=>`<th>${l}</th>`).join('')}
             <th>平均</th><th>總分</th>
           </tr>
@@ -1325,6 +1326,8 @@ function renderVerifySection(){
     if(g!==0) return g;
     const c = (a.classInfo.num - b.classInfo.num) * dir;
     if(c!==0) return c;
+    const s = ((parseInt(a.seat,10)||0) - (parseInt(b.seat,10)||0)) * dir;
+    if(s!==0) return s;
     return (a.name||'').localeCompare(b.name||'', 'zh-Hant') * dir;
   };
   lowList.sort(sortFn);
@@ -1410,6 +1413,8 @@ function getGradeBandList(bandType){
     if(g!==0) return g;
     const c = a.classInfo.num - b.classInfo.num;
     if(c!==0) return c;
+    const s = (parseInt(a.seat,10)||0) - (parseInt(b.seat,10)||0);
+    if(s!==0) return s;
     return (a.name||'').localeCompare(b.name||'', 'zh-Hant');
   });
   return list;
