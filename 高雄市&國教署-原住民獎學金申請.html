@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700;900&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <style>
@@ -663,6 +663,24 @@
       <button type="button" class="primary" id="downloadMoeFormBtn">下載教育部申請書（每人一頁）</button>
       <button type="button" class="primary" id="downloadMoeRosterBtn">下載教育部合格名冊</button>
       <div class="gen-result" id="moeResult"></div>
+    </div>
+
+    <div class="upload-card" style="margin:32px 0 20px;">
+      <h3>審查一覽表（送鼓山高中彙整）設定</h3>
+      <p>依「可申請」學生名單（與上方合格名冊同一份排序）自動產出審查一覽表 Excel。標題文字可自行修改，之後每次下載都會沿用；「檢附資料」與「是否合格」等欄位仍請送出前人工核對。</p>
+      <div class="settings-grid">
+        <label style="grid-column:1/-1;">標題文字（可自行修改，會印在表格最上方）
+          <input type="text" id="setRosterTitle" style="width:100%;" placeholder="附件:115學年度第1學期原住民優秀學生獎學金審查一覽表(國小)　　　　　　　　（以114-2成績單作申請）">
+        </label>
+        <label>區域<input type="text" id="setRosterArea" placeholder="例：鼓山區"></label>
+        <label>承辦人姓名/聯絡電話<input type="text" id="setRosterContact" placeholder="例：林OO/5213258#123"></label>
+        <label>紙本送至鼓山高中日期<input type="text" id="setRosterSendDate" placeholder="例：9/26"></label>
+      </div>
+    </div>
+
+    <div class="generate-bar" style="margin-top:0;">
+      <button type="button" class="primary" id="downloadRosterXlsxBtn">下載審查一覽表（Excel）</button>
+      <div class="gen-result" id="rosterXlsxResult"></div>
     </div>
   </section>
 </div>
@@ -1687,6 +1705,164 @@ async function generateMoeRosterDocx(){
 
 document.getElementById('downloadMoeFormBtn').addEventListener('click', generateMoeFormDocx);
 document.getElementById('downloadMoeRosterBtn').addEventListener('click', generateMoeRosterDocx);
+
+/* ---------------- 審查一覽表（送鼓山高中彙整）Excel ---------------- */
+function getEffectiveGrade(s){
+  const shift = state.semesterMode === 'first' ? 1 : 0;
+  return Math.max(1, s.classInfo.grade - shift);
+}
+
+function studentToReviewRow(s, idx, area, contact, sendDate, settings){
+  const effectiveGrade = getEffectiveGrade(s);
+  const subjectKeys = effectiveGrade<=2 ? LOW_GRADE_KEYS : HIGH_GRADE_KEYS;
+  let avg = s.weightedAvg;
+  if(avg===undefined || avg===null || avg===''){
+    const vals = subjectKeys.map(k=> s.scores[k]!==undefined ? s.scores[k] : 0);
+    avg = (vals.reduce((a,b)=>a+b,0) / subjectKeys.length).toFixed(2);
+  }
+  return [
+    idx+1,              // 學校推薦序
+    area,                // 區域
+    settings.schoolName, // 學校名稱
+    effectiveGrade,      // 成績單之年級別
+    s.name || '',        // 學生姓名
+    s.ethnic || '',       // 族別
+    subjectKeys.length,  // 各年級領域數
+    '符合',               // 各領域成績達甲以上（清單只含可申請學生，故固定符合）
+    avg,                  // 前一學期學業成績總平均
+    '有',                  // 身分證明文件（預設，可再修改）
+    '是',                  // 申請表（預設，可再修改）
+    '有',                  // 戶口名簿影本/戶籍謄本正本（預設，可再修改）
+    '有',                  // 成績證明（預設，可再修改）
+    '否',                  // 具低收入身份證明（預設，可再修改）
+    '是',                  // 是否合格
+    '有',                  // 同時申請高雄市原民會獎學金（預設，可再修改）
+    contact,               // 承辦人姓名/聯絡電話
+    sendDate,               // 紙本送至鼓山高中日期
+  ];
+}
+
+/* 依範本大致配色：個人基本資料=粉、學業成績=橘、申請資格=藍、檢附資料=綠、學校初審決議=淺綠、備註=黃 */
+const REVIEW_GROUP_COLORS = [
+  {from:0, to:0, group:'FFFFFFFF', col:'FFF2F2F2'},   // 學校推薦序（無分組色，淺灰欄頭）
+  {from:1, to:5, group:'FFF4B6C2', col:'FFFCE4EC'},    // 個人基本資料：粉
+  {from:6, to:8, group:'FFF4B183', col:'FFFCE4D6'},    // 學業成績：橘
+  {from:9, to:9, group:'FFBDD7EE', col:'FFDDEBF7'},    // 申請資格：藍
+  {from:10, to:13, group:'FFA9D18E', col:'FFE2EFDA'},  // 檢附資料：綠
+  {from:14, to:14, group:'FFC6E0B4', col:'FFE2EFDA'},  // 學校初審決議：淺綠
+  {from:15, to:17, group:'FFFFFF00', col:'FFFFF9CC'},  // 備註：黃
+];
+function colorForCol(c){
+  return REVIEW_GROUP_COLORS.find(g=>c>=g.from && c<=g.to);
+}
+const THIN_BORDER = {style:'thin', color:{rgb:'FF999999'}};
+const FULL_BORDER = {top:THIN_BORDER, bottom:THIN_BORDER, left:THIN_BORDER, right:THIN_BORDER};
+
+function applyReviewListStyles(ws, numCols, numDataRows){
+  const setCellStyle = (r, c, style)=>{
+    const addr = XLSX.utils.encode_cell({r, c});
+    if(!ws[addr]) ws[addr] = {v:'', t:'s'};
+    ws[addr].s = style;
+  };
+
+  // row 0：標題
+  for(let c=0;c<numCols;c++){
+    setCellStyle(0, c, {
+      font:{bold:true, sz:14, color:{rgb:'FFC00000'}},
+      alignment:{horizontal:'left', vertical:'center'},
+      border: FULL_BORDER,
+    });
+  }
+
+  // row 1：分組列
+  for(let c=0;c<numCols;c++){
+    const g = colorForCol(c);
+    setCellStyle(1, c, {
+      font:{bold:true, sz:11},
+      fill:{fgColor:{rgb: g ? g.group : 'FFFFFFFF'}},
+      alignment:{horizontal:'center', vertical:'center', wrapText:true},
+      border: FULL_BORDER,
+    });
+  }
+
+  // row 2：欄位標題
+  for(let c=0;c<numCols;c++){
+    const g = colorForCol(c);
+    setCellStyle(2, c, {
+      font:{bold:true, sz:10},
+      fill:{fgColor:{rgb: g ? g.col : 'FFF2F2F2'}},
+      alignment:{horizontal:'center', vertical:'center', wrapText:true},
+      border: FULL_BORDER,
+    });
+  }
+
+  // data rows：加外框線，方便貼上/列印
+  for(let r=0;r<numDataRows;r++){
+    for(let c=0;c<numCols;c++){
+      setCellStyle(3+r, c, {
+        alignment:{horizontal:'center', vertical:'center', wrapText:true},
+        border: FULL_BORDER,
+      });
+    }
+  }
+}
+
+function generateReviewListXlsx(){
+  const resultEl = document.getElementById('rosterXlsxResult');
+  if(!window.XLSX){
+    resultEl.innerHTML = '<b class="warn">Excel 產生元件尚未載入完成，請確認網路連線後再試一次。</b>';
+    return;
+  }
+  const settings = getSettings();
+  const list = getAllEligibleSortedList();
+  if(!list.length){
+    resultEl.textContent = '目前沒有符合條件、可申請的學生，未產生檔案。請先於「01 資料匯入」上傳並配對資料。';
+    return;
+  }
+
+  const defaultTitle = `附件:${settings.schoolYear}學年度${settings.semesterText}原住民優秀學生獎學金審查一覽表(國小)`;
+  const title = document.getElementById('setRosterTitle').value.trim() || defaultTitle;
+  const area = document.getElementById('setRosterArea').value.trim();
+  const contact = document.getElementById('setRosterContact').value.trim();
+  const sendDate = document.getElementById('setRosterSendDate').value.trim();
+
+  const headerGroup = ['', '個人基本資料','','','','', '學業成績','','', '申請資格','檢附資料','','','', '學校初審決議','備註','',''];
+  const headerCols = ['學校推薦序','區域','學校名稱','成績單之年級別','學生姓名','族別','各年級領域數','各領域成績達甲以上','前一學期學業成績總平均','身分證明文件','申請表','戶口名簿影本/戶籍謄本正本','成績證明','具低收入身份證明','是否合格','同時申請高雄市原民會獎學金','承辦人姓名/聯絡電話','紙本送至鼓山高中日期「公文交換櫃號2-19」'];
+
+  const dataRows = list.map((s,i)=>studentToReviewRow(s, i, area, contact, sendDate, settings));
+
+  const aoa = [
+    [title],
+    headerGroup,
+    headerCols,
+    ...dataRows,
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges'] = [
+    {s:{r:0,c:0}, e:{r:0,c:headerCols.length-1}},
+    {s:{r:1,c:1}, e:{r:1,c:5}},
+    {s:{r:1,c:6}, e:{r:1,c:8}},
+    {s:{r:1,c:10}, e:{r:1,c:13}},
+    {s:{r:1,c:15}, e:{r:1,c:17}},
+  ];
+  ws['!cols'] = headerCols.map(()=>({wch:14}));
+  ws['!rows'] = [{hpt:30}, {hpt:22}, {hpt:40}];
+
+  applyReviewListStyles(ws, headerCols.length, dataRows.length);
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '國小階段');
+  try{
+    XLSX.writeFile(wb, `審查一覽表-國小-${list.length}人.xlsx`);
+    resultEl.innerHTML = `已下載審查一覽表，共 <b>${list.length}</b> 位學生。請送出前再核對「檢附資料」「是否合格」「同時申請高雄市原民會獎學金」等欄位。`;
+  }catch(err){
+    resultEl.innerHTML = `<b class="warn">產生 Excel 檔時發生錯誤：${err.message}</b>`;
+    console.error(err);
+  }
+}
+
+document.getElementById('downloadRosterXlsxBtn').addEventListener('click', generateReviewListXlsx);
 
 /* keep school name in sync between tab 02 (setSchoolName) and tab 03 (setSchoolNameMoe) */
 (function syncSchoolName(){
