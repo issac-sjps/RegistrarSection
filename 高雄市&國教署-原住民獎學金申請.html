@@ -535,6 +535,7 @@
   <button type="button" class="tab-btn active" data-tab="tabData">01 資料匯入與核對<span class="tab-sub">上傳 Excel、配對、逐生核對</span></button>
   <button type="button" class="tab-btn" data-tab="tabKCG">02 高雄市政府格式<span class="tab-sub">申請表（紙本在校留存）</span></button>
   <button type="button" class="tab-btn" data-tab="tabMOE">03 教育部國教署格式<span class="tab-sub">申請書＋名冊（紙本送件）</span></button>
+  <button type="button" class="tab-btn" data-tab="tabPoor">04 原住民清寒獎助學金<span class="tab-sub">線上系統對照表（每人一份，全員列出）</span></button>
 </div>
 
 <main>
@@ -685,6 +686,23 @@
   </section>
 </div>
 
+<div class="tab-panel" id="tabPoor">
+  <section class="block" id="stepPoor">
+    <div class="block-head"><span class="num">04</span><h2>原住民清寒獎助學金 — 線上系統對照表</h2></div>
+    <p class="block-note">這裡把<b>每一位</b>學生都列出來（不只是「可申請」的學生），因為紙本已經全部發下去，但學生／家長決定要不要申請不一定，只要有申請的，都需要照這份資料去線上系統輸入。點一下任何一格會複製那格內容，貼到申請系統對應欄位即可。</p>
+
+    <div class="moe-note">
+      <b>提醒：</b>「家庭經濟狀況」欄位資料來源沒有這項資訊，統一先預設顯示「3.一般」，如果有低收入戶／中低收入戶等特殊情形，請自行改成正確類別。「身份別」與「父母身分證字號」目前資料也沒有對應欄位，先留空由您自行填寫；如果您的學籍資料 Excel 裡有這些欄位，告訴我實際的欄位名稱，我可以幫忙加進自動比對。「學生家庭狀況」欄位依您指示不顯示，請自行處理。
+    </div>
+
+    <div class="results-toolbar">
+      <input type="text" id="searchBoxPoor" placeholder="搜尋姓名／班級／族別…">
+    </div>
+
+    <div id="cardsContainerPoor"></div>
+  </section>
+</div>
+
 </main>
 
 <footer>
@@ -779,6 +797,8 @@ const FILE2_ROLES = [
   {key:'p2name', label:'家長二姓名', req:false, kw:['家長二姓名']},
   {key:'p2title', label:'家長二稱謂', req:false, kw:['家長二稱謂']},
   {key:'p2phone', label:'家長二行動電話', req:false, kw:['家長二行動電話']},
+  {key:'p1email', label:'家長一電子郵件', req:false, kw:['家長一電子郵件','家長一Email','家長一信箱']},
+  {key:'p2email', label:'家長二電子郵件', req:false, kw:['家長二電子郵件','家長二Email','家長二信箱']},
   {key:'gname', label:'監護人姓名', req:false, kw:['監護人姓名']},
   {key:'gtitle', label:'監護人稱謂', req:false, kw:['監護人稱謂']},
   {key:'gphone', label:'監護人行動電話', req:false, kw:['監護人行動電話']},
@@ -1046,6 +1066,8 @@ document.getElementById('genBtn').addEventListener('click', ()=>{
       p2name: row2 && m2.p2name ? row2[m2.p2name] : '',
       p2title: row2 && m2.p2title ? row2[m2.p2title] : '',
       p2phone: row2 && m2.p2phone ? row2[m2.p2phone] : '',
+      p1email: row2 && m2.p1email ? row2[m2.p1email] : '',
+      p2email: row2 && m2.p2email ? row2[m2.p2email] : '',
       gname: row2 && m2.gname ? row2[m2.gname] : '',
       gtitle: row2 && m2.gtitle ? row2[m2.gtitle] : '',
       gphone: row2 && m2.gphone ? row2[m2.gphone] : '',
@@ -1075,6 +1097,7 @@ document.getElementById('genBtn').addEventListener('click', ()=>{
   state.verifySortDesc = false;
   renderCards();
   renderStats();
+  renderPoorCards();
   switchToTab('tabKCG');
   document.getElementById('step2').scrollIntoView({behavior:'smooth'});
 });
@@ -1139,6 +1162,98 @@ function contactCell(label, name, title, phone){
     ${cellHtml(label+'姓名', nameVal)}
     ${cellHtml(label+'電話', phone)}
   `;
+}
+
+function sortedAllStudents(){
+  const list = state.merged.slice();
+  list.sort((a,b)=>{
+    const ga = a.classInfo? a.classInfo.grade : 999;
+    const gb = b.classInfo? b.classInfo.grade : 999;
+    if(ga!==gb) return ga-gb;
+    const ca = a.classInfo? a.classInfo.num : 999;
+    const cb = b.classInfo? b.classInfo.num : 999;
+    if(ca!==cb) return ca-cb;
+    const sa = parseInt(a.seat,10)||0;
+    const sb = parseInt(b.seat,10)||0;
+    if(sa!==sb) return sa-sb;
+    return (a.name||'').localeCompare(b.name||'', 'zh-Hant');
+  });
+  return list;
+}
+
+function renderPoorCards(){
+  const container = document.getElementById('cardsContainerPoor');
+  if(!container) return;
+  const searchEl = document.getElementById('searchBoxPoor');
+  const search = searchEl ? searchEl.value.trim() : '';
+
+  let list = sortedAllStudents();
+  if(search){
+    list = list.filter(s=>
+      (s.name && s.name.indexOf(search)>=0) ||
+      (s.ethnic && s.ethnic.indexOf(search)>=0) ||
+      (s.classInfo && (`${s.classInfo.grade}年${s.classInfo.num}班`).indexOf(search)>=0) ||
+      (String(s.classRaw||'').indexOf(search)>=0)
+    );
+  }
+
+  if(!list.length){
+    container.innerHTML = `<div class="empty-state">尚無資料，請先到「01 資料匯入與核對」上傳並配對兩份 Excel。</div>`;
+    return;
+  }
+
+  container.innerHTML = list.map((s,i)=>{
+    const gradeLabel = s.classInfo ? `${GRADE_CN[s.classInfo.grade]||s.classInfo.grade}年級` : '';
+    const classLabel = s.classInfo ? `${s.classInfo.grade}年${s.classInfo.num}班` : (s.classRaw||'');
+    const gradeNum = s.classInfo ? s.classInfo.grade : '';
+    const prevAvg = s.weightedAvg || s.generalAvg || '';
+
+    return `
+    <div class="student-card" id="poor-card-${i}">
+      <div class="card-head">
+        <div class="who">
+          <h3>${s.name || '（無姓名）'}</h3>
+          <span class="meta">${classLabel} · 座號 ${s.seat||''}</span>
+          ${gradeLabel?`<span class="grade-tag">${gradeLabel}</span>`:''}
+        </div>
+        <span class="badge ${s.matched?'ok':'warn'}">${s.matched? '已配對學籍資料' : '找不到學籍資料'}</span>
+      </div>
+      <div class="card-body">
+        <div class="panel" style="grid-column:1/-1;">
+          <h4>學生基本資料（點格子複製）</h4>
+          <div class="info-grid">
+            ${cellHtml('成員編號', '01')}
+            ${cellHtml('身份證字號', s.id)}
+            ${cellHtml('姓　名', s.name)}
+            ${cellHtml('年　級', gradeNum)}
+            ${cellHtml('班　級', classLabel)}
+            ${cellHtml('前一學期總平均成績（新生不填）', prevAvg)}
+            ${cellHtml('家庭經濟狀況', '3.一般')}
+            ${cellHtml('身份別（原住民身分別，請自行填寫）', '')}
+            ${cellHtml('族　別', s.ethnic)}
+          </div>
+
+          <div class="contact-group">
+            <div class="grp-title">學生父母身分證資料（成員編號 02／03，身分證字號請自行填寫）</div>
+            <div class="info-grid">
+              ${cellHtml('02 父親/繼父/配偶 姓名', s.p1name)}
+              ${cellHtml('02 身份證字號', '')}
+              ${cellHtml('03 母親/繼母/配偶 姓名', s.p2name)}
+              ${cellHtml('03 身份證字號', '')}
+            </div>
+          </div>
+
+          <div class="contact-group">
+            <div class="grp-title">學生或父母 Email</div>
+            <div class="info-grid">
+              ${cellHtml('家長一電子郵件', s.p1email)}
+              ${cellHtml('家長二電子郵件', s.p2email)}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function renderCards(){
@@ -1533,6 +1648,7 @@ document.getElementById('downloadHighBtn').addEventListener('click', ()=>{
 });
 
 document.getElementById('searchBox').addEventListener('input', renderCards);
+document.getElementById('searchBoxPoor').addEventListener('input', renderPoorCards);
 document.getElementById('onlyUnmatched').addEventListener('change', (e)=>{
   document.getElementById('onlyUnmatchedChip').classList.toggle('active', e.target.checked);
   renderCards();
